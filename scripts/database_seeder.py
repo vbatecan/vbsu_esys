@@ -11,18 +11,43 @@ import mysql.connector
 from mysql.connector import Error
 import argparse
 import sys
+import bcrypt
+from tqdm import tqdm
+from config import *
 
-# Initialize Faker with Philippine locale for more realistic local data
+# Initialize Faker with Philippine locale
 fake = Faker('en_PH')
 
 class UniversityDatabaseSeeder:
-    def __init__(self, host='localhost', database='university_db', user='root', password=''):
-        self.host = host
-        self.database = database
-        self.user = user
-        self.password = password
+    """Comprehensive database seeder for university enrollment system.
+    
+    Generates realistic fake data for all university tables including departments,
+    courses, students, faculty, subjects, enrollments, and more.
+    
+    Attributes:
+        host (str): Database host address
+        database (str): Database name
+        user (str): Database username
+        password (str): Database password
+        connection: MySQL database connection object
+        departments (list): Storage for generated department records
+        courses (list): Storage for generated course records
+        rooms (list): Storage for generated room records
+        users (list): Storage for generated user records
+        faculty (list): Storage for generated faculty records
+        students (list): Storage for generated student records
+        subjects (list): Storage for generated subject records
+        sections (list): Storage for generated section records
+        curriculums (list): Storage for generated curriculum records
+        enrollment_periods (list): Storage for generated enrollment period records
+    """
+    def __init__(self, host=None, database=None, user=None, password=None):
+        # Use config defaults if not provided
+        self.host = host or DATABASE_CONFIG['host']
+        self.database = database or DATABASE_CONFIG['database']
+        self.user = user or DATABASE_CONFIG['user']
+        self.password = password or DATABASE_CONFIG['password']
         self.connection = None
-        
         # Storage for generated IDs to maintain referential integrity
         self.departments = []
         self.courses = []
@@ -36,7 +61,11 @@ class UniversityDatabaseSeeder:
         self.enrollment_periods = []
         
     def connect(self):
-        """Establish database connection"""
+        """Establish database connection.
+        
+        Returns:
+            bool: True if connection successful, False otherwise
+        """
         try:
             self.connection = mysql.connector.connect(
                 host=self.host,
@@ -52,13 +81,20 @@ class UniversityDatabaseSeeder:
             return False
     
     def disconnect(self):
-        """Close database connection"""
+        """Close database connection.
+        
+        Cleans up the database connection and prints confirmation message.
+        """
         if self.connection and self.connection.is_connected():
             self.connection.close()
             print("MySQL connection closed")
     
     def clear_tables(self):
-        """Clear all tables in correct order to respect foreign key constraints"""
+        """Clear all tables in correct order to respect foreign key constraints.
+        
+        Deletes all data from tables in dependency order to avoid foreign key
+        constraint violations. Prints confirmation for each cleared table.
+        """
         print("Clearing existing data...")
         cursor = self.connection.cursor()
         
@@ -91,23 +127,21 @@ class UniversityDatabaseSeeder:
         self.connection.commit()
         cursor.close()
     
-    def seed_departments(self, count=8):
-        """Seed departments table"""
+    def seed_departments(self, count=None):
+        """Seed departments table with realistic academic departments.
+        
+        Args:
+            count (int, optional): Number of departments to create. 
+                Defaults to SEEDING_COUNTS['departments'].
+                
+        Creates college departments with names and descriptions based on
+        DEPARTMENT_DATA configuration.
+        """
+        count = count or SEEDING_COUNTS['departments']
         print(f"Seeding {count} departments...")
         cursor = self.connection.cursor()
         
-        department_data = [
-            ('College of Engineering', 'Offers various engineering programs including Civil, Electrical, Mechanical, and Computer Engineering'),
-            ('College of Business Administration', 'Provides business education with majors in Management, Accounting, Marketing, and Finance'),
-            ('College of Arts and Sciences', 'Liberal arts college offering programs in Humanities, Social Sciences, and Natural Sciences'),
-            ('College of Education', 'Teacher education institution producing future educators and school administrators'),
-            ('College of Nursing', 'Healthcare education provider offering Bachelor of Science in Nursing'),
-            ('College of Information Technology', 'Technology-focused college offering Computer Science, Information Technology, and Data Science programs'),
-            ('College of Architecture', 'Architecture and design education provider'),
-            ('College of Law', 'Legal education institution offering Juris Doctor program')
-        ]
-        
-        for i, (name, description) in enumerate(department_data[:count]):
+        for i, (name, description) in enumerate(tqdm(DEPARTMENT_DATA[:count], desc="Creating departments", unit="dept")):
             query = """
             INSERT INTO departments (department_name, description)
             VALUES (%s, %s)
@@ -123,30 +157,21 @@ class UniversityDatabaseSeeder:
         cursor.close()
         print(f"Created {len(self.departments)} departments")
     
-    def seed_courses(self, count=15):
-        """Seed courses table"""
+    def seed_courses(self, count=None):
+        """Seed courses table with academic programs.
+        
+        Args:
+            count (int, optional): Number of courses to create.
+                Defaults to SEEDING_COUNTS['courses'].
+                
+        Creates degree programs linked to departments using COURSE_DATA
+        configuration. Each course includes name, description, and department.
+        """
+        count = count or SEEDING_COUNTS['courses']
         print(f"Seeding {count} courses...")
         cursor = self.connection.cursor()
         
-        course_data = [
-            ('Bachelor of Science in Computer Science', '4-year degree program focusing on software development, algorithms, and computing theory', 6),
-            ('Bachelor of Science in Information Technology', 'Program focusing on IT infrastructure, network management, and systems administration', 6),
-            ('Bachelor of Science in Civil Engineering', '5-year program covering structural design, construction management, and transportation engineering', 0),
-            ('Bachelor of Science in Electrical Engineering', '5-year program focusing on power systems, electronics, and telecommunications', 0),
-            ('Bachelor of Science in Mechanical Engineering', '5-year program covering thermodynamics, machine design, and manufacturing processes', 0),
-            ('Bachelor of Science in Accountancy', '4-year program preparing students for CPA licensure and accounting careers', 1),
-            ('Bachelor of Science in Business Administration', '4-year program with majors in Management, Marketing, and Finance', 1),
-            ('Bachelor of Arts in English', '4-year liberal arts program focusing on literature and language studies', 2),
-            ('Bachelor of Science in Psychology', '4-year program studying human behavior and mental processes', 2),
-            ('Bachelor of Secondary Education', '4-year teacher education program', 3),
-            ('Bachelor of Science in Nursing', '4-year professional nursing program', 4),
-            ('Bachelor of Science in Architecture', '5-year professional architecture program', 6),
-            ('Bachelor of Arts in Communication', '4-year program in mass communication and media studies', 2),
-            ('Bachelor of Science in Mathematics', '4-year program in pure and applied mathematics', 2),
-            ('Juris Doctor', '4-year professional law degree program', 7)
-        ]
-        
-        for i, (name, description, dept_id) in enumerate(course_data[:count]):
+        for i, (name, description, dept_id) in enumerate(tqdm(COURSE_DATA[:count], desc="Creating courses", unit="course")):
             if dept_id < len(self.departments):
                 query = """
                 INSERT INTO courses (course_name, description, department_id)
@@ -163,25 +188,23 @@ class UniversityDatabaseSeeder:
         cursor.close()
         print(f"Created {len(self.courses)} courses")
     
-    def seed_rooms(self, count=30):
-        """Seed rooms table"""
+    def seed_rooms(self, count=None):
+        """Seed rooms table with various room types and capacities.
+        
+        Args:
+            count (int, optional): Number of rooms to create.
+                Defaults to SEEDING_COUNTS['rooms'].
+                
+        Generates rooms with different types (lecture halls, labs, etc.) and
+        realistic capacity variations based on ROOM_TYPES configuration.
+        """
+        count = count or SEEDING_COUNTS['rooms']
         print(f"Seeding {count} rooms...")
         cursor = self.connection.cursor()
         
-        room_types = [
-            ('Lecture Hall', 150),
-            ('Laboratory', 40),
-            ('Computer Lab', 35),
-            ('Discussion Room', 25),
-            ('Conference Room', 20),
-            ('Auditorium', 300),
-            ('Classroom', 50),
-            ('Seminar Room', 30)
-        ]
-        
-        for i in range(count):
-            room_type, base_capacity = random.choice(room_types)
-            building = random.choice(['Engineering', 'Business', 'Arts', 'Science', 'Main'])
+        for i in tqdm(range(count), desc="Creating rooms", unit="room"):
+            room_type, base_capacity = random.choice(ROOM_TYPES)
+            building = random.choice(BUILDING_NAMES)
             floor = random.randint(1, 5)
             room_number = f"{building[0]}{floor:02d}{i+1:03d}"
             
@@ -204,17 +227,33 @@ class UniversityDatabaseSeeder:
         cursor.close()
         print(f"Created {len(self.rooms)} rooms")
     
-    def seed_users(self, student_count=500, faculty_count=50, registrar_count=5):
-        """Seed users table with students, faculty, and registrars"""
+    def seed_users(self, student_count=None, faculty_count=None, registrar_count=None):
+        """Seed users table with students, faculty, and registrar accounts.
+        
+        Args:
+            student_count (int, optional): Number of student users to create.
+                Defaults to SEEDING_COUNTS['students'].
+            faculty_count (int, optional): Number of faculty users to create.
+                Defaults to SEEDING_COUNTS['faculty'].
+            registrar_count (int, optional): Number of registrar users to create.
+                Defaults to SEEDING_COUNTS['registrars'].
+                
+        Creates user accounts with fake emails and simulated password hashes
+        for different user roles in the university system.
+        """
+        student_count = student_count or SEEDING_COUNTS['students']
+        faculty_count = faculty_count or SEEDING_COUNTS['faculty']
+        registrar_count = registrar_count or SEEDING_COUNTS['registrars']
+        
         print(f"Seeding {student_count} students, {faculty_count} faculty, and {registrar_count} registrars...")
         cursor = self.connection.cursor()
         
         # Create student users
-        for i in range(student_count):
+        for i in tqdm(range(student_count), desc="Creating student users", unit="user"):
             email = fake.unique.email()
-            # Simple password hash simulation (in real app, use proper hashing)
-            password = 'hashed_password_' + fake.password(length=20)
-            role = 'STUDENT'
+            # Simple password hash simulation
+            password = bcrypt.hashpw(fake.password(length=20, special_chars=False, upper_case=False).encode('utf-8'), bcrypt.gensalt(rounds=4)).decode('utf-8')
+            role = USER_ROLES['STUDENT']
             
             query = """
             INSERT INTO users (email, password, role)
@@ -229,10 +268,11 @@ class UniversityDatabaseSeeder:
             })
         
         # Create faculty users
-        for i in range(faculty_count):
+        for i in tqdm(range(faculty_count), desc="Creating faculty users", unit="user"):
             email = fake.unique.email()
-            password = 'hashed_password_' + fake.password(length=20)
-            role = 'FACULTY'
+            # Simple password hash simulation
+            password = bcrypt.hashpw(fake.password(length=20, special_chars=False, upper_case=False).encode('utf-8'), bcrypt.gensalt(rounds=4)).decode('utf-8')
+            role = USER_ROLES['FACULTY']
             
             query = """
             INSERT INTO users (email, password, role)
@@ -247,10 +287,11 @@ class UniversityDatabaseSeeder:
             })
         
         # Create registrar users
-        for i in range(registrar_count):
+        for i in tqdm(range(registrar_count), desc="Creating registrar users", unit="user"):
             email = fake.unique.email()
-            password = 'hashed_password_' + fake.password(length=20)
-            role = 'REGISTRAR'
+            # Simple password hash simulation
+            password = bcrypt.hashpw(fake.password(length=20, special_chars=False, upper_case=False).encode('utf-8'), bcrypt.gensalt(rounds=4)).decode('utf-8')
+            role = USER_ROLES['REGISTRAR']
             
             query = """
             INSERT INTO users (email, password, role)
@@ -269,26 +310,43 @@ class UniversityDatabaseSeeder:
         print(f"Created {len(self.users)} users")
     
     def seed_students(self):
-        """Seed students table"""
+        """Seed students table with realistic student data.
+        
+        Creates student records with:
+        - Unique student IDs with year-based format
+        - Personal information (names, birthdates)
+        - Realistic age distribution (18-25)
+        - Student status (REGULAR/IRREGULAR with 12% irregular probability)
+        - Course assignments and year levels
+        
+        Uses STUDENT_DEMOGRAPHICS and STUDENT_STATUS_CONFIG for realistic data.
+        """
         print("Seeding students...")
         cursor = self.connection.cursor()
         
         student_users = [u for u in self.users if u['type'] == 'student']
         
-        for user in student_users:
-            # Generate student ID (e.g., 2023-12345)
-            year = random.randint(2020, 2024)
-            student_number = f"{year}-{random.randint(10000, 99999)}"
+        for user in tqdm(student_users, desc="Creating student records", unit="student"):
+            # Generate student ID
+            year = random.randint(*STUDENT_DEMOGRAPHICS['year_range'])
+            student_number = f"{year}-{random.randint(*STUDENT_DEMOGRAPHICS['student_number_range'])}"
+            # Check if student number already exists
+            while student_number in [s['student_id'] for s in self.students]:
+                student_number = f"{year}-{random.randint(10000, 99999)}"
             
             first_name = fake.first_name()
             last_name = fake.last_name()
-            middle_name = fake.first_name() if random.random() > 0.3 else None
+            middle_name = fake.first_name() if random.random() > STUDENT_DEMOGRAPHICS['middle_name_probability'] else None
             
-            # Generate realistic birthdate (18-25 years old)
-            age = random.randint(18, 25)
+            # Generate realistic birthdate
+            age = random.randint(*STUDENT_DEMOGRAPHICS['age_range'])
             birthdate = datetime.now() - timedelta(days=age*365)
             
-            student_status = random.choice(['REGULAR', 'IRREGULAR'])
+            # Make IRREGULAR students uncommon
+            if random.random() < STUDENT_STATUS_CONFIG['irregular_probability']:
+                student_status = STUDENT_STATUS_CONFIG['irregular_status']
+            else:
+                student_status = STUDENT_STATUS_CONFIG['regular_status']
             course = random.choice(self.courses)
             year_level = min(random.randint(1, 5), 4 if course['name'].startswith('Bachelor') else 5)
             
@@ -314,13 +372,17 @@ class UniversityDatabaseSeeder:
         print(f"Created {len(self.students)} students")
     
     def seed_faculty(self):
-        """Seed faculty table"""
+        """Seed faculty table with instructor information.
+        
+        Creates faculty records linking user accounts to departments with
+        realistic names and department assignments.
+        """
         print("Seeding faculty...")
         cursor = self.connection.cursor()
         
         faculty_users = [u for u in self.users if u['type'] == 'faculty']
         
-        for user in faculty_users:
+        for user in tqdm(faculty_users, desc="Creating faculty records", unit="faculty"):
             first_name = fake.first_name()
             last_name = fake.last_name()
             department = random.choice(self.departments)
@@ -344,7 +406,11 @@ class UniversityDatabaseSeeder:
         print(f"Created {len(self.faculty)} faculty members")
     
     def seed_curriculum(self):
-        """Seed curriculum table"""
+        """Seed curriculum table with semester-based curriculum entries.
+        
+        Creates curriculum records for each course spanning 4 years
+        with 2 semesters per year (8 total semesters per course).
+        """
         print("Seeding curriculum...")
         cursor = self.connection.cursor()
         
@@ -370,47 +436,23 @@ class UniversityDatabaseSeeder:
         cursor.close()
         print(f"Created {len(self.curriculums)} curriculum entries")
     
-    def seed_subjects(self, count=100):
-        """Seed subjects table"""
+    def seed_subjects(self, count=None):
+        """Seed subjects table with academic courses.
+        
+        Args:
+            count (int, optional): Number of subjects to create.
+                Defaults to SEEDING_COUNTS['subjects'].
+                
+        Creates subject records using SUBJECT_TEMPLATES configuration with
+        realistic names, codes, units, and descriptions. Links to curriculum
+        and departments.
+        """
+        count = count or SEEDING_COUNTS['subjects']
         print(f"Seeding {count} subjects...")
         cursor = self.connection.cursor()
         
-        subject_templates = [
-            ('Calculus', 'CALC', 3, 'Mathematical analysis of functions, limits, derivatives, and integrals'),
-            ('Physics', 'PHYS', 4, 'Study of matter, energy, and their interactions'),
-            ('Chemistry', 'CHEM', 3, 'Study of matter, its properties, composition, and reactions'),
-            ('Programming', 'PROG', 3, 'Introduction to computer programming concepts and practices'),
-            ('Data Structures', 'DS', 3, 'Study of data organization and manipulation algorithms'),
-            ('Database Systems', 'DB', 3, 'Design and implementation of database management systems'),
-            ('Software Engineering', 'SE', 3, 'Principles and practices of software development'),
-            ('Web Development', 'WEB', 3, 'Design and development of web applications'),
-            ('Accounting Principles', 'ACC', 3, 'Fundamental concepts and principles of accounting'),
-            ('Business Finance', 'FIN', 3, 'Financial management and analysis in business'),
-            ('Marketing Management', 'MKT', 3, 'Principles and strategies in marketing'),
-            ('Organizational Behavior', 'ORG', 3, 'Study of human behavior in organizations'),
-            ('Educational Psychology', 'EDPSY', 3, 'Psychological principles in education'),
-            ('Teaching Methods', 'TCH', 3, 'Methodologies and strategies in teaching'),
-            ('Nursing Fundamentals', 'NURS', 4, 'Basic principles and practices in nursing'),
-            ('Anatomy and Physiology', 'ANAT', 4, 'Study of human body structure and function'),
-            ('Engineering Mathematics', 'ENG MATH', 3, 'Advanced mathematics for engineering applications'),
-            ('Thermodynamics', 'THERMO', 3, 'Study of heat, work, and energy'),
-            ('Strength of Materials', 'SOM', 3, 'Analysis of material properties under stress'),
-            ('Circuit Analysis', 'CIRCUIT', 3, 'Analysis of electrical circuits and components'),
-            ('Digital Logic', 'DIGITAL', 3, 'Study of digital systems and logic design'),
-            ('Machine Design', 'MACH', 3, 'Principles of mechanical machine design'),
-            ('Structural Analysis', 'STRUCT', 3, 'Analysis of structures and loads'),
-            ('Business Law', 'BLAW', 3, 'Legal aspects of business operations'),
-            ('Cost Accounting', 'COST', 3, 'Accounting for product and service costs'),
-            ('Human Resource Management', 'HRM', 3, 'Management of human resources in organizations'),
-            ('Operations Management', 'OPS', 3, 'Management of production and service operations'),
-            ('Literature', 'LIT', 3, 'Study of literary works and criticism'),
-            ('Philosophy', 'PHIL', 3, 'Study of fundamental questions about existence and knowledge'),
-            ('Statistics', 'STAT', 3, 'Mathematical analysis of data and probability'),
-            ('Research Methods', 'RES', 3, 'Methodologies for conducting research'),
-        ]
-        
-        for i in range(count):
-            template = random.choice(subject_templates)
+        for i in tqdm(range(count), desc="Creating subjects", unit="subject"):
+            template = random.choice(SUBJECT_TEMPLATES)
             subject_name = f"{template[0]} {random.randint(1, 4)}"
             subject_code = f"{template[1]}{random.randint(100, 999)}"
             units = template[2]
@@ -439,12 +481,16 @@ class UniversityDatabaseSeeder:
         print(f"Created {len(self.subjects)} subjects")
     
     def seed_sections(self):
-        """Seed sections table"""
+        """Seed sections table with class sections for each subject.
+        
+        Creates 2-4 sections per subject with unique section names,
+        codes, and capacities. Sections are used for class scheduling
+        and enrollment management.
+        """
         print("Seeding sections...")
         cursor = self.connection.cursor()
         
-        # Create 2-4 sections for each subject
-        for subject in self.subjects:
+        for subject in tqdm(self.subjects, desc="Creating sections", unit="subject"):
             num_sections = random.randint(2, 4)
             
             for i in range(num_sections):
@@ -470,77 +516,16 @@ class UniversityDatabaseSeeder:
         cursor.close()
         print(f"Created {len(self.sections)} sections")
     
-    def seed_enrollment_periods(self, count=4):
-        """Seed enrollment periods"""
-        print(f"Seeding {count} enrollment periods...")
-        cursor = self.connection.cursor()
-        
-        for i in range(count):
-            year = 2024 - i
-            for semester in ['First Semester', 'Second Semester']:
-                start_date = datetime(year, 8 if semester == 'First Semester' else 1, 1)
-                end_date = start_date + timedelta(days=120)
-                
-                query = """
-                INSERT INTO enrollment_period (school_year, semester, start_date, end_date)
-                VALUES (%s, %s, %s, %s)
-                """
-                cursor.execute(query, (f"{year}-{year+1}", semester, start_date, end_date))
-                
-                self.enrollment_periods.append({
-                    'id': cursor.lastrowid,
-                    'school_year': f"{year}-{year+1}",
-                    'semester': semester
-                })
-        
-        self.connection.commit()
-        cursor.close()
-        print(f"Created {len(self.enrollment_periods)} enrollment periods")
-    
-    def seed_schedules(self):
-        """Seed schedules table"""
-        print("Seeding schedules...")
-        cursor = self.connection.cursor()
-        
-        days = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
-        
-        for section in self.sections:
-            # Create 1-3 schedules for each section
-            num_schedules = random.randint(1, 3)
-            
-            for _ in range(num_schedules):
-                room = random.choice(self.rooms)
-                faculty = random.choice(self.faculty)
-                day = random.choice(days)
-                
-                # Generate realistic time slots
-                start_hour = random.randint(7, 18)
-                start_minute = random.choice([0, 30])
-                start_time = datetime.strptime(f"{start_hour:02d}:{start_minute:02d}", "%H:%M").time()
-                
-                duration = random.choice([1, 1.5, 2, 3]) * 60
-                end_time = (datetime.combine(datetime.now(), start_time) + timedelta(minutes=duration)).time()
-                
-                school_year = random.choice([f"{y}-{y+1}" for y in range(2021, 2025)])
-                semester = random.randint(1, 2)
-                
-                query = """
-                INSERT INTO schedules (section_id, room_id, faculty_id, day, start_time, end_time, school_year, semester)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """
-                cursor.execute(query, (section['id'], room['id'], faculty['id'], day, 
-                                     start_time, end_time, school_year, semester))
-        
-        self.connection.commit()
-        cursor.close()
-        print("Created schedules")
-    
     def seed_prerequisites(self):
-        """Seed prerequisites table"""
+        """Seed prerequisites table with course prerequisite relationships.
+        
+        Creates prerequisite relationships for ~30% of subjects,
+        with 1-2 prerequisites per subject. Ensures no circular
+        dependencies by avoiding self-references.
+        """
         print("Seeding prerequisites...")
         cursor = self.connection.cursor()
         
-        # Create some prerequisite relationships
         for i, subject in enumerate(self.subjects[:50]):  # Limit to first 50 subjects
             if random.random() > 0.7:  # 30% chance of having prerequisites
                 num_prereqs = random.randint(1, 2)
@@ -561,12 +546,105 @@ class UniversityDatabaseSeeder:
         cursor.close()
         print("Created prerequisites")
     
+    def seed_enrollment_periods(self, count=None):
+        """Seed enrollment_period table with academic periods.
+        
+        Args:
+            count (int, optional): Number of enrollment periods to create.
+                Defaults to SEEDING_COUNTS['enrollment_periods'].
+                
+        Creates enrollment periods for different academic years and semesters
+        with start and end dates for enrollment periods.
+        """
+        count = count or SEEDING_COUNTS['enrollment_periods']
+        print(f"Seeding {count} enrollment periods...")
+        cursor = self.connection.cursor()
+        
+        for i in range(count):
+            year = 2021 + i
+            for semester in [1, 2]:
+                # Generate realistic enrollment period dates
+                if semester == 1:
+                    start_date = datetime(year - 1, 10, 1)  # October previous year
+                    end_date = datetime(year - 1, 11, 30)   # November previous year
+                else:
+                    start_date = datetime(year, 3, 1)  # March
+                    end_date = datetime(year, 4, 30)   # April
+                
+                query = """
+                INSERT INTO enrollment_period (school_year, semester, start_date, end_date)
+                VALUES (%s, %s, %s, %s)
+                """
+                cursor.execute(query, (f"{year-1}-{year}", semester, start_date, end_date))
+                
+                self.enrollment_periods.append({
+                    'id': cursor.lastrowid,
+                    'school_year': f"{year-1}-{year}",
+                    'semester': semester,
+                    'start_date': start_date,
+                    'end_date': end_date
+                })
+        
+        self.connection.commit()
+        cursor.close()
+        print(f"Created {len(self.enrollment_periods)} enrollment periods")
+    
+    def seed_schedules(self):
+        """Seed schedules table with class schedules.
+        
+        Creates schedules for sections with:
+        - Random days of the week
+        - Realistic time slots
+        - Room assignments
+        - Faculty assignments
+        """
+        print("Seeding schedules...")
+        cursor = self.connection.cursor()
+        
+        for section in self.sections:
+            # Create 1-2 schedules per section
+            num_schedules = random.randint(1, 2)
+            
+            for _ in range(num_schedules):
+                day = random.choice(DAYS_OF_WEEK)
+                
+                # Generate realistic time slots
+                start_hour = random.choice([7, 8, 9, 10, 13, 14, 15, 16])
+                start_minute = random.choice([0, 30])
+                end_hour = start_hour + random.choice([1, 2, 3])
+                end_minute = start_minute
+                
+                start_time = f"{start_hour:02d}:{start_minute:02d}"
+                end_time = f"{end_hour:02d}:{end_minute:02d}"
+                
+                room = random.choice(self.rooms)
+                faculty = random.choice(self.faculty)
+                
+                query = """
+                INSERT INTO schedules (section_id, room_id, faculty_id, day, start_time, end_time)
+                VALUES (%s, %s, %s, %s, %s, %s)
+                """
+                cursor.execute(query, (section['id'], room['id'], faculty['id'], day, start_time, end_time))
+        
+        self.connection.commit()
+        cursor.close()
+        print("Created schedules")
+    
     def seed_enrollments(self):
-        """Seed enrollments and enrollment details"""
+        """Seed enrollments and enrollment details tables.
+        
+        Creates enrollment records for students with:
+        - Multiple enrollment records per student (1-4)
+        - Various enrollment statuses
+        - Realistic unit loads and submission dates
+        - Detailed subject selections for approved/enrolled enrollments
+        
+        Also populates student_enrolled_subjects for final enrollments.
+        """
         print("Seeding enrollments...")
         cursor = self.connection.cursor()
         
-        statuses = ['DRAFT', 'SUBMITTED', 'APPROVED', 'ENROLLED', 'CANCELLED']
+        statuses = ENROLLMENT_STATUSES
         
         for student in self.students:
             # Create 1-4 enrollments per student
@@ -597,7 +675,7 @@ class UniversityDatabaseSeeder:
                     available_sections = random.sample(self.sections, min(num_subjects, len(self.sections)))
                     
                     for section in available_sections:
-                        detail_status = random.choice(['SELECTED', 'DROPPED'])
+                        detail_status = random.choice(ENROLLMENT_DETAIL_STATUSES)
                         units = next((s['units'] for s in self.subjects if s['id'] == section['subject_id']), 3)
                         
                         query = """
@@ -619,7 +697,18 @@ class UniversityDatabaseSeeder:
         print("Created enrollments and enrollment details")
     
     def seed_all(self, clear_existing=True):
-        """Seed all tables with comprehensive data"""
+        """Seed all tables with comprehensive data in correct dependency order.
+        
+        Args:
+            clear_existing (bool): Whether to clear existing data before seeding.
+                Defaults to True.
+                
+        Returns:
+            bool: True if seeding successful, False otherwise.
+                
+        Executes all seeding methods in the correct order to respect
+        foreign key constraints. Prints summary statistics of created records.
+        """
         if not self.connect():
             return False
         
@@ -631,13 +720,15 @@ class UniversityDatabaseSeeder:
             self.seed_departments()
             self.seed_courses()
             self.seed_rooms()
-            self.seed_users(student_count=500, faculty_count=50, registrar_count=5)
+            self.seed_users(student_count=SEEDING_COUNTS['students'], 
+                       faculty_count=SEEDING_COUNTS['faculty'], 
+                       registrar_count=SEEDING_COUNTS['registrars'])
             self.seed_students()
             self.seed_faculty()
             self.seed_curriculum()
-            self.seed_subjects(count=100)
+            self.seed_subjects(count=SEEDING_COUNTS['subjects'])
             self.seed_sections()
-            self.seed_enrollment_periods(count=4)
+            self.seed_enrollment_periods(count=SEEDING_COUNTS['enrollment_periods'])
             self.seed_schedules()
             self.seed_prerequisites()
             self.seed_enrollments()
@@ -663,11 +754,23 @@ class UniversityDatabaseSeeder:
             self.disconnect()
 
 def main():
+    """Main function to run the database seeder.
+    
+    Parses command line arguments for database connection parameters,
+    initializes the seeder, and runs the seeding process.
+    
+    Command line arguments:
+        --host: Database host (default from config)
+        --database: Database name (default from config)
+        --user: Database user (default from config)
+        --password: Database password (default from config)
+        --no-clear: Skip clearing existing data
+    """
     parser = argparse.ArgumentParser(description='University Database Seeder')
-    parser.add_argument('--host', default='localhost', help='Database host')
-    parser.add_argument('--database', default='university_db', help='Database name')
-    parser.add_argument('--user', default='root', help='Database user')
-    parser.add_argument('--password', default='', help='Database password')
+    parser.add_argument('--host', default=DATABASE_CONFIG['host'], help='Database host')
+    parser.add_argument('--database', default=DATABASE_CONFIG['database'], help='Database name')
+    parser.add_argument('--user', default=DATABASE_CONFIG['user'], help='Database user')
+    parser.add_argument('--password', default=DATABASE_CONFIG['password'], help='Database password')
     parser.add_argument('--no-clear', action='store_true', help='Do not clear existing data')
     
     args = parser.parse_args()

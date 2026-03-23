@@ -1,2 +1,7 @@
-faker==25.8.0
-mysql-connector-python==8.2.0
+faker
+mysql-connector-python
+matplotlib
+seaborn
+numpy
+bcrypt==4.3.0
+tqdm
