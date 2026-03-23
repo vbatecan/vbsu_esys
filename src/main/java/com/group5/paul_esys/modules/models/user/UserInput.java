@@ -1,9 +1,9 @@
-package com.group5.paul_esys.modules.models;
+package com.group5.paul_esys.modules.models.user;
 
 import lombok.Data;
 
 @Data
-public class User {
+public class UserInput {
 
   private String studentId;
   private String password;
