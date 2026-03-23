@@ -1,4 +1,4 @@
-package com.group5.paul_esys.modules.services;
+package com.group5.paul_esys.modules.user.services;
 
 import com.group5.paul_esys.modules.config.Config;
 
