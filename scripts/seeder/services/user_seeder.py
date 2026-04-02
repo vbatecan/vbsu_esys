@@ -40,7 +40,9 @@ class UserSeeder(BaseSeeder):
             id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
             email VARCHAR(255) NOT NULL UNIQUE,
             password VARCHAR(255) NOT NULL,
-            role VARCHAR(50) NOT NULL
+            role VARCHAR(50) NOT NULL,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """
 
@@ -70,6 +72,8 @@ class UserSeeder(BaseSeeder):
             first_name VARCHAR(255) NOT NULL,
             last_name VARCHAR(255) NOT NULL,
             department_id INTEGER,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (user_id) REFERENCES APP.users(id),
             FOREIGN KEY (department_id) REFERENCES APP.departments(id)
         )

@@ -26,6 +26,8 @@ class CourseSeeder(BaseSeeder):
             course_name VARCHAR(255) NOT NULL,
             description CLOB,
             department_id INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (department_id) REFERENCES APP.departments(id)
         )
     """

@@ -38,7 +38,9 @@ class EnrollmentSeeder(BaseSeeder):
             school_year VARCHAR(50),
             semester INTEGER,
             start_date DATE,
-            end_date DATE
+            end_date DATE,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """
 
@@ -51,6 +53,8 @@ class EnrollmentSeeder(BaseSeeder):
             day VARCHAR(10),
             start_time VARCHAR(10),
             end_time VARCHAR(10),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (section_id) REFERENCES APP.sections(id),
             FOREIGN KEY (room_id) REFERENCES APP.rooms(id),
             FOREIGN KEY (faculty_id) REFERENCES APP.faculty(id)
@@ -66,7 +70,9 @@ class EnrollmentSeeder(BaseSeeder):
             status VARCHAR(50),
             max_units DECIMAL(5,2),
             total_units DECIMAL(5,2),
-            submitted_at TIMESTAMP
+            submitted_at TIMESTAMP,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """
 
@@ -78,6 +84,8 @@ class EnrollmentSeeder(BaseSeeder):
             subject_id INTEGER,
             units DECIMAL(3,1),
             status VARCHAR(50),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (enrollment_id) REFERENCES APP.enrollments(id),
             FOREIGN KEY (section_id) REFERENCES APP.sections(id),
             FOREIGN KEY (subject_id) REFERENCES APP.subjects(id)

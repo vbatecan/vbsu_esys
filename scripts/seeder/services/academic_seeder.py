@@ -49,6 +49,8 @@ class AcademicSeeder(BaseSeeder):
             description CLOB,
             curriculum_id INTEGER,
             department_id INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (curriculum_id) REFERENCES APP.curriculum(id),
             FOREIGN KEY (department_id) REFERENCES APP.departments(id)
         )
@@ -61,6 +63,8 @@ class AcademicSeeder(BaseSeeder):
             section_code VARCHAR(50) NOT NULL,
             subject_id INTEGER,
             capacity INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (subject_id) REFERENCES APP.subjects(id)
         )
     """
@@ -70,6 +74,8 @@ class AcademicSeeder(BaseSeeder):
             id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
             pre_subject_id INTEGER,
             subject_id INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             FOREIGN KEY (pre_subject_id) REFERENCES APP.subjects(id),
             FOREIGN KEY (subject_id) REFERENCES APP.subjects(id)
         )

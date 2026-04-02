@@ -32,7 +32,9 @@ class RoomSeeder(BaseSeeder):
         CREATE TABLE TABLE_NAME (
             id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
             room VARCHAR(50) NOT NULL,
-            capacity INTEGER
+            capacity INTEGER,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """
 

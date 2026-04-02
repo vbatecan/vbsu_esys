@@ -25,7 +25,9 @@ class DepartmentSeeder(BaseSeeder):
         CREATE TABLE TABLE_NAME (
             id INTEGER GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
             department_name VARCHAR(255) NOT NULL,
-            description CLOB
+            description CLOB,
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     """
 
