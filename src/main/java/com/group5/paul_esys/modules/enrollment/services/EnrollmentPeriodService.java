@@ -60,7 +60,7 @@ public class EnrollmentPeriodService {
   public Optional<EnrollmentPeriod> getCurrentEnrollmentPeriod() {
     try (Connection conn = ConnectionService.getConnection();
         PreparedStatement ps = conn.prepareStatement(
-            "SELECT * FROM enrollment_period WHERE start_date <= NOW() AND end_date >= NOW()"
+            "SELECT * FROM enrollment_period WHERE start_date <= CURRENT_TIMESTAMP AND end_date >= CURRENT_TIMESTAMP"
         );
         ResultSet rs = ps.executeQuery()) {
       if (rs.next()) {

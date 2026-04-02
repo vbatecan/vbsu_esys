@@ -23,7 +23,7 @@ public class ConnectionService {
    */
   public static Connection getConnection() {
     try {
-      Class.forName("com.mysql.cj.jdbc.Driver");
+      Class.forName("org.apache.derby.jdbc.ClientDriver");
       return DriverManager.getConnection(Config.DB_URL, Config.DB_USER, Config.DB_PASS);
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -31,7 +31,7 @@ public class ConnectionService {
       System.exit(1);
     } catch (ClassNotFoundException e) {
       logger.error("ERROR: " + e.getMessage(), e);
-      JOptionPane.showMessageDialog(null, "Error loading MySQL JDBC Driver: " + e.getMessage());
+      JOptionPane.showMessageDialog(null, "Error loading Apache Derby JDBC Driver: " + e.getMessage());
       System.exit(1);
     }
 

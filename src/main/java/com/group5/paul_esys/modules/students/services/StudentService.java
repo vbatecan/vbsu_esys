@@ -91,7 +91,7 @@ public class StudentService {
     String sql = "SELECT * FROM students WHERE user_id = ?";
     try (Connection conn = ConnectionService.getConnection();
         PreparedStatement stmt = conn.prepareStatement(sql)) {
-      stmt.setString(1, userId);
+      stmt.setLong(1, Long.parseLong(userId));
       try (ResultSet rs = stmt.executeQuery()) {
         if (rs.next()) {
           if (rs.getRow() > 0) {
@@ -102,6 +102,8 @@ public class StudentService {
         }
       }
     } catch (SQLException e) {
+      logger.error(e.getMessage());
+    } catch (NumberFormatException e) {
       logger.error(e.getMessage());
     }
 
