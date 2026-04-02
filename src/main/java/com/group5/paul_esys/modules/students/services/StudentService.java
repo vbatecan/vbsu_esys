@@ -3,22 +3,22 @@ package com.group5.paul_esys.modules.students.services;
 import com.group5.paul_esys.modules.students.model.Student;
 import com.group5.paul_esys.modules.students.utils.StudentMapper;
 import com.group5.paul_esys.modules.users.services.ConnectionService;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.Optional;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class StudentService {
 
   private static final StudentService INSTANCE = new StudentService();
-  private static final Logger logger = LoggerFactory.getLogger(StudentService.class);
+  private static final Logger logger = LoggerFactory.getLogger(
+    StudentService.class
+  );
 
-  private StudentService() {
-  }
+  private StudentService() {}
 
   public static StudentService getInstance() {
     return INSTANCE;
@@ -26,8 +26,10 @@ public class StudentService {
 
   public Optional<Student> get(String studentId) {
     String sql = "SELECT * FROM students WHERE student_id = ?";
-    try (Connection conn = ConnectionService.getConnection();
-        PreparedStatement stmt = conn.prepareStatement(sql)) {
+    try (
+      Connection conn = ConnectionService.getConnection();
+      PreparedStatement stmt = conn.prepareStatement(sql)
+    ) {
       stmt.setString(1, studentId);
       try (ResultSet rs = stmt.executeQuery()) {
         if (rs.next()) {
@@ -46,9 +48,12 @@ public class StudentService {
   }
 
   public Optional<Student> insert(Student student) {
-    String sql = "INSERT INTO students (student_id, user_id, first_name, last_name, middle_name, birthdate, student_status, course_id, year_level) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-      try (Connection conn = ConnectionService.getConnection();
-        PreparedStatement stmt = conn.prepareStatement(sql)) {
+    String sql =
+      "INSERT INTO students (student_id, user_id, first_name, last_name, middle_name, birthdate, student_status, course_id, year_level) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+    try (
+      Connection conn = ConnectionService.getConnection();
+      PreparedStatement stmt = conn.prepareStatement(sql)
+    ) {
       stmt.setString(1, student.getStudentId());
       stmt.setLong(2, student.getUserId());
       stmt.setString(3, student.getFirstName());
@@ -74,8 +79,10 @@ public class StudentService {
   public void delete(String studentId) {
     String sql = "DELETE FROM students WHERE student_id = ?";
 
-    try (Connection conn = ConnectionService.getConnection();
-        PreparedStatement stmt = conn.prepareStatement(sql)) {
+    try (
+      Connection conn = ConnectionService.getConnection();
+      PreparedStatement stmt = conn.prepareStatement(sql)
+    ) {
       stmt.setString(1, studentId);
       int rowsDeleted = stmt.executeUpdate();
 
@@ -87,11 +94,13 @@ public class StudentService {
     }
   }
 
-  public Optional<Student> getStudentByUserId(String userId) {
+  public Optional<Student> getStudentByUserId(Long userId) {
     String sql = "SELECT * FROM students WHERE user_id = ?";
-    try (Connection conn = ConnectionService.getConnection();
-        PreparedStatement stmt = conn.prepareStatement(sql)) {
-      stmt.setLong(1, Long.parseLong(userId));
+    try (
+      Connection conn = ConnectionService.getConnection();
+      PreparedStatement stmt = conn.prepareStatement(sql)
+    ) {
+      stmt.setLong(1, userId);
       try (ResultSet rs = stmt.executeQuery()) {
         if (rs.next()) {
           if (rs.getRow() > 0) {
@@ -102,8 +111,6 @@ public class StudentService {
         }
       }
     } catch (SQLException e) {
-      logger.error(e.getMessage());
-    } catch (NumberFormatException e) {
       logger.error(e.getMessage());
     }
 

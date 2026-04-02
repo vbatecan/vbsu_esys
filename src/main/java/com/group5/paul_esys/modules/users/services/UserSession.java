@@ -5,7 +5,7 @@ import com.group5.paul_esys.modules.users.models.user.UserInformation;
 public class UserSession {
 
     private static UserSession instance;
-    private UserInformation userInformation;
+    private UserInformation<?> userInformation;
     private long timestamp;
 
     private UserSession() {
@@ -21,11 +21,11 @@ public class UserSession {
         return instance;
     }
 
-    public UserInformation getUserInformation() {
+    public UserInformation<?> getUserInformation() {
         return userInformation;
     }
 
-    public void setUserInformation(UserInformation userInformation) {
+    public void setUserInformation(UserInformation<?> userInformation) {
         this.userInformation = userInformation;
         this.timestamp = System.currentTimeMillis();
     }
