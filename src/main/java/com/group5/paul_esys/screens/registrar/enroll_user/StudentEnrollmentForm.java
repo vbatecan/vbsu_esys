@@ -5,6 +5,7 @@ package com.group5.paul_esys.screens.registrar.enroll_user;
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
  */
 
+import com.formdev.flatlaf.FlatLightLaf;
 import java.awt.event.KeyEvent;
 import javax.swing.*;
 
@@ -20,6 +21,7 @@ public class StudentEnrollmentForm extends javax.swing.JFrame {
      * Creates new form Enrollment
      */
     public StudentEnrollmentForm() {
+	FlatLightLaf.setup();
         initComponents();
         this.setLocationRelativeTo(null);
     }

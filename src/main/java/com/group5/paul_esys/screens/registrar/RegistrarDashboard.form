@@ -325,6 +325,9 @@
       </Properties>
     </Component>
     <Component class="com.group5.paul_esys.components.WindowBar" name="windowBar1">
+      <Properties>
+        <Property name="title" type="java.lang.String" value="Welcome!"/>
+      </Properties>
     </Component>
     <Component class="javax.swing.JButton" name="btnRegisterStudent">
       <Properties>
