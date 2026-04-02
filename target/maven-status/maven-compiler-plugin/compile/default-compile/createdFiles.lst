@@ -1,8 +1,0 @@
-com/group5/paul_esys/modules/config/Config.class
-com/group5/paul_esys/modules/models/user/Role.class
-com/group5/paul_esys/modules/models/user/UserInformation.class
-com/group5/paul_esys/SignIn.class
-com/group5/paul_esys/modules/models/user/UserInput.class
-com/group5/paul_esys/modules/models/enums/Role.class
-com/group5/paul_esys/modules/services/ConnectionService.class
-com/group5/paul_esys/modules/services/AuthService.class
