@@ -17,15 +17,21 @@ import org.slf4j.LoggerFactory;
 
 public class PrerequisiteService {
 
-  private final Connection conn = ConnectionService.getConnection();
-  private final Logger logger = LoggerFactory.getLogger(PrerequisiteService.class);
+  private static final PrerequisiteService INSTANCE = new PrerequisiteService();
+  private static final Logger logger = LoggerFactory.getLogger(PrerequisiteService.class);
+
+  private PrerequisiteService() {
+  }
+
+  public static PrerequisiteService getInstance() {
+    return INSTANCE;
+  }
 
   public List<Prerequisite> getAllPrerequisites() {
     List<Prerequisite> prerequisites = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM prerequisites ORDER BY subject_id, pre_subject_id");
-      ResultSet rs = ps.executeQuery();
-      
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM prerequisites ORDER BY subject_id, pre_subject_id");
+        ResultSet rs = ps.executeQuery()) {
       while (rs.next()) {
         prerequisites.add(PrerequisiteUtils.mapResultSetToPrerequisite(rs));
       }
@@ -36,13 +42,14 @@ public class PrerequisiteService {
   }
 
   public Optional<Prerequisite> getPrerequisiteById(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM prerequisites WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM prerequisites WHERE id = ?")) {
       ps.setLong(1, id);
-      
-      ResultSet rs = ps.executeQuery();
-      if (rs.next()) {
-        return Optional.of(PrerequisiteUtils.mapResultSetToPrerequisite(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        if (rs.next()) {
+          return Optional.of(PrerequisiteUtils.mapResultSetToPrerequisite(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -52,13 +59,14 @@ public class PrerequisiteService {
 
   public List<Prerequisite> getPrerequisitesBySubject(Long subjectId) {
     List<Prerequisite> prerequisites = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM prerequisites WHERE subject_id = ? ORDER BY pre_subject_id");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM prerequisites WHERE subject_id = ? ORDER BY pre_subject_id")) {
       ps.setLong(1, subjectId);
-      
-      ResultSet rs = ps.executeQuery();
-      while (rs.next()) {
-        prerequisites.add(PrerequisiteUtils.mapResultSetToPrerequisite(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          prerequisites.add(PrerequisiteUtils.mapResultSetToPrerequisite(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -68,13 +76,14 @@ public class PrerequisiteService {
 
   public List<Prerequisite> getSubjectsRequiringPrerequisite(Long prerequisiteSubjectId) {
     List<Prerequisite> prerequisites = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM prerequisites WHERE pre_subject_id = ? ORDER BY subject_id");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM prerequisites WHERE pre_subject_id = ? ORDER BY subject_id")) {
       ps.setLong(1, prerequisiteSubjectId);
-      
-      ResultSet rs = ps.executeQuery();
-      while (rs.next()) {
-        prerequisites.add(PrerequisiteUtils.mapResultSetToPrerequisite(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          prerequisites.add(PrerequisiteUtils.mapResultSetToPrerequisite(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -83,10 +92,10 @@ public class PrerequisiteService {
   }
 
   public boolean createPrerequisite(Prerequisite prerequisite) {
-    try {
-      PreparedStatement ps = conn.prepareStatement(
-          "INSERT INTO prerequisites (pre_subject_id, subject_id) VALUES (?, ?)"
-      );
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement(
+            "INSERT INTO prerequisites (pre_subject_id, subject_id) VALUES (?, ?)"
+        )) {
       ps.setLong(1, prerequisite.getPreSubjectId());
       ps.setLong(2, prerequisite.getSubjectId());
       
@@ -98,10 +107,10 @@ public class PrerequisiteService {
   }
 
   public boolean updatePrerequisite(Prerequisite prerequisite) {
-    try {
+    try (Connection conn = ConnectionService.getConnection();
       PreparedStatement ps = conn.prepareStatement(
-          "UPDATE prerequisites SET pre_subject_id = ?, subject_id = ? WHERE id = ?"
-      );
+        "UPDATE prerequisites SET pre_subject_id = ?, subject_id = ? WHERE id = ?"
+      )) {
       ps.setLong(1, prerequisite.getPreSubjectId());
       ps.setLong(2, prerequisite.getSubjectId());
       ps.setLong(3, prerequisite.getId());
@@ -114,8 +123,8 @@ public class PrerequisiteService {
   }
 
   public boolean deletePrerequisite(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("DELETE FROM prerequisites WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("DELETE FROM prerequisites WHERE id = ?")) {
       ps.setLong(1, id);
       
       return ps.executeUpdate() > 0;
@@ -126,8 +135,8 @@ public class PrerequisiteService {
   }
 
   public boolean deletePrerequisiteBySubjects(Long preSubjectId, Long subjectId) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("DELETE FROM prerequisites WHERE pre_subject_id = ? AND subject_id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("DELETE FROM prerequisites WHERE pre_subject_id = ? AND subject_id = ?")) {
       ps.setLong(1, preSubjectId);
       ps.setLong(2, subjectId);
       

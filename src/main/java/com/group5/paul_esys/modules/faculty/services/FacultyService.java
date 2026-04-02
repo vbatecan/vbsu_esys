@@ -17,15 +17,21 @@ import org.slf4j.LoggerFactory;
 
 public class FacultyService {
 
-  private final Connection conn = ConnectionService.getConnection();
-  private final Logger logger = LoggerFactory.getLogger(FacultyService.class);
+  private static final FacultyService INSTANCE = new FacultyService();
+  private static final Logger logger = LoggerFactory.getLogger(FacultyService.class);
+
+  private FacultyService() {
+  }
+
+  public static FacultyService getInstance() {
+    return INSTANCE;
+  }
 
   public List<Faculty> getAllFaculty() {
     List<Faculty> faculty = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM faculty ORDER BY last_name, first_name");
-      ResultSet rs = ps.executeQuery();
-      
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM faculty ORDER BY last_name, first_name");
+        ResultSet rs = ps.executeQuery()) {
       while (rs.next()) {
         faculty.add(FacultyUtils.mapResultSetToFaculty(rs));
       }
@@ -36,13 +42,14 @@ public class FacultyService {
   }
 
   public Optional<Faculty> getFacultyById(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM faculty WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM faculty WHERE id = ?")) {
       ps.setLong(1, id);
-      
-      ResultSet rs = ps.executeQuery();
-      if (rs.next()) {
-        return Optional.of(FacultyUtils.mapResultSetToFaculty(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        if (rs.next()) {
+          return Optional.of(FacultyUtils.mapResultSetToFaculty(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -51,13 +58,14 @@ public class FacultyService {
   }
 
   public Optional<Faculty> getFacultyByUserId(Long userId) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM faculty WHERE user_id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM faculty WHERE user_id = ?")) {
       ps.setLong(1, userId);
-      
-      ResultSet rs = ps.executeQuery();
-      if (rs.next()) {
-        return Optional.of(FacultyUtils.mapResultSetToFaculty(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        if (rs.next()) {
+          return Optional.of(FacultyUtils.mapResultSetToFaculty(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -67,13 +75,14 @@ public class FacultyService {
 
   public List<Faculty> getFacultyByDepartment(Long departmentId) {
     List<Faculty> faculty = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM faculty WHERE department_id = ? ORDER BY last_name, first_name");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM faculty WHERE department_id = ? ORDER BY last_name, first_name")) {
       ps.setLong(1, departmentId);
-      
-      ResultSet rs = ps.executeQuery();
-      while (rs.next()) {
-        faculty.add(FacultyUtils.mapResultSetToFaculty(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          faculty.add(FacultyUtils.mapResultSetToFaculty(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -82,10 +91,10 @@ public class FacultyService {
   }
 
   public boolean createFaculty(Faculty faculty) {
-    try {
-      PreparedStatement ps = conn.prepareStatement(
-          "INSERT INTO faculty (user_id, first_name, last_name, department_id) VALUES (?, ?, ?, ?)"
-      );
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement(
+            "INSERT INTO faculty (user_id, first_name, last_name, department_id) VALUES (?, ?, ?, ?)"
+        )) {
       ps.setLong(1, faculty.getUserId());
       ps.setString(2, faculty.getFirstName());
       ps.setString(3, faculty.getLastName());
@@ -99,10 +108,10 @@ public class FacultyService {
   }
 
   public boolean updateFaculty(Faculty faculty) {
-    try {
+    try (Connection conn = ConnectionService.getConnection();
       PreparedStatement ps = conn.prepareStatement(
-          "UPDATE faculty SET user_id = ?, first_name = ?, last_name = ?, department_id = ? WHERE id = ?"
-      );
+        "UPDATE faculty SET user_id = ?, first_name = ?, last_name = ?, department_id = ? WHERE id = ?"
+      )) {
       ps.setLong(1, faculty.getUserId());
       ps.setString(2, faculty.getFirstName());
       ps.setString(3, faculty.getLastName());
@@ -117,8 +126,8 @@ public class FacultyService {
   }
 
   public boolean deleteFaculty(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("DELETE FROM faculty WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("DELETE FROM faculty WHERE id = ?")) {
       ps.setLong(1, id);
       
       return ps.executeUpdate() > 0;

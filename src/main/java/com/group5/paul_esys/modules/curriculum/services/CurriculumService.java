@@ -17,15 +17,21 @@ import org.slf4j.LoggerFactory;
 
 public class CurriculumService {
 
-  private final Connection conn = ConnectionService.getConnection();
-  private final Logger logger = LoggerFactory.getLogger(CurriculumService.class);
+  private static final CurriculumService INSTANCE = new CurriculumService();
+  private static final Logger logger = LoggerFactory.getLogger(CurriculumService.class);
+
+  private CurriculumService() {
+  }
+
+  public static CurriculumService getInstance() {
+    return INSTANCE;
+  }
 
   public List<Curriculum> getAllCurriculums() {
     List<Curriculum> curriculums = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM curriculum ORDER BY cur_year DESC, semester");
-      ResultSet rs = ps.executeQuery();
-      
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM curriculum ORDER BY cur_year DESC, semester");
+        ResultSet rs = ps.executeQuery()) {
       while (rs.next()) {
         curriculums.add(CurriculumUtils.mapResultSetToCurriculum(rs));
       }
@@ -36,13 +42,14 @@ public class CurriculumService {
   }
 
   public Optional<Curriculum> getCurriculumById(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM curriculum WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM curriculum WHERE id = ?")) {
       ps.setLong(1, id);
-      
-      ResultSet rs = ps.executeQuery();
-      if (rs.next()) {
-        return Optional.of(CurriculumUtils.mapResultSetToCurriculum(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        if (rs.next()) {
+          return Optional.of(CurriculumUtils.mapResultSetToCurriculum(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -52,13 +59,14 @@ public class CurriculumService {
 
   public List<Curriculum> getCurriculumsByCourse(Long courseId) {
     List<Curriculum> curriculums = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM curriculum WHERE course = ? ORDER BY cur_year DESC, semester");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM curriculum WHERE course = ? ORDER BY cur_year DESC, semester")) {
       ps.setLong(1, courseId);
-      
-      ResultSet rs = ps.executeQuery();
-      while (rs.next()) {
-        curriculums.add(CurriculumUtils.mapResultSetToCurriculum(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          curriculums.add(CurriculumUtils.mapResultSetToCurriculum(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -67,10 +75,10 @@ public class CurriculumService {
   }
 
   public boolean createCurriculum(Curriculum curriculum) {
-    try {
-      PreparedStatement ps = conn.prepareStatement(
-          "INSERT INTO curriculum (semester, cur_year, course) VALUES (?, ?, ?)"
-      );
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement(
+            "INSERT INTO curriculum (semester, cur_year, course) VALUES (?, ?, ?)"
+        )) {
       ps.setString(1, curriculum.getSemester());
       ps.setDate(2, new java.sql.Date(curriculum.getCurYear().getTime()));
       ps.setLong(3, curriculum.getCourse());
@@ -83,10 +91,10 @@ public class CurriculumService {
   }
 
   public boolean updateCurriculum(Curriculum curriculum) {
-    try {
+    try (Connection conn = ConnectionService.getConnection();
       PreparedStatement ps = conn.prepareStatement(
-          "UPDATE curriculum SET semester = ?, cur_year = ?, course = ? WHERE id = ?"
-      );
+        "UPDATE curriculum SET semester = ?, cur_year = ?, course = ? WHERE id = ?"
+      )) {
       ps.setString(1, curriculum.getSemester());
       ps.setDate(2, new java.sql.Date(curriculum.getCurYear().getTime()));
       ps.setLong(3, curriculum.getCourse());
@@ -100,8 +108,8 @@ public class CurriculumService {
   }
 
   public boolean deleteCurriculum(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("DELETE FROM curriculum WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("DELETE FROM curriculum WHERE id = ?")) {
       ps.setLong(1, id);
       
       return ps.executeUpdate() > 0;

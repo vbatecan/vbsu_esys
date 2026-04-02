@@ -18,15 +18,21 @@ import org.slf4j.LoggerFactory;
 
 public class EnrollmentDetailService {
 
-  private final Connection conn = ConnectionService.getConnection();
-  private final Logger logger = LoggerFactory.getLogger(EnrollmentDetailService.class);
+  private static final EnrollmentDetailService INSTANCE = new EnrollmentDetailService();
+  private static final Logger logger = LoggerFactory.getLogger(EnrollmentDetailService.class);
+
+  private EnrollmentDetailService() {
+  }
+
+  public static EnrollmentDetailService getInstance() {
+    return INSTANCE;
+  }
 
   public List<EnrollmentDetail> getAllEnrollmentDetails() {
     List<EnrollmentDetail> details = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments_details ORDER BY created_at DESC");
-      ResultSet rs = ps.executeQuery();
-      
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments_details ORDER BY created_at DESC");
+        ResultSet rs = ps.executeQuery()) {
       while (rs.next()) {
         details.add(EnrollmentDetailUtils.mapResultSetToEnrollmentDetail(rs));
       }
@@ -37,13 +43,14 @@ public class EnrollmentDetailService {
   }
 
   public Optional<EnrollmentDetail> getEnrollmentDetailById(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments_details WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments_details WHERE id = ?")) {
       ps.setLong(1, id);
-      
-      ResultSet rs = ps.executeQuery();
-      if (rs.next()) {
-        return Optional.of(EnrollmentDetailUtils.mapResultSetToEnrollmentDetail(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        if (rs.next()) {
+          return Optional.of(EnrollmentDetailUtils.mapResultSetToEnrollmentDetail(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -53,13 +60,14 @@ public class EnrollmentDetailService {
 
   public List<EnrollmentDetail> getEnrollmentDetailsByEnrollment(Long enrollmentId) {
     List<EnrollmentDetail> details = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments_details WHERE enrollment_id = ? ORDER BY created_at");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments_details WHERE enrollment_id = ? ORDER BY created_at")) {
       ps.setLong(1, enrollmentId);
-      
-      ResultSet rs = ps.executeQuery();
-      while (rs.next()) {
-        details.add(EnrollmentDetailUtils.mapResultSetToEnrollmentDetail(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          details.add(EnrollmentDetailUtils.mapResultSetToEnrollmentDetail(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -69,13 +77,14 @@ public class EnrollmentDetailService {
 
   public List<EnrollmentDetail> getEnrollmentDetailsBySection(Long sectionId) {
     List<EnrollmentDetail> details = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments_details WHERE section_id = ? ORDER BY created_at");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments_details WHERE section_id = ? ORDER BY created_at")) {
       ps.setLong(1, sectionId);
-      
-      ResultSet rs = ps.executeQuery();
-      while (rs.next()) {
-        details.add(EnrollmentDetailUtils.mapResultSetToEnrollmentDetail(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          details.add(EnrollmentDetailUtils.mapResultSetToEnrollmentDetail(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -84,10 +93,10 @@ public class EnrollmentDetailService {
   }
 
   public boolean createEnrollmentDetail(EnrollmentDetail detail) {
-    try {
-      PreparedStatement ps = conn.prepareStatement(
-          "INSERT INTO enrollments_details (enrollment_id, section_id, subject_id, units, status) VALUES (?, ?, ?, ?, ?)"
-      );
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement(
+            "INSERT INTO enrollments_details (enrollment_id, section_id, subject_id, units, status) VALUES (?, ?, ?, ?, ?)"
+        )) {
       ps.setLong(1, detail.getEnrollmentId());
       ps.setLong(2, detail.getSectionId());
       ps.setLong(3, detail.getSubjectId());
@@ -102,10 +111,10 @@ public class EnrollmentDetailService {
   }
 
   public boolean updateEnrollmentDetail(EnrollmentDetail detail) {
-    try {
+    try (Connection conn = ConnectionService.getConnection();
       PreparedStatement ps = conn.prepareStatement(
-          "UPDATE enrollments_details SET enrollment_id = ?, section_id = ?, subject_id = ?, units = ?, status = ? WHERE id = ?"
-      );
+        "UPDATE enrollments_details SET enrollment_id = ?, section_id = ?, subject_id = ?, units = ?, status = ? WHERE id = ?"
+      )) {
       ps.setLong(1, detail.getEnrollmentId());
       ps.setLong(2, detail.getSectionId());
       ps.setLong(3, detail.getSubjectId());
@@ -121,10 +130,10 @@ public class EnrollmentDetailService {
   }
 
   public boolean updateEnrollmentDetailStatus(Long id, EnrollmentDetailStatus status) {
-    try {
+    try (Connection conn = ConnectionService.getConnection();
       PreparedStatement ps = conn.prepareStatement(
-          "UPDATE enrollments_details SET status = ? WHERE id = ?"
-      );
+        "UPDATE enrollments_details SET status = ? WHERE id = ?"
+      )) {
       ps.setString(1, status.name());
       ps.setLong(2, id);
       
@@ -136,8 +145,8 @@ public class EnrollmentDetailService {
   }
 
   public boolean deleteEnrollmentDetail(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("DELETE FROM enrollments_details WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("DELETE FROM enrollments_details WHERE id = ?")) {
       ps.setLong(1, id);
       
       return ps.executeUpdate() > 0;

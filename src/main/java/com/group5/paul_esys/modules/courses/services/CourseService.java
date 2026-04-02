@@ -17,15 +17,21 @@ import org.slf4j.LoggerFactory;
 
 public class CourseService {
 
-  private final Connection conn = ConnectionService.getConnection();
-  private final Logger logger = LoggerFactory.getLogger(CourseService.class);
+  private static final CourseService INSTANCE = new CourseService();
+  private static final Logger logger = LoggerFactory.getLogger(CourseService.class);
+
+  private CourseService() {
+  }
+
+  public static CourseService getInstance() {
+    return INSTANCE;
+  }
 
   public List<Course> getAllCourses() {
     List<Course> courses = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM courses ORDER BY course_name");
-      ResultSet rs = ps.executeQuery();
-      
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM courses ORDER BY course_name");
+        ResultSet rs = ps.executeQuery()) {
       while (rs.next()) {
         courses.add(CourseUtils.mapResultSetToCourse(rs));
       }
@@ -36,13 +42,14 @@ public class CourseService {
   }
 
   public Optional<Course> getCourseById(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM courses WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM courses WHERE id = ?")) {
       ps.setLong(1, id);
-      
-      ResultSet rs = ps.executeQuery();
-      if (rs.next()) {
-        return Optional.of(CourseUtils.mapResultSetToCourse(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        if (rs.next()) {
+          return Optional.of(CourseUtils.mapResultSetToCourse(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -52,13 +59,14 @@ public class CourseService {
 
   public List<Course> getCoursesByDepartment(Long departmentId) {
     List<Course> courses = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM courses WHERE department_id = ? ORDER BY course_name");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM courses WHERE department_id = ? ORDER BY course_name")) {
       ps.setLong(1, departmentId);
-      
-      ResultSet rs = ps.executeQuery();
-      while (rs.next()) {
-        courses.add(CourseUtils.mapResultSetToCourse(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          courses.add(CourseUtils.mapResultSetToCourse(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -67,10 +75,10 @@ public class CourseService {
   }
 
   public boolean createCourse(Course course) {
-    try {
-      PreparedStatement ps = conn.prepareStatement(
-          "INSERT INTO courses (course_name, description, department_id) VALUES (?, ?, ?)"
-      );
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement(
+            "INSERT INTO courses (course_name, description, department_id) VALUES (?, ?, ?)"
+        )) {
       ps.setString(1, course.getCourseName());
       ps.setString(2, course.getDescription());
       ps.setLong(3, course.getDepartmentId());
@@ -83,10 +91,10 @@ public class CourseService {
   }
 
   public boolean updateCourse(Course course) {
-    try {
+    try (Connection conn = ConnectionService.getConnection();
       PreparedStatement ps = conn.prepareStatement(
-          "UPDATE courses SET course_name = ?, description = ?, department_id = ? WHERE id = ?"
-      );
+        "UPDATE courses SET course_name = ?, description = ?, department_id = ? WHERE id = ?"
+      )) {
       ps.setString(1, course.getCourseName());
       ps.setString(2, course.getDescription());
       ps.setLong(3, course.getDepartmentId());
@@ -100,8 +108,8 @@ public class CourseService {
   }
 
   public boolean deleteCourse(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("DELETE FROM courses WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("DELETE FROM courses WHERE id = ?")) {
       ps.setLong(1, id);
       
       return ps.executeUpdate() > 0;

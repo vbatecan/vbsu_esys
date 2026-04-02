@@ -17,15 +17,21 @@ import org.slf4j.LoggerFactory;
 
 public class EnrollmentPeriodService {
 
-  private final Connection conn = ConnectionService.getConnection();
-  private final Logger logger = LoggerFactory.getLogger(EnrollmentPeriodService.class);
+  private static final EnrollmentPeriodService INSTANCE = new EnrollmentPeriodService();
+  private static final Logger logger = LoggerFactory.getLogger(EnrollmentPeriodService.class);
+
+  private EnrollmentPeriodService() {
+  }
+
+  public static EnrollmentPeriodService getInstance() {
+    return INSTANCE;
+  }
 
   public List<EnrollmentPeriod> getAllEnrollmentPeriods() {
     List<EnrollmentPeriod> periods = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollment_period ORDER BY created_at DESC");
-      ResultSet rs = ps.executeQuery();
-      
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollment_period ORDER BY created_at DESC");
+        ResultSet rs = ps.executeQuery()) {
       while (rs.next()) {
         periods.add(EnrollmentPeriodUtils.mapResultSetToEnrollmentPeriod(rs));
       }
@@ -36,13 +42,14 @@ public class EnrollmentPeriodService {
   }
 
   public Optional<EnrollmentPeriod> getEnrollmentPeriodById(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollment_period WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollment_period WHERE id = ?")) {
       ps.setLong(1, id);
-      
-      ResultSet rs = ps.executeQuery();
-      if (rs.next()) {
-        return Optional.of(EnrollmentPeriodUtils.mapResultSetToEnrollmentPeriod(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        if (rs.next()) {
+          return Optional.of(EnrollmentPeriodUtils.mapResultSetToEnrollmentPeriod(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -51,12 +58,11 @@ public class EnrollmentPeriodService {
   }
 
   public Optional<EnrollmentPeriod> getCurrentEnrollmentPeriod() {
-    try {
-      PreparedStatement ps = conn.prepareStatement(
-          "SELECT * FROM enrollment_period WHERE start_date <= NOW() AND end_date >= NOW()"
-      );
-      
-      ResultSet rs = ps.executeQuery();
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement(
+            "SELECT * FROM enrollment_period WHERE start_date <= NOW() AND end_date >= NOW()"
+        );
+        ResultSet rs = ps.executeQuery()) {
       if (rs.next()) {
         return Optional.of(EnrollmentPeriodUtils.mapResultSetToEnrollmentPeriod(rs));
       }
@@ -67,10 +73,10 @@ public class EnrollmentPeriodService {
   }
 
   public boolean createEnrollmentPeriod(EnrollmentPeriod period) {
-    try {
-      PreparedStatement ps = conn.prepareStatement(
-          "INSERT INTO enrollment_period (school_year, semester, start_date, end_date) VALUES (?, ?, ?, ?)"
-      );
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement(
+            "INSERT INTO enrollment_period (school_year, semester, start_date, end_date) VALUES (?, ?, ?, ?)"
+        )) {
       ps.setString(1, period.getSchoolYear());
       ps.setString(2, period.getSemester());
       ps.setTimestamp(3, new java.sql.Timestamp(period.getStartDate().getTime()));
@@ -84,10 +90,10 @@ public class EnrollmentPeriodService {
   }
 
   public boolean updateEnrollmentPeriod(EnrollmentPeriod period) {
-    try {
+    try (Connection conn = ConnectionService.getConnection();
       PreparedStatement ps = conn.prepareStatement(
-          "UPDATE enrollment_period SET school_year = ?, semester = ?, start_date = ?, end_date = ? WHERE id = ?"
-      );
+        "UPDATE enrollment_period SET school_year = ?, semester = ?, start_date = ?, end_date = ? WHERE id = ?"
+      )) {
       ps.setString(1, period.getSchoolYear());
       ps.setString(2, period.getSemester());
       ps.setTimestamp(3, new java.sql.Timestamp(period.getStartDate().getTime()));
@@ -102,8 +108,8 @@ public class EnrollmentPeriodService {
   }
 
   public boolean deleteEnrollmentPeriod(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("DELETE FROM enrollment_period WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("DELETE FROM enrollment_period WHERE id = ?")) {
       ps.setLong(1, id);
       
       return ps.executeUpdate() > 0;

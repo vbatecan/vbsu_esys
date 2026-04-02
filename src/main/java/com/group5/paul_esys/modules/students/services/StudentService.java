@@ -14,20 +14,28 @@ import java.util.Optional;
 
 public class StudentService {
 
-  private final Connection conn = ConnectionService.getConnection();
-  private final Logger logger = LoggerFactory.getLogger(this.getClass());
+  private static final StudentService INSTANCE = new StudentService();
+  private static final Logger logger = LoggerFactory.getLogger(StudentService.class);
+
+  private StudentService() {
+  }
+
+  public static StudentService getInstance() {
+    return INSTANCE;
+  }
 
   public Optional<Student> get(String studentId) {
     String sql = "SELECT * FROM students WHERE student_id = ?";
-    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement stmt = conn.prepareStatement(sql)) {
       stmt.setString(1, studentId);
-      ResultSet rs = stmt.executeQuery();
-
-      if (rs.next()) {
-        if (rs.getRow() > 0) {
-          return Optional.of(StudentMapper.mapToStudent(rs));
-        } else {
-          return Optional.empty();
+      try (ResultSet rs = stmt.executeQuery()) {
+        if (rs.next()) {
+          if (rs.getRow() > 0) {
+            return Optional.of(StudentMapper.mapToStudent(rs));
+          } else {
+            return Optional.empty();
+          }
         }
       }
     } catch (SQLException e) {
@@ -38,18 +46,9 @@ public class StudentService {
   }
 
   public Optional<Student> insert(Student student) {
-    String sql = "INSERT INTO students (" +
-        "student_id" +
-        "user_id" +
-        "first_name" +
-        "last_name" +
-        "middle_name" +
-        "birthdate" +
-        "student_status" +
-        "course_id" +
-        "year_level" +
-        ") VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+    String sql = "INSERT INTO students (student_id, user_id, first_name, last_name, middle_name, birthdate, student_status, course_id, year_level) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+      try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement stmt = conn.prepareStatement(sql)) {
       stmt.setString(1, student.getStudentId());
       stmt.setLong(2, student.getUserId());
       stmt.setString(3, student.getFirstName());
@@ -75,7 +74,8 @@ public class StudentService {
   public void delete(String studentId) {
     String sql = "DELETE FROM students WHERE student_id = ?";
 
-    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement stmt = conn.prepareStatement(sql)) {
       stmt.setString(1, studentId);
       int rowsDeleted = stmt.executeUpdate();
 
@@ -89,15 +89,16 @@ public class StudentService {
 
   public Optional<Student> getStudentByUserId(String userId) {
     String sql = "SELECT * FROM students WHERE user_id = ?";
-    try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement stmt = conn.prepareStatement(sql)) {
       stmt.setString(1, userId);
-      ResultSet rs = stmt.executeQuery();
-
-      if (rs.next()) {
-        if (rs.getRow() > 0) {
-          return Optional.of(StudentMapper.mapToStudent(rs));
-        } else {
-          return Optional.empty();
+      try (ResultSet rs = stmt.executeQuery()) {
+        if (rs.next()) {
+          if (rs.getRow() > 0) {
+            return Optional.of(StudentMapper.mapToStudent(rs));
+          } else {
+            return Optional.empty();
+          }
         }
       }
     } catch (SQLException e) {

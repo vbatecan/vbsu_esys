@@ -18,15 +18,21 @@ import org.slf4j.LoggerFactory;
 
 public class ScheduleService {
 
-  private final Connection conn = ConnectionService.getConnection();
-  private final Logger logger = LoggerFactory.getLogger(ScheduleService.class);
+  private static final ScheduleService INSTANCE = new ScheduleService();
+  private static final Logger logger = LoggerFactory.getLogger(ScheduleService.class);
+
+  private ScheduleService() {
+  }
+
+  public static ScheduleService getInstance() {
+    return INSTANCE;
+  }
 
   public List<Schedule> getAllSchedules() {
     List<Schedule> schedules = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules ORDER BY day, start_time");
-      ResultSet rs = ps.executeQuery();
-      
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules ORDER BY day, start_time");
+        ResultSet rs = ps.executeQuery()) {
       while (rs.next()) {
         schedules.add(ScheduleUtils.mapResultSetToSchedule(rs));
       }
@@ -37,13 +43,14 @@ public class ScheduleService {
   }
 
   public Optional<Schedule> getScheduleById(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules WHERE id = ?")) {
       ps.setLong(1, id);
-      
-      ResultSet rs = ps.executeQuery();
-      if (rs.next()) {
-        return Optional.of(ScheduleUtils.mapResultSetToSchedule(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        if (rs.next()) {
+          return Optional.of(ScheduleUtils.mapResultSetToSchedule(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -53,13 +60,14 @@ public class ScheduleService {
 
   public List<Schedule> getSchedulesBySection(Long sectionId) {
     List<Schedule> schedules = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules WHERE section_id = ? ORDER BY day, start_time");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules WHERE section_id = ? ORDER BY day, start_time")) {
       ps.setLong(1, sectionId);
-      
-      ResultSet rs = ps.executeQuery();
-      while (rs.next()) {
-        schedules.add(ScheduleUtils.mapResultSetToSchedule(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          schedules.add(ScheduleUtils.mapResultSetToSchedule(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -69,13 +77,14 @@ public class ScheduleService {
 
   public List<Schedule> getSchedulesByFaculty(Long facultyId) {
     List<Schedule> schedules = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules WHERE faculty_id = ? ORDER BY day, start_time");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules WHERE faculty_id = ? ORDER BY day, start_time")) {
       ps.setLong(1, facultyId);
-      
-      ResultSet rs = ps.executeQuery();
-      while (rs.next()) {
-        schedules.add(ScheduleUtils.mapResultSetToSchedule(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          schedules.add(ScheduleUtils.mapResultSetToSchedule(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -85,13 +94,14 @@ public class ScheduleService {
 
   public List<Schedule> getSchedulesByRoom(Long roomId) {
     List<Schedule> schedules = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules WHERE room_id = ? ORDER BY day, start_time");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules WHERE room_id = ? ORDER BY day, start_time")) {
       ps.setLong(1, roomId);
-      
-      ResultSet rs = ps.executeQuery();
-      while (rs.next()) {
-        schedules.add(ScheduleUtils.mapResultSetToSchedule(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          schedules.add(ScheduleUtils.mapResultSetToSchedule(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -101,13 +111,14 @@ public class ScheduleService {
 
   public List<Schedule> getSchedulesByDay(DayOfWeek day) {
     List<Schedule> schedules = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules WHERE day = ? ORDER BY start_time");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules WHERE day = ? ORDER BY start_time")) {
       ps.setString(1, day.name());
-      
-      ResultSet rs = ps.executeQuery();
-      while (rs.next()) {
-        schedules.add(ScheduleUtils.mapResultSetToSchedule(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          schedules.add(ScheduleUtils.mapResultSetToSchedule(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -116,10 +127,10 @@ public class ScheduleService {
   }
 
   public boolean createSchedule(Schedule schedule) {
-    try {
-      PreparedStatement ps = conn.prepareStatement(
-          "INSERT INTO schedules (section_id, room_id, faculty_id, day, start_time, end_time, school_year, semester) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-      );
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement(
+            "INSERT INTO schedules (section_id, room_id, faculty_id, day, start_time, end_time, school_year, semester) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
+        )) {
       ps.setLong(1, schedule.getSectionId());
       ps.setLong(2, schedule.getRoomId());
       ps.setLong(3, schedule.getFacultyId());
@@ -137,10 +148,10 @@ public class ScheduleService {
   }
 
   public boolean updateSchedule(Schedule schedule) {
-    try {
+    try (Connection conn = ConnectionService.getConnection();
       PreparedStatement ps = conn.prepareStatement(
-          "UPDATE schedules SET section_id = ?, room_id = ?, faculty_id = ?, day = ?, start_time = ?, end_time = ?, school_year = ?, semester = ? WHERE id = ?"
-      );
+        "UPDATE schedules SET section_id = ?, room_id = ?, faculty_id = ?, day = ?, start_time = ?, end_time = ?, school_year = ?, semester = ? WHERE id = ?"
+      )) {
       ps.setLong(1, schedule.getSectionId());
       ps.setLong(2, schedule.getRoomId());
       ps.setLong(3, schedule.getFacultyId());
@@ -159,8 +170,8 @@ public class ScheduleService {
   }
 
   public boolean deleteSchedule(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("DELETE FROM schedules WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("DELETE FROM schedules WHERE id = ?")) {
       ps.setLong(1, id);
       
       return ps.executeUpdate() > 0;

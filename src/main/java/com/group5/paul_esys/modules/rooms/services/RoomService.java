@@ -17,15 +17,21 @@ import org.slf4j.LoggerFactory;
 
 public class RoomService {
 
-  private final Connection conn = ConnectionService.getConnection();
-  private final Logger logger = LoggerFactory.getLogger(RoomService.class);
+  private static final RoomService INSTANCE = new RoomService();
+  private static final Logger logger = LoggerFactory.getLogger(RoomService.class);
+
+  private RoomService() {
+  }
+
+  public static RoomService getInstance() {
+    return INSTANCE;
+  }
 
   public List<Room> getAllRooms() {
     List<Room> rooms = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM rooms ORDER BY room");
-      ResultSet rs = ps.executeQuery();
-      
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM rooms ORDER BY room");
+        ResultSet rs = ps.executeQuery()) {
       while (rs.next()) {
         rooms.add(RoomUtils.mapResultSetToRoom(rs));
       }
@@ -36,13 +42,14 @@ public class RoomService {
   }
 
   public Optional<Room> getRoomById(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM rooms WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM rooms WHERE id = ?")) {
       ps.setLong(1, id);
-      
-      ResultSet rs = ps.executeQuery();
-      if (rs.next()) {
-        return Optional.of(RoomUtils.mapResultSetToRoom(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        if (rs.next()) {
+          return Optional.of(RoomUtils.mapResultSetToRoom(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -51,13 +58,14 @@ public class RoomService {
   }
 
   public Optional<Room> getRoomByName(String roomName) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM rooms WHERE room = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM rooms WHERE room = ?")) {
       ps.setString(1, roomName);
-      
-      ResultSet rs = ps.executeQuery();
-      if (rs.next()) {
-        return Optional.of(RoomUtils.mapResultSetToRoom(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        if (rs.next()) {
+          return Optional.of(RoomUtils.mapResultSetToRoom(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -67,13 +75,14 @@ public class RoomService {
 
   public List<Room> getRoomsByCapacity(int minCapacity) {
     List<Room> rooms = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM rooms WHERE capacity >= ? ORDER BY room");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM rooms WHERE capacity >= ? ORDER BY room")) {
       ps.setInt(1, minCapacity);
-      
-      ResultSet rs = ps.executeQuery();
-      while (rs.next()) {
-        rooms.add(RoomUtils.mapResultSetToRoom(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          rooms.add(RoomUtils.mapResultSetToRoom(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -82,10 +91,10 @@ public class RoomService {
   }
 
   public boolean createRoom(Room room) {
-    try {
-      PreparedStatement ps = conn.prepareStatement(
-          "INSERT INTO rooms (room, capacity) VALUES (?, ?)"
-      );
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement(
+            "INSERT INTO rooms (room, capacity) VALUES (?, ?)"
+        )) {
       ps.setString(1, room.getRoom());
       ps.setInt(2, room.getCapacity());
       
@@ -97,10 +106,10 @@ public class RoomService {
   }
 
   public boolean updateRoom(Room room) {
-    try {
+    try (Connection conn = ConnectionService.getConnection();
       PreparedStatement ps = conn.prepareStatement(
-          "UPDATE rooms SET room = ?, capacity = ? WHERE id = ?"
-      );
+        "UPDATE rooms SET room = ?, capacity = ? WHERE id = ?"
+      )) {
       ps.setString(1, room.getRoom());
       ps.setInt(2, room.getCapacity());
       ps.setLong(3, room.getId());
@@ -113,8 +122,8 @@ public class RoomService {
   }
 
   public boolean deleteRoom(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("DELETE FROM rooms WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("DELETE FROM rooms WHERE id = ?")) {
       ps.setLong(1, id);
       
       return ps.executeUpdate() > 0;

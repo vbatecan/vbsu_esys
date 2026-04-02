@@ -15,7 +15,7 @@ public class StudentMapper {
         rs.getString("first_name"),
         rs.getString("last_name"),
         rs.getString("middle_name"),
-        rs.getDate("birth_date"),
+        rs.getDate("birthdate"),
         StudentStatus.valueOf(rs.getString("student_status")),
         rs.getLong("course_id"),
         rs.getLong("year_level"),

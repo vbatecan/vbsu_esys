@@ -18,15 +18,21 @@ import org.slf4j.LoggerFactory;
 
 public class EnrollmentService {
 
-  private final Connection conn = ConnectionService.getConnection();
-  private final Logger logger = LoggerFactory.getLogger(EnrollmentService.class);
+  private static final EnrollmentService INSTANCE = new EnrollmentService();
+  private static final Logger logger = LoggerFactory.getLogger(EnrollmentService.class);
+
+  private EnrollmentService() {
+  }
+
+  public static EnrollmentService getInstance() {
+    return INSTANCE;
+  }
 
   public List<Enrollment> getAllEnrollments() {
     List<Enrollment> enrollments = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments ORDER BY created_at DESC");
-      ResultSet rs = ps.executeQuery();
-      
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments ORDER BY created_at DESC");
+        ResultSet rs = ps.executeQuery()) {
       while (rs.next()) {
         enrollments.add(EnrollmentUtils.mapResultSetToEnrollment(rs));
       }
@@ -37,13 +43,14 @@ public class EnrollmentService {
   }
 
   public Optional<Enrollment> getEnrollmentById(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments WHERE id = ?")) {
       ps.setLong(1, id);
-      
-      ResultSet rs = ps.executeQuery();
-      if (rs.next()) {
-        return Optional.of(EnrollmentUtils.mapResultSetToEnrollment(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        if (rs.next()) {
+          return Optional.of(EnrollmentUtils.mapResultSetToEnrollment(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -53,13 +60,14 @@ public class EnrollmentService {
 
   public List<Enrollment> getEnrollmentsByStudent(String studentId) {
     List<Enrollment> enrollments = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments WHERE student_id = ? ORDER BY created_at DESC");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments WHERE student_id = ? ORDER BY created_at DESC")) {
       ps.setString(1, studentId);
-      
-      ResultSet rs = ps.executeQuery();
-      while (rs.next()) {
-        enrollments.add(EnrollmentUtils.mapResultSetToEnrollment(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          enrollments.add(EnrollmentUtils.mapResultSetToEnrollment(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -69,13 +77,14 @@ public class EnrollmentService {
 
   public List<Enrollment> getEnrollmentsByStatus(EnrollmentStatus status) {
     List<Enrollment> enrollments = new ArrayList<>();
-    try {
-      PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments WHERE status = ? ORDER BY created_at DESC");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments WHERE status = ? ORDER BY created_at DESC")) {
       ps.setString(1, status.name());
-      
-      ResultSet rs = ps.executeQuery();
-      while (rs.next()) {
-        enrollments.add(EnrollmentUtils.mapResultSetToEnrollment(rs));
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          enrollments.add(EnrollmentUtils.mapResultSetToEnrollment(rs));
+        }
       }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
@@ -84,10 +93,10 @@ public class EnrollmentService {
   }
 
   public boolean createEnrollment(Enrollment enrollment) {
-    try {
-      PreparedStatement ps = conn.prepareStatement(
-          "INSERT INTO enrollments (student_id, school_year, semester, status, max_units, total_units, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
-      );
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement(
+            "INSERT INTO enrollments (student_id, school_year, semester, status, max_units, total_units, submitted_at) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        )) {
       ps.setString(1, enrollment.getStudentId());
       ps.setString(2, enrollment.getSchoolYear());
       ps.setInt(3, enrollment.getSemester());
@@ -104,10 +113,10 @@ public class EnrollmentService {
   }
 
   public boolean updateEnrollment(Enrollment enrollment) {
-    try {
+    try (Connection conn = ConnectionService.getConnection();
       PreparedStatement ps = conn.prepareStatement(
-          "UPDATE enrollments SET student_id = ?, school_year = ?, semester = ?, status = ?, max_units = ?, total_units = ?, submitted_at = ? WHERE id = ?"
-      );
+        "UPDATE enrollments SET student_id = ?, school_year = ?, semester = ?, status = ?, max_units = ?, total_units = ?, submitted_at = ? WHERE id = ?"
+      )) {
       ps.setString(1, enrollment.getStudentId());
       ps.setString(2, enrollment.getSchoolYear());
       ps.setInt(3, enrollment.getSemester());
@@ -125,10 +134,10 @@ public class EnrollmentService {
   }
 
   public boolean updateEnrollmentStatus(Long id, EnrollmentStatus status) {
-    try {
+    try (Connection conn = ConnectionService.getConnection();
       PreparedStatement ps = conn.prepareStatement(
-          "UPDATE enrollments SET status = ? WHERE id = ?"
-      );
+        "UPDATE enrollments SET status = ? WHERE id = ?"
+      )) {
       ps.setString(1, status.name());
       ps.setLong(2, id);
       
@@ -140,8 +149,8 @@ public class EnrollmentService {
   }
 
   public boolean deleteEnrollment(Long id) {
-    try {
-      PreparedStatement ps = conn.prepareStatement("DELETE FROM enrollments WHERE id = ?");
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("DELETE FROM enrollments WHERE id = ?")) {
       ps.setLong(1, id);
       
       return ps.executeUpdate() > 0;
