@@ -219,11 +219,12 @@ public class StudentDashboard extends javax.swing.JFrame {
                 jPanel8 = new javax.swing.JPanel();
                 jLabel15 = new javax.swing.JLabel();
                 jSeparator1 = new javax.swing.JSeparator();
-                jTextField3 = new javax.swing.JTextField();
                 jLabel16 = new javax.swing.JLabel();
                 jLabel17 = new javax.swing.JLabel();
                 jSeparator2 = new javax.swing.JSeparator();
                 btnSubmitSchedule = new javax.swing.JButton();
+                jScrollPane3 = new javax.swing.JScrollPane();
+                jList1 = new javax.swing.JList<>();
                 panelMySchedule = new javax.swing.JPanel();
                 jPanel9 = new javax.swing.JPanel();
                 jPanel10 = new javax.swing.JPanel();
@@ -577,16 +578,21 @@ public class StudentDashboard extends javax.swing.JFrame {
                 tblSubjectCatalog.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 tblSubjectCatalog.setModel(new javax.swing.table.DefaultTableModel(
                         new Object [][] {
+                                {null, null, null, null},
+                                {null, null, null, null},
+                                {null, null, null, null},
+                                {null, null, null, null}
                         },
                         new String [] {
-                                "Subject Code", "Subject Name", "Units", "Section", "Schedule", "Available", "Section ID", "Subject ID"
+                                "Subject Name", "Code", "Units", "Description"
                         }
                 ) {
-                        public Class<?> getColumnClass(int columnIndex) {
-                                return String.class;
-                        }
-                        public boolean isCellEditable(int rowIndex, int columnIndex) {
-                                return false;
+                        Class[] types = new Class [] {
+                                java.lang.String.class, java.lang.String.class, java.lang.Integer.class, java.lang.String.class
+                        };
+
+                        public Class getColumnClass(int columnIndex) {
+                                return types [columnIndex];
                         }
                 });
                 jScrollPane1.setViewportView(tblSubjectCatalog);
@@ -610,7 +616,7 @@ public class StudentDashboard extends javax.swing.JFrame {
                                 .addGap(13, 13, 13)
                                 .addComponent(jLabel14)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 568, Short.MAX_VALUE)
+                                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 572, Short.MAX_VALUE)
                                 .addContainerGap())
                 );
 
@@ -624,8 +630,6 @@ public class StudentDashboard extends javax.swing.JFrame {
                 jLabel15.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 jLabel15.setText("Selected");
 
-                jTextField3.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
-
                 jLabel16.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 jLabel16.setText("Selected");
 
@@ -633,9 +637,16 @@ public class StudentDashboard extends javax.swing.JFrame {
                 jLabel17.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
                 jLabel17.setText("0 / n units");
 
-                btnSubmitSchedule.setFont(new java.awt.Font("Poppins", 0, 18)); // NOI18N
+                btnSubmitSchedule.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 btnSubmitSchedule.setText("Submit Schedule");
                 btnSubmitSchedule.addActionListener(this::btnSubmitScheduleActionPerformed);
+
+                jList1.setModel(new javax.swing.AbstractListModel<String>() {
+                        String[] strings = { "Item 1", "Item 2", "Item 3", "Item 4", "Item 5" };
+                        public int getSize() { return strings.length; }
+                        public String getElementAt(int i) { return strings[i]; }
+                });
+                jScrollPane3.setViewportView(jList1);
 
                 javax.swing.GroupLayout jPanel8Layout = new javax.swing.GroupLayout(jPanel8);
                 jPanel8.setLayout(jPanel8Layout);
@@ -644,23 +655,25 @@ public class StudentDashboard extends javax.swing.JFrame {
                         .addGroup(jPanel8Layout.createSequentialGroup()
                                 .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                         .addComponent(jSeparator1, javax.swing.GroupLayout.Alignment.TRAILING)
-                                        .addComponent(jSeparator2, javax.swing.GroupLayout.Alignment.TRAILING)
-                                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel8Layout.createSequentialGroup()
-                                                .addContainerGap()
-                                                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                                        .addComponent(jLabel17, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                                        .addComponent(jTextField3, javax.swing.GroupLayout.Alignment.TRAILING)))
                                         .addGroup(jPanel8Layout.createSequentialGroup()
-                                                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                                        .addGroup(jPanel8Layout.createSequentialGroup()
-                                                                .addGap(157, 157, 157)
-                                                                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                                                        .addComponent(jLabel16)
-                                                                        .addComponent(jLabel15)))
-                                                        .addGroup(jPanel8Layout.createSequentialGroup()
-                                                                .addGap(71, 71, 71)
-                                                                .addComponent(btnSubmitSchedule, javax.swing.GroupLayout.PREFERRED_SIZE, 219, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                                                .addGap(0, 78, Short.MAX_VALUE)))
+                                                .addGap(157, 157, 157)
+                                                .addComponent(jLabel15)
+                                                .addGap(0, 150, Short.MAX_VALUE)))
+                                .addContainerGap())
+                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel8Layout.createSequentialGroup()
+                                .addGap(0, 0, Short.MAX_VALUE)
+                                .addComponent(btnSubmitSchedule, javax.swing.GroupLayout.PREFERRED_SIZE, 219, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(67, 67, 67))
+                        .addGroup(jPanel8Layout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(jSeparator2)
+                                        .addComponent(jLabel17, javax.swing.GroupLayout.Alignment.TRAILING, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                        .addGroup(jPanel8Layout.createSequentialGroup()
+                                                .addGap(151, 151, 151)
+                                                .addComponent(jLabel16)
+                                                .addGap(0, 0, Short.MAX_VALUE))
+                                        .addComponent(jScrollPane3, javax.swing.GroupLayout.Alignment.TRAILING))
                                 .addContainerGap())
                 );
                 jPanel8Layout.setVerticalGroup(
@@ -668,19 +681,19 @@ public class StudentDashboard extends javax.swing.JFrame {
                         .addGroup(jPanel8Layout.createSequentialGroup()
                                 .addGap(11, 11, 11)
                                 .addComponent(jLabel15)
+                                .addGap(11, 11, 11)
+                                .addComponent(jScrollPane3)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jTextField3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                 .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(jLabel16)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(jLabel17)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGap(18, 18, 18)
                                 .addComponent(jSeparator2, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(btnSubmitSchedule, javax.swing.GroupLayout.PREFERRED_SIZE, 45, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addGap(32, 32, 32)
+                                .addComponent(btnSubmitSchedule)
+                                .addGap(54, 54, 54))
                 );
 
                 javax.swing.GroupLayout panelCourseRegistrationLayout = new javax.swing.GroupLayout(panelCourseRegistration);
@@ -739,15 +752,15 @@ public class StudentDashboard extends javax.swing.JFrame {
 
                 jTable2.setModel(new javax.swing.table.DefaultTableModel(
                         new Object [][] {
+                                {null, null, null, null, null, null},
+                                {null, null, null, null, null, null},
+                                {null, null, null, null, null, null},
+                                {null, null, null, null, null, null}
                         },
                         new String [] {
-                                "Code", "Course Name", "Section", "Instructor", "Schedule", "Room", "Credits"
+                                "Code", "Course Name", "Instructor", "Schedule", "Room", "Credits"
                         }
-                ) {
-                        public boolean isCellEditable(int rowIndex, int columnIndex) {
-                                return false;
-                        }
-                });
+                ));
                 jScrollPane2.setViewportView(jTable2);
 
                 javax.swing.GroupLayout jPanel9Layout = new javax.swing.GroupLayout(jPanel9);
@@ -1014,16 +1027,17 @@ public class StudentDashboard extends javax.swing.JFrame {
         private javax.swing.JLabel jLabel7;
         private javax.swing.JLabel jLabel8;
         private javax.swing.JLabel jLabel9;
+        private javax.swing.JList<String> jList1;
         private javax.swing.JPanel jPanel10;
         private javax.swing.JPanel jPanel2;
         private javax.swing.JPanel jPanel8;
         private javax.swing.JPanel jPanel9;
         private javax.swing.JScrollPane jScrollPane1;
         private javax.swing.JScrollPane jScrollPane2;
+        private javax.swing.JScrollPane jScrollPane3;
         private javax.swing.JSeparator jSeparator1;
         private javax.swing.JSeparator jSeparator2;
         private javax.swing.JTable jTable2;
-        private javax.swing.JTextField jTextField3;
         private javax.swing.JProgressBar pBarRegistration;
         private javax.swing.JPanel panelAcademicOverview;
         private javax.swing.JPanel panelCourseRegistration;
