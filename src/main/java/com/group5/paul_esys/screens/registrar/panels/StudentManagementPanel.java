@@ -26,7 +26,6 @@ public final class StudentManagementPanel extends javax.swing.JPanel {
 	public StudentManagementPanel() {
 		initComponents();
 		this.initializeStudents();
-		tableRegistrarStudents.setComponentPopupMenu(popMenuRegistrarTable);
 	}
 
 	/**
@@ -38,9 +37,6 @@ public final class StudentManagementPanel extends javax.swing.JPanel {
         // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
         private void initComponents() {
 
-                popMenuRegistrarTable = new javax.swing.JPopupMenu();
-                mItemRegistrarDelete = new javax.swing.JMenuItem();
-                mItemRegistrarUpdate = new javax.swing.JMenuItem();
                 panelStudents = new javax.swing.JPanel();
                 jPanel6 = new javax.swing.JPanel();
                 jPanel2 = new javax.swing.JPanel();
@@ -75,12 +71,6 @@ public final class StudentManagementPanel extends javax.swing.JPanel {
                 txtStudentEmailAddress = new javax.swing.JTextField();
                 jLabel15 = new javax.swing.JLabel();
                 jLabel16 = new javax.swing.JLabel();
-
-                mItemRegistrarDelete.setText("Delete Student");
-                popMenuRegistrarTable.add(mItemRegistrarDelete);
-
-                mItemRegistrarUpdate.setText("Update Student");
-                popMenuRegistrarTable.add(mItemRegistrarUpdate);
 
                 setLayout(new java.awt.BorderLayout());
 
@@ -480,10 +470,7 @@ public final class StudentManagementPanel extends javax.swing.JPanel {
         private javax.swing.JPanel jPanel5;
         private javax.swing.JPanel jPanel6;
         private javax.swing.JScrollPane jScrollPane1;
-        private javax.swing.JMenuItem mItemRegistrarDelete;
-        private javax.swing.JMenuItem mItemRegistrarUpdate;
         private javax.swing.JPanel panelStudents;
-        private javax.swing.JPopupMenu popMenuRegistrarTable;
         private javax.swing.JTable tableRegistrarStudents;
         private javax.swing.JTextField txtStudentCourse;
         private javax.swing.JTextField txtStudentEmailAddress;

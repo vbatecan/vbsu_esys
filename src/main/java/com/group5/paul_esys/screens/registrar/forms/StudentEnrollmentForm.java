@@ -21,6 +21,7 @@ public class StudentEnrollmentForm extends javax.swing.JFrame {
    */
   public StudentEnrollmentForm() {
     FlatMTGitHubIJTheme.setup();
+    this.setUndecorated(true);
     initComponents();
     this.setLocationRelativeTo(null);
   }

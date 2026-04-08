@@ -71,10 +71,12 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                         jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(jPanel3Layout.createSequentialGroup()
                                 .addContainerGap()
-                                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                        .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, 280, Short.MAX_VALUE)
+                                .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addGroup(jPanel3Layout.createSequentialGroup()
+                                                .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 280, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addGap(0, 80, Short.MAX_VALUE))
                                         .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                                .addContainerGap(86, Short.MAX_VALUE))
+                                .addContainerGap())
                 );
                 jPanel3Layout.setVerticalGroup(
                         jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -103,10 +105,12 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                         jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(jPanel4Layout.createSequentialGroup()
                                 .addContainerGap()
-                                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                        .addComponent(jLabel2, javax.swing.GroupLayout.DEFAULT_SIZE, 250, Short.MAX_VALUE)
+                                .addGroup(jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addGroup(jPanel4Layout.createSequentialGroup()
+                                                .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 250, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addGap(0, 105, Short.MAX_VALUE))
                                         .addComponent(jLabel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                                .addContainerGap(111, Short.MAX_VALUE))
+                                .addContainerGap())
                 );
                 jPanel4Layout.setVerticalGroup(
                         jPanel4Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -136,9 +140,11 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                         .addGroup(jPanel7Layout.createSequentialGroup()
                                 .addContainerGap()
                                 .addGroup(jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                        .addComponent(jLabel18)
-                                        .addComponent(jLabel19, javax.swing.GroupLayout.PREFERRED_SIZE, 273, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addContainerGap(93, Short.MAX_VALUE))
+                                        .addGroup(jPanel7Layout.createSequentialGroup()
+                                                .addComponent(jLabel18)
+                                                .addGap(0, 87, Short.MAX_VALUE))
+                                        .addComponent(jLabel19, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                .addContainerGap())
                 );
                 jPanel7Layout.setVerticalGroup(
                         jPanel7Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -155,10 +161,7 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
 
                 tableStudents.setModel(new javax.swing.table.DefaultTableModel(
                         new Object [][] {
-                                {null, null, null, null, null, null},
-                                {null, null, null, null, null, null},
-                                {null, null, null, null, null, null},
-                                {null, null, null, null, null, null}
+
                         },
                         new String [] {
                                 "Student ID", "First Name", "Last Name", "Year Level", "Status", "Select"
@@ -185,17 +188,28 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
 
                 txtSearch.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 txtSearch.setBorder(new com.group5.paul_esys.ui.TextFieldRoundBorder());
+                txtSearch.addKeyListener(new java.awt.event.KeyAdapter() {
+                        public void keyReleased(java.awt.event.KeyEvent evt) {
+                                txtSearchKeyReleased(evt);
+                        }
+                });
 
                 jLabel21.setText("Year Level");
 
                 cbxYearlevel.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "ALL" }));
+                cbxYearlevel.addItemListener(this::cbxYearlevelItemStateChanged);
 
                 jLabel22.setText("Status");
 
                 cbxStatus.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "ALL" }));
+                cbxStatus.addItemListener(this::cbxStatusItemStateChanged);
 
+                btnDecline.setBackground(new java.awt.Color(119, 0, 0));
+                btnDecline.setForeground(new java.awt.Color(255, 255, 255));
                 btnDecline.setText("Decline");
 
+                btnApprove.setBackground(new java.awt.Color(153, 204, 255));
+                btnApprove.setForeground(new java.awt.Color(255, 255, 255));
                 btnApprove.setText("Approve");
 
                 javax.swing.GroupLayout jPanel9Layout = new javax.swing.GroupLayout(jPanel9);
@@ -219,9 +233,9 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                                 .addComponent(cbxStatus, javax.swing.GroupLayout.PREFERRED_SIZE, 175, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addComponent(btnApprove, javax.swing.GroupLayout.DEFAULT_SIZE, 137, Short.MAX_VALUE)
+                                                .addComponent(btnApprove, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addComponent(btnDecline, javax.swing.GroupLayout.DEFAULT_SIZE, 136, Short.MAX_VALUE)))
+                                                .addComponent(btnDecline, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
                                 .addContainerGap())
                 );
                 jPanel9Layout.setVerticalGroup(
@@ -229,7 +243,6 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                         .addGroup(jPanel9Layout.createSequentialGroup()
                                 .addContainerGap()
                                 .addGroup(jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                        .addComponent(btnDecline, javax.swing.GroupLayout.DEFAULT_SIZE, 59, Short.MAX_VALUE)
                                         .addGroup(jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                                                 .addComponent(cbxStatus, javax.swing.GroupLayout.DEFAULT_SIZE, 36, Short.MAX_VALUE)
                                                 .addComponent(jLabel22)
@@ -237,11 +250,14 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                                         .addGroup(jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                                                 .addComponent(cbxYearlevel, javax.swing.GroupLayout.DEFAULT_SIZE, 37, Short.MAX_VALUE)
                                                 .addComponent(jLabel21))
-                                        .addGroup(jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addComponent(jLabel20)))
+                                        .addGroup(jPanel9Layout.createSequentialGroup()
+                                                .addGroup(jPanel9Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                                        .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                        .addComponent(jLabel20))
+                                                .addGap(0, 0, Short.MAX_VALUE))
+                                        .addComponent(btnDecline, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 520, Short.MAX_VALUE)
+                                .addComponent(jScrollPane2, javax.swing.GroupLayout.DEFAULT_SIZE, 505, Short.MAX_VALUE)
                                 .addContainerGap())
                 );
 
@@ -250,15 +266,15 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                 panelDashboardLayout.setHorizontalGroup(
                         panelDashboardLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(panelDashboardLayout.createSequentialGroup()
-                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                .addGroup(panelDashboardLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                        .addComponent(jPanel9, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addContainerGap(14, Short.MAX_VALUE)
+                                .addGroup(panelDashboardLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                                         .addGroup(panelDashboardLayout.createSequentialGroup()
                                                 .addComponent(jPanel3, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                 .addGap(12, 12, 12)
                                                 .addComponent(jPanel4, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                                .addComponent(jPanel7, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                        .addComponent(jPanel9, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                                 .addGap(6, 6, 6)
                                 .addComponent(jLabel1))
                 );
@@ -301,6 +317,18 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                                         .addGap(0, 0, Short.MAX_VALUE)))
                 );
         }// </editor-fold>//GEN-END:initComponents
+
+        private void cbxStatusItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cbxStatusItemStateChanged
+                // TODO add your handling code here:
+        }//GEN-LAST:event_cbxStatusItemStateChanged
+
+        private void cbxYearlevelItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cbxYearlevelItemStateChanged
+                // TODO add your handling code here:
+        }//GEN-LAST:event_cbxYearlevelItemStateChanged
+
+        private void txtSearchKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_txtSearchKeyReleased
+                // TODO add your handling code here:
+        }//GEN-LAST:event_txtSearchKeyReleased
 
 
         // Variables declaration - do not modify//GEN-BEGIN:variables
