@@ -1,5 +1,14 @@
 package com.group5.paul_esys.screens.registrar.forms;
 
+import com.group5.paul_esys.modules.curriculum.model.Curriculum;
+import com.group5.paul_esys.modules.curriculum.services.CurriculumService;
+import com.group5.paul_esys.modules.semester.model.Semester;
+import com.group5.paul_esys.modules.semester.services.SemesterService;
+import java.time.ZoneId;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import javax.swing.JOptionPane;
+
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
  * Click nbfs://nbhost/SystemFileSystem/Templates/GUIForms/JFrame.java to edit this template
@@ -12,14 +21,139 @@ package com.group5.paul_esys.screens.registrar.forms;
 public class SemesterForm extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(SemesterForm.class.getName());
+    private final CurriculumService curriculumService = CurriculumService.getInstance();
+    private final SemesterService semesterService = SemesterService.getInstance();
+    private final Map<String, Long> curriculumIdByLabel = new LinkedHashMap<>();
+    private final Runnable onSavedCallback;
+    private final Semester editingSemester;
 
     /**
      * Creates new form SemForm
      */
     public SemesterForm() {
+        this(null, null);
+    }
+
+    public SemesterForm(Semester editingSemester, Runnable onSavedCallback) {
+        this.editingSemester = editingSemester;
+        this.onSavedCallback = onSavedCallback;
         this.setUndecorated(true);
         initComponents();
         this.setLocationRelativeTo(null);
+        initializeForm();
+    }
+
+    private void initializeForm() {
+        loadCurriculums();
+
+        if (editingSemester == null) {
+            return;
+        }
+
+        jLabel1.setText("Update Semester");
+        jLabel4.setText("Update existing semester");
+        btnSave.setText("Update");
+
+        txtSem.setText(editingSemester.getSemester());
+
+        curriculumService
+            .getCurriculumById(editingSemester.getCurriculumId())
+            .ifPresent(curriculum -> cbxCur.setSelectedItem(buildCurriculumLabel(curriculum)));
+    }
+
+    private String buildCurriculumLabel(Curriculum curriculum) {
+        String curriculumName = curriculum.getName() == null ? "Curriculum" : curriculum.getName();
+        if (curriculum.getCurYear() == null) {
+            return curriculumName;
+        }
+
+        int year = curriculum
+            .getCurYear()
+            .toInstant()
+            .atZone(ZoneId.systemDefault())
+            .toLocalDate()
+            .getYear();
+
+        return curriculumName + " (" + year + ")";
+    }
+
+    private void loadCurriculums() {
+        cbxCur.removeAllItems();
+        curriculumIdByLabel.clear();
+
+        for (Curriculum curriculum : curriculumService.getAllCurriculums()) {
+            String label = buildCurriculumLabel(curriculum);
+            cbxCur.addItem(label);
+            curriculumIdByLabel.put(label, curriculum.getId());
+        }
+    }
+
+    private boolean isValidForm() {
+        if (txtSem.getText() == null || txtSem.getText().trim().isEmpty()) {
+            JOptionPane.showMessageDialog(
+                this,
+                "Semester name is required.",
+                "Validation Error",
+                JOptionPane.WARNING_MESSAGE
+            );
+            return false;
+        }
+
+        Object selectedCurriculum = cbxCur.getSelectedItem();
+        if (selectedCurriculum == null || !curriculumIdByLabel.containsKey(selectedCurriculum.toString())) {
+            JOptionPane.showMessageDialog(
+                this,
+                "Curriculum is required.",
+                "Validation Error",
+                JOptionPane.WARNING_MESSAGE
+            );
+            return false;
+        }
+
+        return true;
+    }
+
+    private void saveSemester() {
+        if (!isValidForm()) {
+            return;
+        }
+
+        String selectedCurriculum = cbxCur.getSelectedItem().toString();
+        Long curriculumId = curriculumIdByLabel.get(selectedCurriculum);
+
+        Semester semester = editingSemester == null ? new Semester() : editingSemester;
+        semester
+            .setSemester(txtSem.getText().trim())
+            .setCurriculumId(curriculumId);
+
+        boolean success = editingSemester == null
+            ? semesterService.createSemester(semester)
+            : semesterService.updateSemester(semester);
+
+        if (!success) {
+            JOptionPane.showMessageDialog(
+                this,
+                "Failed to save semester. Please try again.",
+                "Save Failed",
+                JOptionPane.ERROR_MESSAGE
+            );
+            return;
+        }
+
+        JOptionPane.showMessageDialog(
+            this,
+            editingSemester == null
+                ? "Semester created successfully."
+                : "Semester updated successfully.",
+            "Success",
+            JOptionPane.INFORMATION_MESSAGE
+        );
+
+        if (onSavedCallback != null) {
+            onSavedCallback.run();
+        }
+
+        dispose();
     }
 
     /**
@@ -96,15 +230,15 @@ public class SemesterForm extends javax.swing.JFrame {
         }// </editor-fold>//GEN-END:initComponents
 
     private void txtSemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtSemActionPerformed
-        // TODO add your handling code here:
+        // no-op
     }//GEN-LAST:event_txtSemActionPerformed
 
     private void btnSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSaveActionPerformed
-        // TODO add your handling code here:
+        saveSemester();
     }//GEN-LAST:event_btnSaveActionPerformed
 
     private void btnCancelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCancelActionPerformed
-        // TODO add your handling code here:
+        dispose();
     }//GEN-LAST:event_btnCancelActionPerformed
 
     /**
