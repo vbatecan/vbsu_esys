@@ -5,16 +5,16 @@ import java.util.Date;
 public class Curriculum {
 
   private Long id;
-  private String semester;
+  private String name;
   private Date curYear;
   private Long course;
 
   public Curriculum() {
   }
 
-  public Curriculum(Long id, String semester, Date curYear, Long course) {
+  public Curriculum(Long id, String name, Date curYear, Long course) {
     this.id = id;
-    this.semester = semester;
+    this.name = name;
     this.curYear = curYear;
     this.course = course;
   }
@@ -28,13 +28,21 @@ public class Curriculum {
     return this;
   }
 
+  public String getName() {
+    return name;
+  }
+
+  public Curriculum setName(String name) {
+    this.name = name;
+    return this;
+  }
+
   public String getSemester() {
-    return semester;
+    return getName();
   }
 
   public Curriculum setSemester(String semester) {
-    this.semester = semester;
-    return this;
+    return setName(semester);
   }
 
   public Date getCurYear() {
