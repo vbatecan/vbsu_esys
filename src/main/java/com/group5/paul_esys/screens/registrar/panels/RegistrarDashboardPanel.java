@@ -4,17 +4,42 @@
  */
 package com.group5.paul_esys.screens.registrar.panels;
 
+import com.group5.paul_esys.modules.enums.EnrollmentStatus;
+import com.group5.paul_esys.modules.registrar.model.EnrollmentApplication;
+import com.group5.paul_esys.modules.registrar.services.RegistrarEnrollmentService;
+
+import java.awt.event.ItemEvent;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
+import javax.swing.table.TableColumn;
+
 /**
  *
  * @author nytri
  */
 public class RegistrarDashboardPanel extends javax.swing.JPanel {
 
+                private static final String FILTER_ALL = "ALL";
+                private static final int COL_YEAR_LEVEL = 3;
+                private static final int COL_SELECT = 5;
+                private static final int COL_ENROLLMENT_ID = 6;
+
+                private final RegistrarEnrollmentService enrollmentService = RegistrarEnrollmentService.getInstance();
+                private List<EnrollmentApplication> applications = List.of();
+                private boolean filterOptionsUpdating = false;
+
 	/**
 	 * Creates new form RegistrarDashboardPanel
 	 */
 	public RegistrarDashboardPanel() {
 		initComponents();
+		initializeDashboard();
 	}
 
 	/**
@@ -29,14 +54,14 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                 panelDashboard = new javax.swing.JPanel();
                 jLabel1 = new javax.swing.JLabel();
                 jPanel3 = new javax.swing.JPanel();
-                jLabel3 = new javax.swing.JLabel();
-                jLabel4 = new javax.swing.JLabel();
+                label3 = new javax.swing.JLabel();
+                lblPendingActions = new javax.swing.JLabel();
                 jPanel4 = new javax.swing.JPanel();
                 jLabel2 = new javax.swing.JLabel();
-                jLabel5 = new javax.swing.JLabel();
+                lblTotalRegistered = new javax.swing.JLabel();
                 jPanel7 = new javax.swing.JPanel();
                 jLabel18 = new javax.swing.JLabel();
-                jLabel19 = new javax.swing.JLabel();
+                lblApplications = new javax.swing.JLabel();
                 jPanel9 = new javax.swing.JPanel();
                 jScrollPane2 = new javax.swing.JScrollPane();
                 tableStudents = new javax.swing.JTable();
@@ -57,13 +82,13 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                 jPanel3.setBackground(new java.awt.Color(255, 255, 255));
                 jPanel3.setBorder(new com.group5.paul_esys.ui.PanelRoundBorder());
 
-                jLabel3.setFont(new java.awt.Font("Poppins", 0, 24)); // NOI18N
-                jLabel3.setForeground(new java.awt.Color(0, 0, 102));
-                jLabel3.setText("Pending Actions");
+                label3.setFont(new java.awt.Font("Poppins", 0, 24)); // NOI18N
+                label3.setForeground(new java.awt.Color(0, 0, 102));
+                label3.setText("Pending Actions");
 
-                jLabel4.setFont(new java.awt.Font("Poppins", 0, 18)); // NOI18N
-                jLabel4.setForeground(new java.awt.Color(0, 0, 0));
-                jLabel4.setText("0");
+                lblPendingActions.setFont(new java.awt.Font("Poppins", 0, 18)); // NOI18N
+                lblPendingActions.setForeground(new java.awt.Color(0, 0, 0));
+                lblPendingActions.setText("0");
 
                 javax.swing.GroupLayout jPanel3Layout = new javax.swing.GroupLayout(jPanel3);
                 jPanel3.setLayout(jPanel3Layout);
@@ -73,18 +98,18 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                                 .addContainerGap()
                                 .addGroup(jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                         .addGroup(jPanel3Layout.createSequentialGroup()
-                                                .addComponent(jLabel3, javax.swing.GroupLayout.PREFERRED_SIZE, 280, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addComponent(label3, javax.swing.GroupLayout.PREFERRED_SIZE, 280, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                 .addGap(0, 80, Short.MAX_VALUE))
-                                        .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                        .addComponent(lblPendingActions, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                                 .addContainerGap())
                 );
                 jPanel3Layout.setVerticalGroup(
                         jPanel3Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(jPanel3Layout.createSequentialGroup()
                                 .addContainerGap()
-                                .addComponent(jLabel3)
+                                .addComponent(label3)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(lblPendingActions, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                 .addContainerGap())
                 );
 
@@ -95,9 +120,9 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                 jLabel2.setForeground(new java.awt.Color(0, 0, 102));
                 jLabel2.setText("Total Registered");
 
-                jLabel5.setFont(new java.awt.Font("Poppins", 0, 18)); // NOI18N
-                jLabel5.setForeground(new java.awt.Color(0, 0, 0));
-                jLabel5.setText("0");
+                lblTotalRegistered.setFont(new java.awt.Font("Poppins", 0, 18)); // NOI18N
+                lblTotalRegistered.setForeground(new java.awt.Color(0, 0, 0));
+                lblTotalRegistered.setText("0");
 
                 javax.swing.GroupLayout jPanel4Layout = new javax.swing.GroupLayout(jPanel4);
                 jPanel4.setLayout(jPanel4Layout);
@@ -109,7 +134,7 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                                         .addGroup(jPanel4Layout.createSequentialGroup()
                                                 .addComponent(jLabel2, javax.swing.GroupLayout.PREFERRED_SIZE, 250, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                 .addGap(0, 105, Short.MAX_VALUE))
-                                        .addComponent(jLabel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                        .addComponent(lblTotalRegistered, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                                 .addContainerGap())
                 );
                 jPanel4Layout.setVerticalGroup(
@@ -118,7 +143,7 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                                 .addContainerGap()
                                 .addComponent(jLabel2)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jLabel5, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(lblTotalRegistered, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                 .addContainerGap())
                 );
 
@@ -129,9 +154,9 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                 jLabel18.setForeground(new java.awt.Color(0, 0, 102));
                 jLabel18.setText("Applications To Review");
 
-                jLabel19.setFont(new java.awt.Font("Poppins", 0, 18)); // NOI18N
-                jLabel19.setForeground(new java.awt.Color(0, 0, 0));
-                jLabel19.setText("0");
+                lblApplications.setFont(new java.awt.Font("Poppins", 0, 18)); // NOI18N
+                lblApplications.setForeground(new java.awt.Color(0, 0, 0));
+                lblApplications.setText("0");
 
                 javax.swing.GroupLayout jPanel7Layout = new javax.swing.GroupLayout(jPanel7);
                 jPanel7.setLayout(jPanel7Layout);
@@ -143,7 +168,7 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                                         .addGroup(jPanel7Layout.createSequentialGroup()
                                                 .addComponent(jLabel18)
                                                 .addGap(0, 87, Short.MAX_VALUE))
-                                        .addComponent(jLabel19, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                        .addComponent(lblApplications, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                                 .addContainerGap())
                 );
                 jPanel7Layout.setVerticalGroup(
@@ -152,7 +177,7 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                                 .addContainerGap()
                                 .addComponent(jLabel18)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jLabel19, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addComponent(lblApplications, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                 .addContainerGap())
                 );
 
@@ -167,14 +192,14 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                                 "Student ID", "First Name", "Last Name", "Year Level", "Status", "Select"
                         }
                 ) {
-                        Class[] types = new Class [] {
+                        Class<?>[] types = new Class<?> [] {
                                 java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.Object.class, java.lang.Object.class, java.lang.Boolean.class
                         };
                         boolean[] canEdit = new boolean [] {
                                 false, false, false, false, false, false
                         };
 
-                        public Class getColumnClass(int columnIndex) {
+                        public Class<?> getColumnClass(int columnIndex) {
                                 return types [columnIndex];
                         }
 
@@ -207,10 +232,12 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
                 btnDecline.setBackground(new java.awt.Color(119, 0, 0));
                 btnDecline.setForeground(new java.awt.Color(255, 255, 255));
                 btnDecline.setText("Decline");
+                btnDecline.addActionListener(this::btnDeclineActionPerformed);
 
                 btnApprove.setBackground(new java.awt.Color(153, 204, 255));
                 btnApprove.setForeground(new java.awt.Color(255, 255, 255));
                 btnApprove.setText("Approve");
+                btnApprove.addActionListener(this::btnApproveActionPerformed);
 
                 javax.swing.GroupLayout jPanel9Layout = new javax.swing.GroupLayout(jPanel9);
                 jPanel9.setLayout(jPanel9Layout);
@@ -319,16 +346,289 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
         }// </editor-fold>//GEN-END:initComponents
 
         private void cbxStatusItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cbxStatusItemStateChanged
-                // TODO add your handling code here:
+                if (evt.getStateChange() == ItemEvent.SELECTED && !filterOptionsUpdating) {
+                        applyFilters();
+                }
         }//GEN-LAST:event_cbxStatusItemStateChanged
 
         private void cbxYearlevelItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cbxYearlevelItemStateChanged
-                // TODO add your handling code here:
+                if (evt.getStateChange() == ItemEvent.SELECTED && !filterOptionsUpdating) {
+                        applyFilters();
+                }
         }//GEN-LAST:event_cbxYearlevelItemStateChanged
 
         private void txtSearchKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_txtSearchKeyReleased
-                // TODO add your handling code here:
+                applyFilters();
         }//GEN-LAST:event_txtSearchKeyReleased
+
+        private void btnApproveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnApproveActionPerformed
+                processSelectedApplications(EnrollmentStatus.APPROVED, "approve");
+        }//GEN-LAST:event_btnApproveActionPerformed
+
+        private void btnDeclineActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDeclineActionPerformed
+                processSelectedApplications(EnrollmentStatus.CANCELLED, "decline");
+        }//GEN-LAST:event_btnDeclineActionPerformed
+
+        private void initializeDashboard() {
+                configureTable();
+                reloadDashboardData();
+        }
+
+        private void configureTable() {
+                DefaultTableModel model = new DefaultTableModel(
+                    new Object[][]{},
+                    new String[]{
+                            "Student ID",
+                            "First Name",
+                            "Last Name",
+                            "Year Level",
+                            "Status",
+                            "Select",
+                            "Enrollment ID"
+                    }
+                ) {
+                        @Override
+                        public Class<?> getColumnClass(int columnIndex) {
+                                return switch (columnIndex) {
+                                        case COL_YEAR_LEVEL -> Integer.class;
+                                        case COL_SELECT -> Boolean.class;
+                                        case COL_ENROLLMENT_ID -> Long.class;
+                                        default -> String.class;
+                                };
+                        }
+
+                        @Override
+                        public boolean isCellEditable(int rowIndex, int columnIndex) {
+                                return columnIndex == COL_SELECT;
+                        }
+                };
+
+                tableStudents.setModel(model);
+                tableStudents.setRowHeight(28);
+
+                TableColumn hiddenEnrollmentColumn = tableStudents.getColumnModel().getColumn(COL_ENROLLMENT_ID);
+                hiddenEnrollmentColumn.setMinWidth(0);
+                hiddenEnrollmentColumn.setMaxWidth(0);
+                hiddenEnrollmentColumn.setPreferredWidth(0);
+        }
+
+        private void reloadDashboardData() {
+                applications = enrollmentService.getEnrollmentApplications();
+                refreshSummaryCards();
+                reloadFilterOptions();
+                applyFilters();
+        }
+
+        private void refreshSummaryCards() {
+                lblPendingActions.setText(String.valueOf(enrollmentService.countPendingActions()));
+                lblApplications.setText(String.valueOf(enrollmentService.countApplicationsToReview()));
+                lblTotalRegistered.setText(String.valueOf(enrollmentService.countTotalRegistered()));
+        }
+
+        private void reloadFilterOptions() {
+                filterOptionsUpdating = true;
+                try {
+                        String selectedYear = cbxYearlevel.getSelectedItem() == null
+                            ? FILTER_ALL
+                            : cbxYearlevel.getSelectedItem().toString();
+                        String selectedStatus = cbxStatus.getSelectedItem() == null
+                            ? FILTER_ALL
+                            : cbxStatus.getSelectedItem().toString();
+
+                        Set<Integer> yearLevels = applications.stream()
+                            .map(EnrollmentApplication::getYearLevel)
+                            .filter(yearLevel -> yearLevel != null && yearLevel > 0)
+                            .collect(LinkedHashSet::new, LinkedHashSet::add, LinkedHashSet::addAll);
+
+                        List<Integer> sortedYearLevels = yearLevels.stream()
+                            .sorted(Comparator.naturalOrder())
+                            .toList();
+
+                        cbxYearlevel.removeAllItems();
+                        cbxYearlevel.addItem(FILTER_ALL);
+                        for (Integer yearLevel : sortedYearLevels) {
+                                cbxYearlevel.addItem(String.valueOf(yearLevel));
+                        }
+
+                        if (containsItem(cbxYearlevel, selectedYear)) {
+                                cbxYearlevel.setSelectedItem(selectedYear);
+                        } else {
+                                cbxYearlevel.setSelectedItem(FILTER_ALL);
+                        }
+
+                        cbxStatus.removeAllItems();
+                        cbxStatus.addItem(FILTER_ALL);
+                        for (EnrollmentStatus status : EnrollmentStatus.values()) {
+                                cbxStatus.addItem(status.name());
+                        }
+
+                        if (containsItem(cbxStatus, selectedStatus)) {
+                                cbxStatus.setSelectedItem(selectedStatus);
+                        } else if (containsItem(cbxStatus, EnrollmentStatus.SUBMITTED.name())) {
+                                cbxStatus.setSelectedItem(EnrollmentStatus.SUBMITTED.name());
+                        } else {
+                                cbxStatus.setSelectedItem(FILTER_ALL);
+                        }
+                } finally {
+                        filterOptionsUpdating = false;
+                }
+        }
+
+        private boolean containsItem(javax.swing.JComboBox<String> comboBox, String value) {
+                if (value == null) {
+                        return false;
+                }
+
+                for (int i = 0; i < comboBox.getItemCount(); i++) {
+                        if (value.equals(comboBox.getItemAt(i))) {
+                                return true;
+                        }
+                }
+
+                return false;
+        }
+
+        private void applyFilters() {
+                String searchText = txtSearch.getText() == null ? "" : txtSearch.getText().trim().toLowerCase();
+                String selectedYearLevel = cbxYearlevel.getSelectedItem() == null
+                    ? FILTER_ALL
+                    : cbxYearlevel.getSelectedItem().toString();
+                String selectedStatus = cbxStatus.getSelectedItem() == null
+                    ? FILTER_ALL
+                    : cbxStatus.getSelectedItem().toString();
+
+                DefaultTableModel model = (DefaultTableModel) tableStudents.getModel();
+                model.setRowCount(0);
+
+                for (EnrollmentApplication application : applications) {
+                        if (!matchesSearch(application, searchText)) {
+                                continue;
+                        }
+                        if (!matchesYearLevel(application, selectedYearLevel)) {
+                                continue;
+                        }
+                        if (!matchesStatus(application, selectedStatus)) {
+                                continue;
+                        }
+
+                        model.addRow(
+                            new Object[]{
+                                    application.getStudentId(),
+                                    application.getFirstName(),
+                                    application.getLastName(),
+                                    application.getYearLevel(),
+                                    application.getStatus().name(),
+                                    Boolean.FALSE,
+                                    application.getEnrollmentId()
+                            }
+                        );
+                }
+        }
+
+        private boolean matchesSearch(EnrollmentApplication application, String searchText) {
+                if (searchText == null || searchText.isBlank()) {
+                        return true;
+                }
+
+                String fullName = String.format(
+                    "%s %s",
+                    application.getFirstName() == null ? "" : application.getFirstName(),
+                    application.getLastName() == null ? "" : application.getLastName()
+                ).trim().toLowerCase();
+
+                String studentId = application.getStudentId() == null
+                    ? ""
+                    : application.getStudentId().toLowerCase();
+
+                return fullName.contains(searchText) || studentId.contains(searchText);
+        }
+
+        private boolean matchesYearLevel(EnrollmentApplication application, String selectedYearLevel) {
+                if (FILTER_ALL.equals(selectedYearLevel)) {
+                        return true;
+                }
+
+                if (application.getYearLevel() == null) {
+                        return false;
+                }
+
+                return selectedYearLevel.equals(String.valueOf(application.getYearLevel()));
+        }
+
+        private boolean matchesStatus(EnrollmentApplication application, String selectedStatus) {
+                if (FILTER_ALL.equals(selectedStatus)) {
+                        return true;
+                }
+
+                if (application.getStatus() == null) {
+                        return false;
+                }
+
+                return selectedStatus.equals(application.getStatus().name());
+        }
+
+        private void processSelectedApplications(EnrollmentStatus targetStatus, String actionLabel) {
+                List<Long> selectedIds = getSelectedEnrollmentIds();
+                if (selectedIds.isEmpty()) {
+                        JOptionPane.showMessageDialog(
+                            this,
+                            "Please select at least one application.",
+                            "No Selection",
+                            JOptionPane.WARNING_MESSAGE
+                        );
+                        return;
+                }
+
+                int choice = JOptionPane.showConfirmDialog(
+                    this,
+                    "Are you sure you want to " + actionLabel + " the selected applications?",
+                    "Confirm Action",
+                    JOptionPane.YES_NO_OPTION
+                );
+
+                if (choice != JOptionPane.YES_OPTION) {
+                        return;
+                }
+
+                int updatedCount = enrollmentService.updateApplicationsStatus(selectedIds, targetStatus);
+                if (updatedCount <= 0) {
+                        JOptionPane.showMessageDialog(
+                            this,
+                            "No applications were updated. They may have already been processed.",
+                            "No Changes",
+                            JOptionPane.WARNING_MESSAGE
+                        );
+                        reloadDashboardData();
+                        return;
+                }
+
+                JOptionPane.showMessageDialog(
+                    this,
+                    updatedCount + " application(s) updated successfully.",
+                    "Success",
+                    JOptionPane.INFORMATION_MESSAGE
+                );
+                reloadDashboardData();
+        }
+
+        private List<Long> getSelectedEnrollmentIds() {
+                List<Long> selectedIds = new ArrayList<>();
+                DefaultTableModel model = (DefaultTableModel) tableStudents.getModel();
+
+                for (int row = 0; row < model.getRowCount(); row++) {
+                        Object selectedValue = model.getValueAt(row, COL_SELECT);
+                        if (!(selectedValue instanceof Boolean) || !((Boolean) selectedValue)) {
+                                continue;
+                        }
+
+                        Object enrollmentIdValue = model.getValueAt(row, COL_ENROLLMENT_ID);
+                        if (enrollmentIdValue instanceof Long enrollmentId) {
+                                selectedIds.add(enrollmentId);
+                        }
+                }
+
+                return selectedIds;
+        }
 
 
         // Variables declaration - do not modify//GEN-BEGIN:variables
@@ -338,19 +638,19 @@ public class RegistrarDashboardPanel extends javax.swing.JPanel {
         private javax.swing.JComboBox<String> cbxYearlevel;
         private javax.swing.JLabel jLabel1;
         private javax.swing.JLabel jLabel18;
-        private javax.swing.JLabel jLabel19;
         private javax.swing.JLabel jLabel2;
         private javax.swing.JLabel jLabel20;
         private javax.swing.JLabel jLabel21;
         private javax.swing.JLabel jLabel22;
-        private javax.swing.JLabel jLabel3;
-        private javax.swing.JLabel jLabel4;
-        private javax.swing.JLabel jLabel5;
         private javax.swing.JPanel jPanel3;
         private javax.swing.JPanel jPanel4;
         private javax.swing.JPanel jPanel7;
         private javax.swing.JPanel jPanel9;
         private javax.swing.JScrollPane jScrollPane2;
+        private javax.swing.JLabel label3;
+        private javax.swing.JLabel lblApplications;
+        private javax.swing.JLabel lblPendingActions;
+        private javax.swing.JLabel lblTotalRegistered;
         private javax.swing.JPanel panelDashboard;
         private javax.swing.JTable tableStudents;
         private javax.swing.JTextField txtSearch;
