@@ -84,9 +84,11 @@ public class SignIn extends javax.swing.JFrame {
                 btnSignIn.addActionListener(this::btnSignInActionPerformed);
 
                 txtEmail.setFont(new java.awt.Font("Liberation Sans", 0, 18)); // NOI18N
+                txtEmail.setText("registrar@test.com");
                 txtEmail.setBorder(new com.group5.paul_esys.ui.TextFieldRoundBorder());
 
                 txtPassword.setFont(new java.awt.Font("Liberation Sans", 0, 18)); // NOI18N
+                txtPassword.setText("12345678");
                 txtPassword.setBorder(new com.group5.paul_esys.ui.TextFieldRoundBorder());
                 txtPassword.addKeyListener(new java.awt.event.KeyAdapter() {
                         public void keyReleased(java.awt.event.KeyEvent evt) {

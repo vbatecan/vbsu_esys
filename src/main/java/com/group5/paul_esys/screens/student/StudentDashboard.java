@@ -11,8 +11,13 @@ import com.group5.paul_esys.modules.enrollments.model.Enrollment;
 import com.group5.paul_esys.modules.enrollments.model.EnrollmentDetail;
 import com.group5.paul_esys.modules.enrollments.services.EnrollmentDetailService;
 import com.group5.paul_esys.modules.enrollments.services.EnrollmentService;
+import com.group5.paul_esys.modules.enrollments.services.StudentEnrolledSubjectService;
+import com.group5.paul_esys.modules.enrollment_period.services.EnrollmentPeriodService;
 import com.group5.paul_esys.modules.enums.EnrollmentDetailStatus;
 import com.group5.paul_esys.modules.enums.EnrollmentStatus;
+import com.group5.paul_esys.modules.enums.StudentEnrolledSubjectStatus;
+import com.group5.paul_esys.modules.offerings.model.Offering;
+import com.group5.paul_esys.modules.offerings.services.OfferingService;
 import com.group5.paul_esys.modules.schedules.model.Schedule;
 import com.group5.paul_esys.modules.schedules.services.ScheduleService;
 import com.group5.paul_esys.modules.sections.model.Section;
@@ -22,7 +27,11 @@ import com.group5.paul_esys.modules.subjects.model.Subject;
 import com.group5.paul_esys.modules.subjects.services.SubjectService;
 import com.group5.paul_esys.modules.users.services.UserSession;
 import java.awt.*;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import javax.swing.*;
 
@@ -31,9 +40,6 @@ import javax.swing.*;
  * @author Shan
  */
 public class StudentDashboard extends javax.swing.JFrame {
-
-	private static final java.util.logging.Logger logger
-	  = java.util.logging.Logger.getLogger(StudentDashboard.class.getName());
 
 	private Student currentStudent;
 
@@ -80,39 +86,114 @@ public class StudentDashboard extends javax.swing.JFrame {
 		javax.swing.table.DefaultTableModel model = (javax.swing.table.DefaultTableModel) tblSubjectCatalog.getModel();
 		model.setRowCount(0);
 
-		List<Subject> subjects = SubjectService.getInstance().getAllSubjects();
-		if (keyword != null && !keyword.trim().isEmpty()) {
-			subjects.removeIf(s -> !s.getSubjectName().toLowerCase().contains(keyword.toLowerCase())
-			  && !s.getSubjectCode().toLowerCase().contains(keyword.toLowerCase()));
+		Optional<Long> activeEnrollmentPeriodId = EnrollmentPeriodService.getInstance()
+		  .getCurrentEnrollmentPeriod()
+		  .map(period -> period.getId());
+
+		if (activeEnrollmentPeriodId.isEmpty()) {
+			return;
 		}
 
-		for (Subject subject : subjects) {
-			List<Section> sections = SectionService.getInstance().getSectionsBySubject(subject.getId());
-			for (Section section : sections) {
-				List<Schedule> schedules = ScheduleService.getInstance().getSchedulesBySection(section.getId());
-				StringBuilder schedString = new StringBuilder();
-				for (Schedule sched : schedules) {
-					schedString.append(sched.getDay().toString()).append(" ")
-					  .append(sched.getStartTime().toString().substring(0, 5)).append("-")
-					  .append(sched.getEndTime().toString().substring(0, 5)).append(" ");
-				}
+		List<Offering> offerings = OfferingService.getInstance().getOfferingsByEnrollmentPeriod(activeEnrollmentPeriodId.get());
+		if (offerings.isEmpty()) {
+			return;
+		}
 
-				long enrolledCount = EnrollmentDetailService.getInstance().getEnrollmentDetailsBySection(section.getId()).stream().filter(e -> "SELECTED".equals(e.getStatus().toString())).count();
-				String available = (section.getCapacity() - enrolledCount) + "/" + section.getCapacity();
+		Map<Long, Subject> subjectById = new HashMap<>();
+		for (Subject subject : SubjectService.getInstance().getAllSubjects()) {
+			subjectById.put(subject.getId(), subject);
+		}
 
-				model.addRow(new Object[]{
-					subject.getSubjectCode(),
-					subject.getSubjectName(),
-					String.valueOf(subject.getUnits()),
-					section.getSectionCode(),
-					schedString.toString(),
-					available,
-					String.valueOf(section.getId()),
-					String.valueOf(subject.getId())
-				});
+		Map<Long, Section> sectionById = new HashMap<>();
+		for (Section section : SectionService.getInstance().getAllSections()) {
+			sectionById.put(section.getId(), section);
+		}
+
+		Map<Long, Long> selectedOfferingBySubject = getLatestSelectedOfferingBySubject();
+		String normalizedKeyword = keyword == null ? "" : keyword.trim().toLowerCase();
+
+		for (Offering offering : offerings) {
+			Subject subject = subjectById.get(offering.getSubjectId());
+			Section section = sectionById.get(offering.getSectionId());
+			if (subject == null || section == null) {
+				continue;
 			}
+
+			if (!normalizedKeyword.isEmpty()) {
+				boolean matchesKeyword = subject.getSubjectName().toLowerCase().contains(normalizedKeyword)
+				  || subject.getSubjectCode().toLowerCase().contains(normalizedKeyword);
+				if (!matchesKeyword) {
+					continue;
+				}
+			}
+
+			Long selectedOfferingId = selectedOfferingBySubject.get(subject.getId());
+			if (selectedOfferingId != null && !selectedOfferingId.equals(offering.getId())) {
+				continue;
+			}
+
+			addSubjectCatalogRow(model, subject, section, offering);
 		}
 	}
+
+        private Map<Long, Long> getLatestSelectedOfferingBySubject() {
+                Map<Long, Long> selectedOfferingBySubject = new HashMap<>();
+
+                List<Enrollment> enrollments = EnrollmentService.getInstance().getEnrollmentsByStudent(currentStudent.getStudentId());
+                if (enrollments == null || enrollments.isEmpty()) {
+                        return selectedOfferingBySubject;
+                }
+
+                Enrollment latest = enrollments.get(0);
+                List<EnrollmentDetail> details = EnrollmentDetailService.getInstance().getEnrollmentDetailsByEnrollment(latest.getId());
+                for (EnrollmentDetail detail : details) {
+                        if (detail.getStatus() != EnrollmentDetailStatus.SELECTED) {
+                                continue;
+                        }
+
+                        Optional<Offering> offeringOpt = OfferingService.getInstance().getOfferingById(detail.getOfferingId());
+                        if (offeringOpt.isPresent()) {
+                                Offering offering = offeringOpt.get();
+                                selectedOfferingBySubject.put(offering.getSubjectId(), offering.getId());
+                        }
+                }
+
+                return selectedOfferingBySubject;
+        }
+
+        private void addSubjectCatalogRow(
+                javax.swing.table.DefaultTableModel model,
+                Subject subject,
+                Section section,
+                Offering offering
+        ) {
+                List<Schedule> schedules = ScheduleService.getInstance().getSchedulesByOffering(offering.getId());
+                StringBuilder schedString = new StringBuilder();
+                for (Schedule sched : schedules) {
+                        if (sched.getStartTime() == null || sched.getEndTime() == null) {
+                                continue;
+                        }
+
+                        schedString.append(sched.getDay().toString()).append(" ")
+                          .append(sched.getStartTime().toString().substring(0, 5)).append("-")
+                          .append(sched.getEndTime().toString().substring(0, 5)).append(" ");
+                }
+
+                int capacity = offering.getCapacity() == null ? section.getCapacity() : offering.getCapacity();
+                long enrolledCount = EnrollmentDetailService.getInstance().countSelectedByOffering(offering.getId());
+                long availableSlots = Math.max(0, capacity - enrolledCount);
+
+                model.addRow(new Object[]{
+                        subject.getSubjectCode(),
+                        subject.getSubjectName(),
+                        String.valueOf(subject.getUnits()),
+                        section.getSectionCode(),
+                        schedString.toString().trim(),
+                        availableSlots + "/" + capacity,
+                        String.valueOf(offering.getId()),
+                        String.valueOf(subject.getId())
+                });
+        }
 
 	private void initStudentData(Student student) {
 		txtStudentID.setText(student.getStudentId());
@@ -129,13 +210,32 @@ public class StudentDashboard extends javax.swing.JFrame {
 
 		List<Enrollment> enrollments = EnrollmentService.getInstance().getEnrollmentsByStudent(student.getStudentId());
 		if (enrollments != null && !enrollments.isEmpty()) {
-			Enrollment latest = enrollments.get(enrollments.size() - 1);
+                        Enrollment latest = enrollments.get(0);
 			txtEnrollmentStatus.setText(latest.getStatus().toString());
 			txtTotalUnits.setText(latest.getTotalUnits() != null ? latest.getTotalUnits().toString() : "0");
 
 			List<EnrollmentDetail> details = EnrollmentDetailService.getInstance().getEnrollmentDetailsByEnrollment(latest.getId());
 			txtTotalSubjects.setText(String.valueOf(details.size()));
-			txtSections.setText(details.isEmpty() ? "None" : String.valueOf(details.get(0).getSectionId())); // Simplification for dashboard
+
+                        String sectionCode = "None";
+                        for (EnrollmentDetail detail : details) {
+                                if (detail.getStatus() != EnrollmentDetailStatus.SELECTED) {
+                                        continue;
+                                }
+
+                                Optional<Offering> offering = OfferingService.getInstance().getOfferingById(detail.getOfferingId());
+                                if (offering.isEmpty()) {
+                                        continue;
+                                }
+
+                                Optional<Section> section = SectionService.getInstance().getSectionById(offering.get().getSectionId());
+                                if (section.isPresent()) {
+                                        sectionCode = section.get().getSectionCode();
+                                        break;
+                                }
+                        }
+
+                        txtSections.setText(sectionCode);
 		} else {
 			txtEnrollmentStatus.setText("NOT ENROLLED");
 			txtTotalUnits.setText("0");
@@ -163,7 +263,6 @@ public class StudentDashboard extends javax.swing.JFrame {
 	 * form. WARNING: Do NOT modify this code. The content of this method is
 	 * always regenerated by the Form Editor.
 	 */
-	@SuppressWarnings("unchecked")
         // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
         private void initComponents() {
 
@@ -581,21 +680,28 @@ public class StudentDashboard extends javax.swing.JFrame {
                 tblSubjectCatalog.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 tblSubjectCatalog.setModel(new javax.swing.table.DefaultTableModel(
                         new Object [][] {
-                                {null, null, null, null},
-                                {null, null, null, null},
-                                {null, null, null, null},
-                                {null, null, null, null}
+                                {null, null, null, null, null, null, null, null},
+                                {null, null, null, null, null, null, null, null},
+                                {null, null, null, null, null, null, null, null},
+                                {null, null, null, null, null, null, null, null}
                         },
                         new String [] {
-                                "Subject Name", "Code", "Units", "Description"
+                                "Code", "Subject Name", "Units", "Section", "Schedule", "Availability", "Offering ID", "Subject ID"
                         }
                 ) {
-                        Class[] types = new Class [] {
-                                java.lang.String.class, java.lang.String.class, java.lang.Integer.class, java.lang.String.class
+                        Class<?>[] types = new Class [] {
+                                java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
+                        };
+                        boolean[] canEdit = new boolean [] {
+                                false, false, false, false, false, false, false, false
                         };
 
-                        public Class getColumnClass(int columnIndex) {
+                        public Class<?> getColumnClass(int columnIndex) {
                                 return types [columnIndex];
+                        }
+
+                        public boolean isCellEditable(int rowIndex, int columnIndex) {
+                                return canEdit [columnIndex];
                         }
                 });
                 jScrollPane1.setViewportView(tblSubjectCatalog);
@@ -755,13 +861,13 @@ public class StudentDashboard extends javax.swing.JFrame {
 
                 jTable2.setModel(new javax.swing.table.DefaultTableModel(
                         new Object [][] {
-                                {null, null, null, null, null, null},
-                                {null, null, null, null, null, null},
-                                {null, null, null, null, null, null},
-                                {null, null, null, null, null, null}
+                                {null, null, null, null, null, null, null},
+                                {null, null, null, null, null, null, null},
+                                {null, null, null, null, null, null, null},
+                                {null, null, null, null, null, null, null}
                         },
                         new String [] {
-                                "Code", "Course Name", "Instructor", "Schedule", "Room", "Credits"
+                                "Code", "Course Name", "Section", "Instructor", "Schedule", "Room", "Credits"
                         }
                 ));
                 jScrollPane2.setViewportView(jTable2);
@@ -849,30 +955,54 @@ public class StudentDashboard extends javax.swing.JFrame {
         private void btnSubmitScheduleActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSubmitScheduleActionPerformed
 		int[] selectedRows = tblSubjectCatalog.getSelectedRows();
 		if (selectedRows == null || selectedRows.length == 0) {
-			JOptionPane.showMessageDialog(this, "Please select sections to enroll.", "Error", JOptionPane.ERROR_MESSAGE);
+                        JOptionPane.showMessageDialog(this, "Please select offerings to enroll.", "Error", JOptionPane.ERROR_MESSAGE);
 			return;
 		}
 
+                Optional<Long> activeEnrollmentPeriodId = EnrollmentPeriodService.getInstance()
+                  .getCurrentEnrollmentPeriod()
+                  .map(period -> period.getId());
+                if (activeEnrollmentPeriodId.isEmpty()) {
+                        JOptionPane.showMessageDialog(this, "No active enrollment period.", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                }
+
 		// Check capacity and schedule conflict
-		java.util.List<Schedule> selectedSchedules = new java.util.ArrayList<>();
+                List<Schedule> selectedSchedules = new ArrayList<>();
+                List<Offering> selectedOfferings = new ArrayList<>();
 		for (int r : selectedRows) {
-			Long sectionId = Long.parseLong(tblSubjectCatalog.getValueAt(r, 6).toString());
+                        Long offeringId = Long.parseLong(tblSubjectCatalog.getValueAt(r, 6).toString());
 
-			Optional<Section> sectionOpt = SectionService.getInstance().getSectionById(sectionId);
-			if (!sectionOpt.isPresent()) {
-				continue;
-			}
-			Section section = sectionOpt.get();
+                        Optional<Offering> offeringOpt = OfferingService.getInstance().getOfferingById(offeringId);
+                        if (offeringOpt.isEmpty()) {
+                                JOptionPane.showMessageDialog(this, "Selected offering no longer exists.", "Error", JOptionPane.ERROR_MESSAGE);
+                                return;
+                        }
 
-			long enrolledCount = EnrollmentDetailService.getInstance().getEnrollmentDetailsBySection(sectionId).stream().filter(e -> "SELECTED".equals(e.getStatus().toString())).count();
-			if (enrolledCount >= section.getCapacity()) {
-				JOptionPane.showMessageDialog(this, "Section " + section.getSectionCode() + " is full! Capacity: " + section.getCapacity(), "Capacity Conflict", JOptionPane.ERROR_MESSAGE);
-				return;
-			}
+                        Offering offering = offeringOpt.get();
+                        Optional<Section> sectionOpt = SectionService.getInstance().getSectionById(offering.getSectionId());
+                        String sectionLabel = sectionOpt.map(Section::getSectionCode).orElse("Section #" + offering.getSectionId());
 
-			List<Schedule> scheds = ScheduleService.getInstance().getSchedulesBySection(sectionId);
+                        int capacity = offering.getCapacity() != null
+                          ? offering.getCapacity()
+                          : sectionOpt.map(Section::getCapacity).orElse(0);
+                        long enrolledCount = EnrollmentDetailService.getInstance().countSelectedByOffering(offering.getId());
+                        if (capacity > 0 && enrolledCount >= capacity) {
+                                JOptionPane.showMessageDialog(this, "Offering for " + sectionLabel + " is full! Capacity: " + capacity, "Capacity Conflict", JOptionPane.ERROR_MESSAGE);
+                                return;
+                        }
+
+                        List<Schedule> scheds = ScheduleService.getInstance().getSchedulesByOffering(offering.getId());
 			for (Schedule sNew : scheds) {
+                                if (sNew.getStartTime() == null || sNew.getEndTime() == null) {
+                                        continue;
+                                }
+
 				for (Schedule sExisting : selectedSchedules) {
+                                        if (sExisting.getStartTime() == null || sExisting.getEndTime() == null) {
+                                                continue;
+                                        }
+
 					if (sNew.getDay() == sExisting.getDay()) {
 						// Check overlap (Start1 < End2 and End1 > Start2)
 						long start1 = sNew.getStartTime().getTime();
@@ -880,19 +1010,23 @@ public class StudentDashboard extends javax.swing.JFrame {
 						long start2 = sExisting.getStartTime().getTime();
 						long end2 = sExisting.getEndTime().getTime();
 						if (start1 < end2 && end1 > start2) {
-							JOptionPane.showMessageDialog(this, "Schedule Conflict: Overlapping schedule at " + sNew.getDay() + " for section " + section.getSectionCode(), "Schedule Conflict", JOptionPane.ERROR_MESSAGE);
+                                                        JOptionPane.showMessageDialog(this, "Schedule conflict at " + sNew.getDay() + " for " + sectionLabel, "Schedule Conflict", JOptionPane.ERROR_MESSAGE);
 							return;
 						}
 					}
 				}
 			}
 			selectedSchedules.addAll(scheds);
+                        selectedOfferings.add(offering);
 		}
 
 		Enrollment enrollment = new Enrollment();
 		enrollment.setStudentId(currentStudent.getStudentId());
+                enrollment.setEnrollmentPeriodId(activeEnrollmentPeriodId.get());
 		enrollment.setStatus(EnrollmentStatus.SUBMITTED);
+                enrollment.setMaxUnits(24.0f);
 		enrollment.setTotalUnits(0.0f);
+                enrollment.setSubmittedAt(new Date());
 
 		boolean created = EnrollmentService.getInstance().createEnrollment(enrollment);
 		if (!created) {
@@ -900,27 +1034,48 @@ public class StudentDashboard extends javax.swing.JFrame {
 			return;
 		}
 
-		java.util.List<Enrollment> studentEr = EnrollmentService.getInstance().getEnrollmentsByStudent(currentStudent.getStudentId());
-		Enrollment added = studentEr.get(studentEr.size() - 1);
+                List<Enrollment> studentEr = EnrollmentService.getInstance().getEnrollmentsByStudent(currentStudent.getStudentId());
+                if (studentEr.isEmpty()) {
+                        JOptionPane.showMessageDialog(this, "Enrollment was created but cannot be reloaded.", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
+                }
+
+                Enrollment added = studentEr.get(0);
 		float sumUnits = 0.0f;
 
-		for (int r : selectedRows) {
-			Long sectionId = Long.parseLong(tblSubjectCatalog.getValueAt(r, 6).toString());
-			Long subjectId = Long.parseLong(tblSubjectCatalog.getValueAt(r, 7).toString());
+                for (int i = 0; i < selectedRows.length; i++) {
+                        int r = selectedRows[i];
+                        Offering offering = selectedOfferings.get(i);
 			float units = Float.parseFloat(tblSubjectCatalog.getValueAt(r, 2).toString());
 
 			EnrollmentDetail ed = new EnrollmentDetail();
 			ed.setEnrollmentId(added.getId());
-			ed.setSectionId(sectionId);
-			ed.setSubjectId(subjectId);
+                        ed.setOfferingId(offering.getId());
 			ed.setUnits(units);
 			ed.setStatus(EnrollmentDetailStatus.SELECTED);
 
-			EnrollmentDetailService.getInstance().createEnrollmentDetail(ed);
+                        if (!EnrollmentDetailService.getInstance().createEnrollmentDetail(ed)) {
+                                JOptionPane.showMessageDialog(this, "Failed to create enrollment detail.", "Error", JOptionPane.ERROR_MESSAGE);
+                                return;
+                        }
+
+                        if (offering.getSemesterSubjectId() != null) {
+                                StudentEnrolledSubjectService.getInstance().upsertStatus(
+                                  currentStudent.getStudentId(),
+                                  added.getId(),
+                                  offering.getId(),
+                                  offering.getSemesterSubjectId(),
+                                  StudentEnrolledSubjectStatus.ENROLLED
+                                );
+                        }
+
 			sumUnits += units;
 		}
 
-		added.setTotalUnits((float) sumUnits);
+                added.setTotalUnits(sumUnits);
+                if (added.getSubmittedAt() == null) {
+                        added.setSubmittedAt(new Date());
+                }
 		EnrollmentService.getInstance().updateEnrollment(added);
 
 		JOptionPane.showMessageDialog(this, "Enrollment submitted to Registrar successfully!", "Success", JOptionPane.INFORMATION_MESSAGE);
@@ -932,28 +1087,37 @@ public class StudentDashboard extends javax.swing.JFrame {
 		javax.swing.table.DefaultTableModel model = (javax.swing.table.DefaultTableModel) jTable2.getModel();
 		model.setRowCount(0);
 
-		java.util.List<Enrollment> studentEr = EnrollmentService.getInstance().getEnrollmentsByStudent(currentStudent.getStudentId());
+                List<Enrollment> studentEr = EnrollmentService.getInstance().getEnrollmentsByStudent(currentStudent.getStudentId());
 		if (studentEr == null || studentEr.isEmpty()) {
 			return;
 		}
 
-		Enrollment active = studentEr.get(studentEr.size() - 1);
-		java.util.List<EnrollmentDetail> details = EnrollmentDetailService.getInstance().getEnrollmentDetailsByEnrollment(active.getId());
+                Enrollment active = studentEr.get(0);
+                List<EnrollmentDetail> details = EnrollmentDetailService.getInstance().getEnrollmentDetailsByEnrollment(active.getId());
 
 		for (EnrollmentDetail ed : details) {
 			if (ed.getStatus() != EnrollmentDetailStatus.SELECTED) {
 				continue;
 			}
 
-			Optional<Subject> subject = SubjectService.getInstance().getSubjectById(ed.getSubjectId());
-			Optional<Section> section = SectionService.getInstance().getSectionById(ed.getSectionId());
-			List<Schedule> schedules = ScheduleService.getInstance().getSchedulesBySection(ed.getSectionId());
+                        Optional<Offering> offering = OfferingService.getInstance().getOfferingById(ed.getOfferingId());
+                        if (offering.isEmpty()) {
+                                continue;
+                        }
+
+                        Optional<Subject> subject = SubjectService.getInstance().getSubjectById(offering.get().getSubjectId());
+                        Optional<Section> section = SectionService.getInstance().getSectionById(offering.get().getSectionId());
+                        List<Schedule> schedules = ScheduleService.getInstance().getSchedulesByOffering(offering.get().getId());
 
 			StringBuilder schedString = new StringBuilder();
 			StringBuilder roomString = new StringBuilder();
 			StringBuilder facultyString = new StringBuilder();
 
 			for (Schedule sched : schedules) {
+                                if (sched.getStartTime() == null || sched.getEndTime() == null) {
+                                        continue;
+                                }
+
 				schedString.append(sched.getDay().toString()).append(" ")
 				  .append(sched.getStartTime().toString().substring(0, 5)).append("-")
 				  .append(sched.getEndTime().toString().substring(0, 5)).append(" ");
