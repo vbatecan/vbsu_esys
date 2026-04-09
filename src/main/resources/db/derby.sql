@@ -22,6 +22,7 @@ CREATE TABLE enrollment_period
     semester    varchar(24) not null,
     start_date  TIMESTAMP   not null,
     end_date    TIMESTAMP   not null,
+    description clob,
     updated_at  timestamp default current_timestamp,
     created_at  timestamp default current_timestamp
 );
@@ -80,17 +81,16 @@ CREATE TABLE subjects
 );
 
 /**
- * Represents class sections for subjects.
- * Each section belongs to a specific subject and has a capacity limit.
- * Sections are scheduled in the schedules table with time and room assignments.
+ * Represents class sections independent of specific subjects.
+ * Sections act as shared class groups with capacity limits and reusable schedules.
  */
 CREATE TABLE sections
 (
     id           bigint NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     section_name varchar(48),
     section_code varchar(48),
-    subject_id   bigint,
     capacity     int    NOT NULL,
+    status      varchar(20) CHECK (status IN ('OPEN', 'CLOSED', 'WAITLIST', 'DISSOLVED')) DEFAULT 'OPEN',
     updated_at   timestamp default current_timestamp,
     created_at   timestamp default current_timestamp
 );
@@ -136,12 +136,14 @@ CREATE TABLE semester_subjects
     semester_id bigint NOT NULL REFERENCES semester (id),
     subject_id  bigint NOT NULL REFERENCES subjects (id),
     created_at  timestamp default current_timestamp,
-    updated_at  timestamp default current_timestamp
+    updated_at  timestamp default current_timestamp,
+    UNIQUE (semester_id, subject_id),
+    UNIQUE (id, subject_id)
 );
 
 /**
  * Tracks all subjects that students have enrolled in or completed.
- * Links students to semester subjects with status tracking (ENROLLED/COMPLETED/DROPPED).
+ * Links actual enrolled offerings to planned semester subjects with status tracking.
  * Essential for prerequisite checking and academic history tracking.
  *
  * Note: This table is needed to track which subjects students have taken,
@@ -150,11 +152,13 @@ CREATE TABLE semester_subjects
  */
 CREATE TABLE student_enrolled_subjects
 (
-    student_id          varchar(32)                                                        NOT NULL REFERENCES students (student_id),
-    semester_subject_id bigint                                                             NOT NULL REFERENCES semester_subjects (id),
+    student_id          varchar(32) NOT NULL,
+    enrollment_id       bigint      NOT NULL,
+    offering_id         bigint      NOT NULL,
+    semester_subject_id bigint      NOT NULL,
     status              varchar(20) CHECK (status IN ('ENROLLED', 'COMPLETED', 'DROPPED')) NOT NULL DEFAULT 'ENROLLED',
-    created_at          timestamp                                                                   default current_timestamp,
-    updated_at          timestamp                                                                   default current_timestamp
+    created_at          timestamp default current_timestamp,
+    updated_at          timestamp default current_timestamp
 );
 
 /**
@@ -221,22 +225,40 @@ CREATE TABLE registrar
 );
 
 /**
- * Class schedule assignments linking sections to rooms, faculty, and time slots.
- * Defines when and where each section meets (day of week, start/end times).
- * Prevents scheduling conflicts for rooms, faculty, and students.
+ * Class schedule assignments linking offerings to rooms, faculty, and time slots.
+ * Defines when and where a concrete class offering meets (day of week, start/end times).
+ * Prevents scheduling conflicts for the same offering instance.
  */
 CREATE TABLE schedules
 (
+    id          bigint NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    offering_id bigint NOT NULL,
+    room_id     bigint,
+    faculty_id  bigint,
+    day         varchar(3) CHECK (day IN ('MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN')),
+    start_time  time,
+    end_time    time,
+    updated_at  timestamp default current_timestamp,
+    created_at  timestamp default current_timestamp,
+    UNIQUE (offering_id, day, start_time)
+);
+
+/**
+ * Concrete class offerings for a specific enrollment period.
+ * Acts as the single source of truth for enrollable classes by pairing
+ * subject, section, and term-specific capacity in one record.
+ * Optionally maps to planned curriculum entries via semester_subjects.
+ */
+CREATE TABLE offerings
+(
     id                   bigint NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    section_id           bigint,
-    room_id              bigint,
-    faculty_id           bigint,
-    day                  varchar(3) CHECK (day IN ('MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT', 'SUN')),
-    start_time           time,
-    end_time             time,
-    enrollment_period_id bigint,
-    updated_at           timestamp default current_timestamp,
-    created_at           timestamp default current_timestamp
+    subject_id           bigint NOT NULL,
+    section_id           bigint NOT NULL,
+    enrollment_period_id bigint NOT NULL,
+    semester_subject_id  bigint,
+    capacity             int,
+    created_at           timestamp default current_timestamp,
+    UNIQUE (subject_id, section_id, enrollment_period_id)
 );
 
 /**
@@ -247,31 +269,34 @@ CREATE TABLE schedules
 CREATE TABLE enrollments
 (
     id                   bigint NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    student_id           varchar(32),
-    enrollment_period_id bigint,
-    status               varchar(20) CHECK (status IN ('DRAFT', 'SUBMITTED', 'APPROVED', 'ENROLLED', 'CANCELLED')),
+    student_id           varchar(32) NOT NULL,
+    enrollment_period_id bigint NOT NULL,
+    status               varchar(20) NOT NULL CHECK (status IN ('DRAFT', 'SUBMITTED', 'APPROVED', 'ENROLLED', 'CANCELLED')),
     max_units            float,
     total_units          float,
     submitted_at         TIMESTAMP,
+    approved_by bigint REFERENCES users (id),
+    approved_at TIMESTAMP,
     updated_at           timestamp default current_timestamp,
-    created_at           timestamp default current_timestamp
+    created_at           timestamp default current_timestamp,
+    UNIQUE (student_id, enrollment_period_id)
 );
 
 /**
  * Detailed line items for each enrollment record.
- * Specifies which sections and subjects the student selected.
- * Tracks unit counts and allows for selective dropping of subjects.
+ * Specifies which concrete offerings the student selected.
+ * Tracks unit counts and allows for selective dropping of offerings.
  */
 CREATE TABLE enrollments_details
 (
     id            bigint NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-    enrollment_id bigint,
-    section_id    bigint,
-    subject_id    bigint,
+    enrollment_id bigint NOT NULL,
+    offering_id   bigint NOT NULL,
     units         float,
     status        varchar(20) CHECK (status IN ('SELECTED', 'DROPPED')),
     created_at    timestamp default current_timestamp,
-    updated_at    timestamp default current_timestamp
+    updated_at    timestamp default current_timestamp,
+    UNIQUE (enrollment_id, offering_id)
 );
 
 
@@ -319,7 +344,7 @@ CREATE TABLE departments
     created_at      timestamp default current_timestamp
 );
 
-CREATE UNIQUE INDEX student_enrolled_subjects_index_0 ON student_enrolled_subjects (student_id, semester_subject_id);
+CREATE UNIQUE INDEX student_enrolled_subjects_index_0 ON student_enrolled_subjects (student_id, offering_id);
 
 CREATE UNIQUE INDEX student_semester_progress_index_0 ON student_semester_progress (student_id, semester_id);
 
@@ -335,9 +360,6 @@ ALTER TABLE students
 ALTER TABLE subjects
     ADD CONSTRAINT fk_subjects_dept FOREIGN KEY (department_id) REFERENCES departments (id);
 
-ALTER TABLE sections
-    ADD CONSTRAINT fk_sections_subject FOREIGN KEY (subject_id) REFERENCES subjects (id);
-
 ALTER TABLE curriculum
     ADD CONSTRAINT fk_curriculum_course FOREIGN KEY (course) REFERENCES courses (id);
 
@@ -348,7 +370,7 @@ ALTER TABLE faculty
     ADD CONSTRAINT fk_faculty_dept FOREIGN KEY (department_id) REFERENCES departments (id);
 
 ALTER TABLE schedules
-    ADD CONSTRAINT fk_schedules_section FOREIGN KEY (section_id) REFERENCES sections (id);
+    ADD CONSTRAINT fk_schedules_offering FOREIGN KEY (offering_id) REFERENCES offerings (id);
 
 ALTER TABLE schedules
     ADD CONSTRAINT fk_schedules_room FOREIGN KEY (room_id) REFERENCES rooms (id);
@@ -363,13 +385,20 @@ ALTER TABLE enrollments_details
     ADD CONSTRAINT fk_ed_enrollment FOREIGN KEY (enrollment_id) REFERENCES enrollments (id);
 
 ALTER TABLE enrollments_details
-    ADD CONSTRAINT fk_ed_section FOREIGN KEY (section_id) REFERENCES sections (id);
-
-ALTER TABLE enrollments_details
-    ADD CONSTRAINT fk_ed_subject FOREIGN KEY (subject_id) REFERENCES subjects (id);
+    ADD CONSTRAINT fk_ed_offering FOREIGN KEY (offering_id) REFERENCES offerings (id);
 
 ALTER TABLE student_enrolled_subjects
     ADD CONSTRAINT fk_ses_student FOREIGN KEY (student_id) REFERENCES students (student_id);
+
+ALTER TABLE student_enrolled_subjects
+    ADD CONSTRAINT fk_ses_enrollment FOREIGN KEY (enrollment_id) REFERENCES enrollments (id);
+
+ALTER TABLE student_enrolled_subjects
+    ADD CONSTRAINT fk_ses_offering FOREIGN KEY (offering_id) REFERENCES offerings (id);
+
+ALTER TABLE student_enrolled_subjects
+    ADD CONSTRAINT fk_ses_enrollment_offering
+        FOREIGN KEY (enrollment_id, offering_id) REFERENCES enrollments_details (enrollment_id, offering_id);
 
 ALTER TABLE student_enrolled_subjects
     ADD CONSTRAINT fk_ses_subject FOREIGN KEY (semester_subject_id) REFERENCES semester_subjects (id);
@@ -392,9 +421,18 @@ ALTER TABLE prerequisites
 ALTER TABLE prerequisites
     ADD CONSTRAINT fk_prereq_subject FOREIGN KEY (subject_id) REFERENCES subjects (id);
 
-ALTER TABLE schedules
-    ADD CONSTRAINT fk_schedules_enrollment_period FOREIGN KEY (enrollment_period_id) REFERENCES enrollment_period (id);
-
 ALTER TABLE enrollments
     ADD CONSTRAINT fk_enrollments_enrollment_period FOREIGN KEY (enrollment_period_id) REFERENCES enrollment_period (id);
 
+ALTER TABLE offerings
+    ADD CONSTRAINT fk_offerings_subject FOREIGN KEY (subject_id) REFERENCES subjects (id);
+
+ALTER TABLE offerings
+    ADD CONSTRAINT fk_offerings_section FOREIGN KEY (section_id) REFERENCES sections (id);
+
+ALTER TABLE offerings
+    ADD CONSTRAINT fk_offerings_enrollment_period FOREIGN KEY (enrollment_period_id) REFERENCES enrollment_period (id);
+
+ALTER TABLE offerings
+    ADD CONSTRAINT fk_offerings_semester_subject_map
+        FOREIGN KEY (semester_subject_id, subject_id) REFERENCES semester_subjects (id, subject_id);

@@ -76,16 +76,14 @@ CREATE TABLE IF NOT EXISTS subjects
 );
 
 /**
- * Represents class sections for subjects.
- * Each section belongs to a specific subject and has a capacity limit.
- * Sections are scheduled in the schedules table with time and room assignments.
+ * Represents class sections independent of specific subjects.
+ * Sections act as shared class groups with capacity limits and reusable schedules.
  */
 CREATE TABLE IF NOT EXISTS sections
 (
     id           bigint PRIMARY KEY AUTO_INCREMENT,
     section_name varchar(48),
     section_code varchar(48),
-    subject_id   bigint,
     capacity     int NOT NULL,
     updated_at   timestamp    default current_timestamp(),
     created_at   timestamp    default current_timestamp()
@@ -286,9 +284,6 @@ ALTER TABLE students
 
 ALTER TABLE subjects
     ADD FOREIGN KEY (department_id) REFERENCES departments (id);
-
-ALTER TABLE sections
-    ADD FOREIGN KEY (subject_id) REFERENCES subjects (id);
 
 ALTER TABLE curriculum
     ADD FOREIGN KEY (course) REFERENCES courses (id);
