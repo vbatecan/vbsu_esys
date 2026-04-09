@@ -8,12 +8,12 @@ package com.group5.paul_esys.screens.registrar.panels;
  *
  * @author nytri
  */
-public class CurriculumManagement extends javax.swing.JPanel {
+public class RegistrarCurriculumManagement extends javax.swing.JPanel {
 
 	/**
 	 * Creates new form CurriculumManagement
 	 */
-	public CurriculumManagement() {
+	public RegistrarCurriculumManagement() {
 		initComponents();
 	}
 
@@ -26,21 +26,98 @@ public class CurriculumManagement extends javax.swing.JPanel {
         // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
         private void initComponents() {
 
+                tabbedPaneCurriculums = new javax.swing.JTabbedPane();
+                jPanel1 = new javax.swing.JPanel();
+                jLabel1 = new javax.swing.JLabel();
+                jLabel2 = new javax.swing.JLabel();
+                btnAddSemester = new javax.swing.JButton();
+                btnddCurriculum = new javax.swing.JButton();
+
+                setBackground(new java.awt.Color(255, 255, 255));
                 setPreferredSize(new java.awt.Dimension(1181, 684));
+
+                tabbedPaneCurriculums.setTabLayoutPolicy(javax.swing.JTabbedPane.SCROLL_TAB_LAYOUT);
+                tabbedPaneCurriculums.setTabPlacement(javax.swing.JTabbedPane.LEFT);
+
+                javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
+                jPanel1.setLayout(jPanel1Layout);
+                jPanel1Layout.setHorizontalGroup(
+                        jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGap(0, 1112, Short.MAX_VALUE)
+                );
+                jPanel1Layout.setVerticalGroup(
+                        jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGap(0, 606, Short.MAX_VALUE)
+                );
+
+                tabbedPaneCurriculums.addTab("tab1", jPanel1);
+
+                jLabel1.setFont(new java.awt.Font("Poppins", 0, 24)); // NOI18N
+                jLabel1.setText("Curriculum Management");
+
+                jLabel2.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
+                jLabel2.setForeground(new java.awt.Color(153, 153, 153));
+                jLabel2.setText("Manage Curriculum, Semesters, Semester Subjects efficiently");
+
+                btnAddSemester.setBackground(new java.awt.Color(119, 0, 0));
+                btnAddSemester.setForeground(new java.awt.Color(255, 255, 255));
+                btnAddSemester.setText("Add Semester");
+
+                btnddCurriculum.setBackground(new java.awt.Color(119, 0, 0));
+                btnddCurriculum.setForeground(new java.awt.Color(255, 255, 255));
+                btnddCurriculum.setText("Add Curriculum");
 
                 javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
                 this.setLayout(layout);
                 layout.setHorizontalGroup(
                         layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGap(0, 0, Short.MAX_VALUE)
+                        .addGroup(layout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addGroup(layout.createSequentialGroup()
+                                                .addGap(6, 6, 6)
+                                                .addComponent(tabbedPaneCurriculums))
+                                        .addGroup(layout.createSequentialGroup()
+                                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                        .addGroup(layout.createSequentialGroup()
+                                                                .addComponent(jLabel2)
+                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                                        .addGroup(layout.createSequentialGroup()
+                                                                .addComponent(jLabel1)
+                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)))
+                                                .addGap(483, 483, 483)
+                                                .addComponent(btnddCurriculum, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(btnAddSemester, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addGap(14, 14, 14)))
+                                .addContainerGap())
                 );
                 layout.setVerticalGroup(
                         layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGap(0, 0, Short.MAX_VALUE)
+                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                .addContainerGap()
+                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                        .addGroup(layout.createSequentialGroup()
+                                                .addComponent(jLabel1)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(jLabel2)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED))
+                                        .addGroup(layout.createSequentialGroup()
+                                                .addGroup(layout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                                        .addComponent(btnddCurriculum, javax.swing.GroupLayout.DEFAULT_SIZE, 44, Short.MAX_VALUE)
+                                                        .addComponent(btnAddSemester, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                                .addGap(18, 18, 18)))
+                                .addComponent(tabbedPaneCurriculums, javax.swing.GroupLayout.PREFERRED_SIZE, 606, javax.swing.GroupLayout.PREFERRED_SIZE))
                 );
         }// </editor-fold>//GEN-END:initComponents
 
 
         // Variables declaration - do not modify//GEN-BEGIN:variables
+        private javax.swing.JButton btnAddSemester;
+        private javax.swing.JButton btnddCurriculum;
+        private javax.swing.JLabel jLabel1;
+        private javax.swing.JLabel jLabel2;
+        private javax.swing.JPanel jPanel1;
+        private javax.swing.JTabbedPane tabbedPaneCurriculums;
         // End of variables declaration//GEN-END:variables
 }
