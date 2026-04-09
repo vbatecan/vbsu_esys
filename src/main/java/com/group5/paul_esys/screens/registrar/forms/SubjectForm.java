@@ -4,6 +4,20 @@
  */
 package com.group5.paul_esys.screens.registrar.forms;
 
+import com.group5.paul_esys.modules.curriculum.model.Curriculum;
+import com.group5.paul_esys.modules.curriculum.services.CurriculumService;
+import com.group5.paul_esys.modules.departments.model.Department;
+import com.group5.paul_esys.modules.departments.services.DepartmentService;
+import com.group5.paul_esys.modules.subjects.model.Subject;
+import com.group5.paul_esys.modules.subjects.services.SubjectService;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.util.Date;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import java.util.Optional;
+import javax.swing.JOptionPane;
+
 /**
  *
  * @author nytri
@@ -11,15 +25,283 @@ package com.group5.paul_esys.screens.registrar.forms;
 public class SubjectForm extends javax.swing.JDialog {
 	
 	private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(SubjectForm.class.getName());
+        private final SubjectService subjectService = SubjectService.getInstance();
+        private final DepartmentService departmentService = DepartmentService.getInstance();
+        private final CurriculumService curriculumService = CurriculumService.getInstance();
+
+        private final Map<String, Long> curriculumIdByLabel = new LinkedHashMap<>();
+        private final Map<String, Long> departmentIdByLabel = new LinkedHashMap<>();
+        private final Map<Long, String> curriculumLabelById = new LinkedHashMap<>();
+        private final Map<Long, String> departmentLabelById = new LinkedHashMap<>();
+
+        private final Subject editingSubject;
+        private final Runnable onSavedCallback;
 
 	/**
 	 * Creates new form SubjectForm
 	 */
 	public SubjectForm(java.awt.Frame parent, boolean modal) {
+		this(parent, modal, null, null);
+	}
+
+        public SubjectForm(java.awt.Frame parent, boolean modal, Subject editingSubject, Runnable onSavedCallback) {
 		super(parent, modal);
+		this.editingSubject = editingSubject;
+		this.onSavedCallback = onSavedCallback;
 		this.setUndecorated(true);
 		initComponents();
 		this.setLocationRelativeTo(null);
+		initializeForm();
+	}
+
+        private void initializeForm() {
+                jButton1.addActionListener(this::jButton1ActionPerformed);
+                jButton2.addActionListener(this::jButton2ActionPerformed);
+
+                jLabel4.setText("Subject Code");
+                jSpinner1.setModel(new javax.swing.SpinnerNumberModel(Float.valueOf(1.0f), Float.valueOf(0.5f), Float.valueOf(25.0f), Float.valueOf(0.5f)));
+
+                loadCurriculums();
+                loadDepartments();
+
+                if (editingSubject == null) {
+                        return;
+                }
+
+                jLabel1.setText("Update Subject");
+                jLabel2.setText("Update existing subject");
+                jButton1.setText("Update");
+
+                jTextField1.setText(editingSubject.getSubjectName());
+                jTextField2.setText(editingSubject.getSubjectCode());
+                jTextArea1.setText(editingSubject.getDescription() == null ? "" : editingSubject.getDescription());
+
+                if (editingSubject.getUnits() != null) {
+                        jSpinner1.setValue(editingSubject.getUnits());
+                }
+
+                String curriculumLabel = curriculumLabelById.get(editingSubject.getCurriculumId());
+                if (curriculumLabel != null) {
+                        jComboBox1.setSelectedItem(curriculumLabel);
+                }
+
+                String departmentLabel = departmentLabelById.get(editingSubject.getDepartmentId());
+                if (departmentLabel != null) {
+                        jComboBox2.setSelectedItem(departmentLabel);
+                }
+        }
+
+        private void loadCurriculums() {
+                jComboBox1.removeAllItems();
+                curriculumIdByLabel.clear();
+                curriculumLabelById.clear();
+
+                for (Curriculum curriculum : curriculumService.getAllCurriculums()) {
+                        String label = buildCurriculumLabel(curriculum);
+                        jComboBox1.addItem(label);
+                        curriculumIdByLabel.put(label, curriculum.getId());
+                        curriculumLabelById.put(curriculum.getId(), label);
+                }
+        }
+
+        private String buildCurriculumLabel(Curriculum curriculum) {
+                String name = curriculum.getName() == null || curriculum.getName().trim().isEmpty()
+                        ? "Curriculum"
+                        : curriculum.getName().trim();
+
+                String yearLabel = "N/A";
+                if (curriculum.getCurYear() != null) {
+                        yearLabel = String.valueOf(extractYear(curriculum.getCurYear()));
+                }
+
+                return name + " (" + yearLabel + ") - ID " + curriculum.getId();
+	}
+
+        private int extractYear(Date date) {
+                if (date instanceof java.sql.Date sqlDate) {
+                        return sqlDate.toLocalDate().getYear();
+                }
+
+                LocalDate localDate = date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                return localDate.getYear();
+        }
+
+        private void loadDepartments() {
+                jComboBox2.removeAllItems();
+                departmentIdByLabel.clear();
+                departmentLabelById.clear();
+
+                for (Department department : departmentService.getAllDepartments()) {
+                        String label = buildDepartmentLabel(department);
+                        jComboBox2.addItem(label);
+                        departmentIdByLabel.put(label, department.getId());
+                        departmentLabelById.put(department.getId(), label);
+                }
+	}
+
+        private String buildDepartmentLabel(Department department) {
+                String name = department.getDepartmentName() == null || department.getDepartmentName().trim().isEmpty()
+                        ? "Department"
+                        : department.getDepartmentName().trim();
+                return name + " - ID " + department.getId();
+	}
+
+        private boolean isValidForm() {
+                if (jTextField1.getText() == null || jTextField1.getText().trim().isEmpty()) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Subject name is required.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                if (jTextField2.getText() == null || jTextField2.getText().trim().isEmpty()) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Subject code is required.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                if (!hasValidUnits()) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Units must be greater than zero.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                if (!isValidCurriculumSelection()) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Please select a curriculum.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                if (!isValidDepartmentSelection()) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Please select a department.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                if (!isSubjectCodeAvailable()) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Subject code already exists. Please use a unique code.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                return true;
+	}
+
+        private boolean hasValidUnits() {
+                return readUnits() > 0;
+        }
+
+        private float readUnits() {
+                Object unitsValue = jSpinner1.getValue();
+                if (unitsValue instanceof Number number) {
+                        return number.floatValue();
+                }
+
+                try {
+                        return Float.parseFloat(unitsValue.toString());
+                } catch (NumberFormatException ex) {
+                        return 0;
+                }
+        }
+
+        private boolean isValidCurriculumSelection() {
+                Object selectedCurriculum = jComboBox1.getSelectedItem();
+                return selectedCurriculum != null
+                        && curriculumIdByLabel.containsKey(selectedCurriculum.toString());
+        }
+
+        private boolean isValidDepartmentSelection() {
+                Object selectedDepartment = jComboBox2.getSelectedItem();
+                return selectedDepartment != null
+                        && departmentIdByLabel.containsKey(selectedDepartment.toString());
+        }
+
+        private boolean isSubjectCodeAvailable() {
+                String subjectCode = jTextField2.getText().trim().toUpperCase();
+                Optional<Subject> existingSubject = subjectService.getSubjectByCode(subjectCode);
+                if (existingSubject.isEmpty()) {
+                        return true;
+                }
+
+                return editingSubject != null && existingSubject.get().getId().equals(editingSubject.getId());
+        }
+
+        private void saveSubject() {
+                if (!isValidForm()) {
+                        return;
+                }
+
+                Long curriculumId = curriculumIdByLabel.get(jComboBox1.getSelectedItem().toString());
+                Long departmentId = departmentIdByLabel.get(jComboBox2.getSelectedItem().toString());
+
+                Subject subject = editingSubject == null ? new Subject() : editingSubject;
+                subject
+                        .setSubjectName(jTextField1.getText().trim())
+                        .setSubjectCode(jTextField2.getText().trim().toUpperCase())
+                        .setUnits(readUnits())
+                        .setDescription(jTextArea1.getText().trim())
+                        .setCurriculumId(curriculumId)
+                        .setDepartmentId(departmentId);
+
+                boolean success = editingSubject == null
+                        ? subjectService.createSubject(subject)
+                        : subjectService.updateSubject(subject);
+
+                if (!success) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Failed to save subject. Please try again.",
+                                "Save Failed",
+                                JOptionPane.ERROR_MESSAGE
+                        );
+                        return;
+                }
+
+                JOptionPane.showMessageDialog(
+                        this,
+                        editingSubject == null
+                                ? "Subject created successfully."
+                                : "Subject updated successfully.",
+                        "Success",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+
+                if (onSavedCallback != null) {
+                        onSavedCallback.run();
+                }
+
+                dispose();
+	}
+
+        private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {
+                saveSubject();
+	}
+
+        private void jButton2ActionPerformed(java.awt.event.ActionEvent evt) {
+                dispose();
 	}
 
 	/**
@@ -27,7 +309,6 @@ public class SubjectForm extends javax.swing.JDialog {
 	 * form. WARNING: Do NOT modify this code. The content of this method is
 	 * always regenerated by the Form Editor.
 	 */
-	@SuppressWarnings("unchecked")
         // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
         private void initComponents() {
 
