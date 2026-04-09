@@ -9,6 +9,8 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -97,12 +99,31 @@ public class EnrollmentService {
         PreparedStatement ps = conn.prepareStatement(
             "INSERT INTO enrollments (student_id, enrollment_period_id, status, max_units, total_units, submitted_at) VALUES (?, ?, ?, ?, ?, ?)"
         )) {
+      Long enrollmentPeriodId = resolveEnrollmentPeriodId(conn, enrollment.getEnrollmentPeriodId());
+      if (enrollmentPeriodId == null) {
+        logger.warn("Unable to create enrollment: no enrollment period available");
+        return false;
+      }
+
       ps.setString(1, enrollment.getStudentId());
-      ps.setLong(2, enrollment.getEnrollmentPeriodId());
+      ps.setLong(2, enrollmentPeriodId);
       ps.setString(3, enrollment.getStatus().name());
-      ps.setFloat(4, enrollment.getMaxUnits());
-      ps.setFloat(5, enrollment.getTotalUnits());
-      ps.setTimestamp(6, new java.sql.Timestamp(enrollment.getSubmittedAt().getTime()));
+      if (enrollment.getMaxUnits() == null) {
+        ps.setNull(4, Types.FLOAT);
+      } else {
+        ps.setFloat(4, enrollment.getMaxUnits());
+      }
+
+      if (enrollment.getTotalUnits() == null) {
+        ps.setNull(5, Types.FLOAT);
+      } else {
+        ps.setFloat(5, enrollment.getTotalUnits());
+      }
+
+      Timestamp submittedAt = enrollment.getSubmittedAt() == null
+          ? new Timestamp(System.currentTimeMillis())
+          : new Timestamp(enrollment.getSubmittedAt().getTime());
+      ps.setTimestamp(6, submittedAt);
 
       boolean created = ps.executeUpdate() > 0;
       if (created) {
@@ -120,12 +141,32 @@ public class EnrollmentService {
       PreparedStatement ps = conn.prepareStatement(
         "UPDATE enrollments SET student_id = ?, enrollment_period_id = ?, status = ?, max_units = ?, total_units = ?, submitted_at = ? WHERE id = ?"
       )) {
+      Long enrollmentPeriodId = resolveEnrollmentPeriodId(conn, enrollment.getEnrollmentPeriodId());
+      if (enrollmentPeriodId == null) {
+        logger.warn("Unable to update enrollment {}: no enrollment period available", enrollment.getId());
+        return false;
+      }
+
       ps.setString(1, enrollment.getStudentId());
-      ps.setLong(2, enrollment.getEnrollmentPeriodId());
+      ps.setLong(2, enrollmentPeriodId);
       ps.setString(3, enrollment.getStatus().name());
-      ps.setFloat(4, enrollment.getMaxUnits());
-      ps.setFloat(5, enrollment.getTotalUnits());
-      ps.setTimestamp(6, new java.sql.Timestamp(enrollment.getSubmittedAt().getTime()));
+      if (enrollment.getMaxUnits() == null) {
+        ps.setNull(4, Types.FLOAT);
+      } else {
+        ps.setFloat(4, enrollment.getMaxUnits());
+      }
+
+      if (enrollment.getTotalUnits() == null) {
+        ps.setNull(5, Types.FLOAT);
+      } else {
+        ps.setFloat(5, enrollment.getTotalUnits());
+      }
+
+      if (enrollment.getSubmittedAt() == null) {
+        ps.setNull(6, Types.TIMESTAMP);
+      } else {
+        ps.setTimestamp(6, new Timestamp(enrollment.getSubmittedAt().getTime()));
+      }
       ps.setLong(7, enrollment.getId());
 
       boolean updated = ps.executeUpdate() > 0;
@@ -196,5 +237,31 @@ public class EnrollmentService {
     }
 
     return Optional.empty();
+  }
+
+  private Long resolveEnrollmentPeriodId(Connection conn, Long requestedEnrollmentPeriodId) throws SQLException {
+    if (requestedEnrollmentPeriodId != null) {
+      return requestedEnrollmentPeriodId;
+    }
+
+    Long currentPeriodId = getEnrollmentPeriodId(conn,
+        "SELECT id FROM enrollment_period WHERE start_date <= CURRENT_TIMESTAMP AND end_date >= CURRENT_TIMESTAMP ORDER BY start_date DESC FETCH FIRST 1 ROWS ONLY");
+    if (currentPeriodId != null) {
+      return currentPeriodId;
+    }
+
+    return getEnrollmentPeriodId(conn,
+        "SELECT id FROM enrollment_period ORDER BY created_at DESC FETCH FIRST 1 ROWS ONLY");
+  }
+
+  private Long getEnrollmentPeriodId(Connection conn, String sql) throws SQLException {
+    try (PreparedStatement ps = conn.prepareStatement(sql);
+        ResultSet rs = ps.executeQuery()) {
+      if (rs.next()) {
+        return rs.getLong("id");
+      }
+    }
+
+    return null;
   }
 }

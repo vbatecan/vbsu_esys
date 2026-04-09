@@ -78,7 +78,11 @@ public class EnrollmentDetailService {
   public List<EnrollmentDetail> getEnrollmentDetailsBySection(Long sectionId) {
     List<EnrollmentDetail> details = new ArrayList<>();
     try (Connection conn = ConnectionService.getConnection();
-        PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments_details WHERE section_id = ? ORDER BY created_at")) {
+        PreparedStatement ps = conn.prepareStatement(
+            "SELECT ed.* FROM enrollments_details ed "
+                + "INNER JOIN offerings o ON o.id = ed.offering_id "
+                + "WHERE o.section_id = ? ORDER BY ed.created_at"
+        )) {
       ps.setLong(1, sectionId);
 
       try (ResultSet rs = ps.executeQuery()) {
@@ -92,16 +96,54 @@ public class EnrollmentDetailService {
     return details;
   }
 
+  public List<EnrollmentDetail> getEnrollmentDetailsByOffering(Long offeringId) {
+    List<EnrollmentDetail> details = new ArrayList<>();
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement("SELECT * FROM enrollments_details WHERE offering_id = ? ORDER BY created_at")) {
+      ps.setLong(1, offeringId);
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          details.add(EnrollmentDetailUtils.mapResultSetToEnrollmentDetail(rs));
+        }
+      }
+    } catch (SQLException e) {
+      logger.error("ERROR: " + e.getMessage(), e);
+    }
+    return details;
+  }
+
+  public long countSelectedByOffering(Long offeringId) {
+    String sql = "SELECT COUNT(*) AS total FROM enrollments_details WHERE offering_id = ? AND status = ?";
+
+    try (
+      Connection conn = ConnectionService.getConnection();
+      PreparedStatement ps = conn.prepareStatement(sql)
+    ) {
+      ps.setLong(1, offeringId);
+      ps.setString(2, EnrollmentDetailStatus.SELECTED.name());
+
+      try (ResultSet rs = ps.executeQuery()) {
+        if (rs.next()) {
+          return rs.getLong("total");
+        }
+      }
+    } catch (SQLException e) {
+      logger.error("ERROR: " + e.getMessage(), e);
+    }
+
+    return 0;
+  }
+
   public boolean createEnrollmentDetail(EnrollmentDetail detail) {
     try (Connection conn = ConnectionService.getConnection();
         PreparedStatement ps = conn.prepareStatement(
-            "INSERT INTO enrollments_details (enrollment_id, section_id, subject_id, units, status) VALUES (?, ?, ?, ?, ?)"
+            "INSERT INTO enrollments_details (enrollment_id, offering_id, units, status) VALUES (?, ?, ?, ?)"
         )) {
       ps.setLong(1, detail.getEnrollmentId());
-      ps.setLong(2, detail.getSectionId());
-      ps.setLong(3, detail.getSubjectId());
-      ps.setFloat(4, detail.getUnits());
-      ps.setString(5, detail.getStatus().name());
+      ps.setLong(2, detail.getOfferingId());
+      ps.setFloat(3, detail.getUnits());
+      ps.setString(4, detail.getStatus().name());
 
       boolean created = ps.executeUpdate() > 0;
       if (created) {
@@ -117,14 +159,13 @@ public class EnrollmentDetailService {
   public boolean updateEnrollmentDetail(EnrollmentDetail detail) {
     try (Connection conn = ConnectionService.getConnection();
       PreparedStatement ps = conn.prepareStatement(
-        "UPDATE enrollments_details SET enrollment_id = ?, section_id = ?, subject_id = ?, units = ?, status = ? WHERE id = ?"
+        "UPDATE enrollments_details SET enrollment_id = ?, offering_id = ?, units = ?, status = ? WHERE id = ?"
       )) {
       ps.setLong(1, detail.getEnrollmentId());
-      ps.setLong(2, detail.getSectionId());
-      ps.setLong(3, detail.getSubjectId());
-      ps.setFloat(4, detail.getUnits());
-      ps.setString(5, detail.getStatus().name());
-      ps.setLong(6, detail.getId());
+      ps.setLong(2, detail.getOfferingId());
+      ps.setFloat(3, detail.getUnits());
+      ps.setString(4, detail.getStatus().name());
+      ps.setLong(5, detail.getId());
 
       boolean updated = ps.executeUpdate() > 0;
       if (updated) {

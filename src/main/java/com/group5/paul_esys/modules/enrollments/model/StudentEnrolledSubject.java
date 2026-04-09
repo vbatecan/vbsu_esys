@@ -6,6 +6,8 @@ import java.sql.Timestamp;
 public class StudentEnrolledSubject {
 
   private String studentId;
+  private Long enrollmentId;
+  private Long offeringId;
   private Long semesterSubjectId;
   private StudentEnrolledSubjectStatus status;
   private Timestamp createdAt;
@@ -14,8 +16,18 @@ public class StudentEnrolledSubject {
   public StudentEnrolledSubject() {
   }
 
-  public StudentEnrolledSubject(String studentId, Long semesterSubjectId, StudentEnrolledSubjectStatus status, Timestamp createdAt, Timestamp updatedAt) {
+  public StudentEnrolledSubject(
+      String studentId,
+      Long enrollmentId,
+      Long offeringId,
+      Long semesterSubjectId,
+      StudentEnrolledSubjectStatus status,
+      Timestamp createdAt,
+      Timestamp updatedAt
+  ) {
     this.studentId = studentId;
+    this.enrollmentId = enrollmentId;
+    this.offeringId = offeringId;
     this.semesterSubjectId = semesterSubjectId;
     this.status = status;
     this.createdAt = createdAt;
@@ -28,6 +40,24 @@ public class StudentEnrolledSubject {
 
   public StudentEnrolledSubject setStudentId(String studentId) {
     this.studentId = studentId;
+    return this;
+  }
+
+  public Long getEnrollmentId() {
+    return enrollmentId;
+  }
+
+  public StudentEnrolledSubject setEnrollmentId(Long enrollmentId) {
+    this.enrollmentId = enrollmentId;
+    return this;
+  }
+
+  public Long getOfferingId() {
+    return offeringId;
+  }
+
+  public StudentEnrolledSubject setOfferingId(Long offeringId) {
+    this.offeringId = offeringId;
     return this;
   }
 

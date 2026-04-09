@@ -10,6 +10,8 @@ public class StudentEnrolledSubjectUtils {
   public static StudentEnrolledSubject mapResultSetToStudentEnrolledSubject(ResultSet rs) throws SQLException {
     return new StudentEnrolledSubject(
         rs.getString("student_id"),
+        rs.getLong("enrollment_id"),
+        rs.getLong("offering_id"),
         rs.getLong("semester_subject_id"),
         StudentEnrolledSubjectStatus.valueOf(rs.getString("status")),
         rs.getTimestamp("created_at"),

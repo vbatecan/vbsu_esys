@@ -12,8 +12,7 @@ public class EnrollmentDetailUtils {
     return new EnrollmentDetail(
         rs.getLong("id"),
         rs.getLong("enrollment_id"),
-        rs.getLong("section_id"),
-        rs.getLong("subject_id"),
+        rs.getLong("offering_id"),
         rs.getFloat("units"),
         EnrollmentDetailStatus.valueOf(rs.getString("status")),
         rs.getTimestamp("created_at"),

@@ -7,8 +7,7 @@ public class EnrollmentDetail {
 
   private Long id;
   private Long enrollmentId;
-  private Long sectionId;
-  private Long subjectId;
+  private Long offeringId;
   private Float units;
   private EnrollmentDetailStatus status;
   private Timestamp createdAt;
@@ -17,11 +16,10 @@ public class EnrollmentDetail {
   public EnrollmentDetail() {
   }
 
-  public EnrollmentDetail(Long id, Long enrollmentId, Long sectionId, Long subjectId, Float units, EnrollmentDetailStatus status, Timestamp createdAt, Timestamp updatedAt) {
+  public EnrollmentDetail(Long id, Long enrollmentId, Long offeringId, Float units, EnrollmentDetailStatus status, Timestamp createdAt, Timestamp updatedAt) {
     this.id = id;
     this.enrollmentId = enrollmentId;
-    this.sectionId = sectionId;
-    this.subjectId = subjectId;
+    this.offeringId = offeringId;
     this.units = units;
     this.status = status;
     this.createdAt = createdAt;
@@ -46,21 +44,12 @@ public class EnrollmentDetail {
     return this;
   }
 
-  public Long getSectionId() {
-    return sectionId;
+  public Long getOfferingId() {
+    return offeringId;
   }
 
-  public EnrollmentDetail setSectionId(Long sectionId) {
-    this.sectionId = sectionId;
-    return this;
-  }
-
-  public Long getSubjectId() {
-    return subjectId;
-  }
-
-  public EnrollmentDetail setSubjectId(Long subjectId) {
-    this.subjectId = subjectId;
+  public EnrollmentDetail setOfferingId(Long offeringId) {
+    this.offeringId = offeringId;
     return this;
   }
 

@@ -247,10 +247,11 @@ public class StudentSemesterProgressService {
 
   private long countSelectedEnrollmentActivity(Connection conn, String studentId, Long semesterId) throws SQLException {
     String sql =
-        "SELECT COUNT(DISTINCT ed.subject_id) AS total "
+      "SELECT COUNT(DISTINCT o.semester_subject_id) AS total "
             + "FROM enrollments_details ed "
             + "JOIN enrollments e ON e.id = ed.enrollment_id "
-            + "JOIN semester_subjects ss ON ss.subject_id = ed.subject_id "
+        + "JOIN offerings o ON o.id = ed.offering_id "
+        + "JOIN semester_subjects ss ON ss.id = o.semester_subject_id "
             + "WHERE e.student_id = ? AND ss.semester_id = ? AND ed.status = 'SELECTED'";
 
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
