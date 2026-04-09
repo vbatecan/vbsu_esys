@@ -26,21 +26,32 @@ public class RegistrarRoomsManagementPanel extends javax.swing.JPanel {
         // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
         private void initComponents() {
 
+                popMenu = new javax.swing.JPopupMenu();
+                menuItemUpdate = new javax.swing.JMenuItem();
+                menuItemDelete = new javax.swing.JMenuItem();
                 jLabel2 = new javax.swing.JLabel();
                 jLabel1 = new javax.swing.JLabel();
                 jPanel1 = new javax.swing.JPanel();
                 jScrollPane1 = new javax.swing.JScrollPane();
-                jTable1 = new javax.swing.JTable();
+                tableSubjects = new javax.swing.JTable();
                 jLabel3 = new javax.swing.JLabel();
                 txtSearch = new javax.swing.JTextField();
                 jLabel4 = new javax.swing.JLabel();
-                jComboBox1 = new javax.swing.JComboBox<>();
-                jComboBox2 = new javax.swing.JComboBox<>();
+                cbxType = new javax.swing.JComboBox<>();
+                cbxStatus = new javax.swing.JComboBox<>();
                 jLabel5 = new javax.swing.JLabel();
-                jButton1 = new javax.swing.JButton();
+                btnClearFilter = new javax.swing.JButton();
+
+                menuItemUpdate.setText("jMenuItem1");
+                menuItemUpdate.addActionListener(this::menuItemUpdateActionPerformed);
+                popMenu.add(menuItemUpdate);
+
+                menuItemDelete.setText("jMenuItem2");
+                menuItemDelete.addActionListener(this::menuItemDeleteActionPerformed);
+                popMenu.add(menuItemDelete);
 
                 setBackground(new java.awt.Color(255, 255, 255));
-                setPreferredSize(new java.awt.Dimension(1181, 731));
+                setPreferredSize(new java.awt.Dimension(1181, 684));
 
                 jLabel2.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 jLabel2.setForeground(new java.awt.Color(153, 153, 153));
@@ -52,7 +63,7 @@ public class RegistrarRoomsManagementPanel extends javax.swing.JPanel {
                 jPanel1.setBackground(new java.awt.Color(255, 255, 255));
                 jPanel1.setBorder(new com.group5.paul_esys.ui.PanelRoundBorder());
 
-                jTable1.setModel(new javax.swing.table.DefaultTableModel(
+                tableSubjects.setModel(new javax.swing.table.DefaultTableModel(
                         new Object [][] {
 
                         },
@@ -75,21 +86,29 @@ public class RegistrarRoomsManagementPanel extends javax.swing.JPanel {
                                 return canEdit [columnIndex];
                         }
                 });
-                jScrollPane1.setViewportView(jTable1);
+                jScrollPane1.setViewportView(tableSubjects);
 
                 jLabel3.setText("Search");
 
                 txtSearch.setBorder(new com.group5.paul_esys.ui.TextFieldRoundBorder());
+                txtSearch.addKeyListener(new java.awt.event.KeyAdapter() {
+                        public void keyReleased(java.awt.event.KeyEvent evt) {
+                                txtSearchKeyReleased(evt);
+                        }
+                });
 
                 jLabel4.setText("Type");
 
-                jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+                cbxType.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "LECTURE", "LAB", "SEMINAR", "AUDITORIUM", "OTHER" }));
+                cbxType.addItemListener(this::cbxTypeItemStateChanged);
 
-                jComboBox2.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+                cbxStatus.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "AVAILABLE", "UNAVAILABLE", "MAINTENANCE" }));
+                cbxStatus.addItemListener(this::cbxStatusItemStateChanged);
 
                 jLabel5.setText("Status");
 
-                jButton1.setText("Clear Filter");
+                btnClearFilter.setText("Clear Filter");
+                btnClearFilter.addActionListener(this::btnClearFilterActionPerformed);
 
                 javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
                 jPanel1.setLayout(jPanel1Layout);
@@ -98,7 +117,7 @@ public class RegistrarRoomsManagementPanel extends javax.swing.JPanel {
                         .addGroup(jPanel1Layout.createSequentialGroup()
                                 .addContainerGap()
                                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                        .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 1147, Short.MAX_VALUE)
+                                        .addComponent(jScrollPane1)
                                         .addGroup(jPanel1Layout.createSequentialGroup()
                                                 .addComponent(jLabel3)
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -106,13 +125,13 @@ public class RegistrarRoomsManagementPanel extends javax.swing.JPanel {
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                                 .addComponent(jLabel4)
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addComponent(jComboBox1, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                                .addComponent(cbxType, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                                 .addComponent(jLabel5)
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addComponent(jComboBox2, javax.swing.GroupLayout.PREFERRED_SIZE, 175, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addComponent(cbxStatus, javax.swing.GroupLayout.PREFERRED_SIZE, 175, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
-                                                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                                .addComponent(btnClearFilter, javax.swing.GroupLayout.PREFERRED_SIZE, 120, javax.swing.GroupLayout.PREFERRED_SIZE)))
                                 .addContainerGap())
                 );
                 jPanel1Layout.setVerticalGroup(
@@ -124,12 +143,12 @@ public class RegistrarRoomsManagementPanel extends javax.swing.JPanel {
                                                 .addComponent(jLabel3)
                                                 .addComponent(txtSearch, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                 .addComponent(jLabel4)
-                                                .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addComponent(jComboBox2, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addComponent(cbxType, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addComponent(cbxStatus, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                 .addComponent(jLabel5))
-                                        .addComponent(jButton1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                                        .addComponent(btnClearFilter, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 584, Short.MAX_VALUE)
+                                .addComponent(jScrollPane1, javax.swing.GroupLayout.DEFAULT_SIZE, 537, Short.MAX_VALUE)
                                 .addContainerGap())
                 );
 
@@ -161,11 +180,35 @@ public class RegistrarRoomsManagementPanel extends javax.swing.JPanel {
                 );
         }// </editor-fold>//GEN-END:initComponents
 
+        private void txtSearchKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_txtSearchKeyReleased
+                // TODO add your handling code here:
+        }//GEN-LAST:event_txtSearchKeyReleased
+
+        private void cbxTypeItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cbxTypeItemStateChanged
+                // TODO add your handling code here:
+        }//GEN-LAST:event_cbxTypeItemStateChanged
+
+        private void cbxStatusItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cbxStatusItemStateChanged
+                // TODO add your handling code here:
+        }//GEN-LAST:event_cbxStatusItemStateChanged
+
+        private void btnClearFilterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnClearFilterActionPerformed
+                // TODO add your handling code here:
+        }//GEN-LAST:event_btnClearFilterActionPerformed
+
+        private void menuItemUpdateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuItemUpdateActionPerformed
+                // TODO add your handling code here:
+        }//GEN-LAST:event_menuItemUpdateActionPerformed
+
+        private void menuItemDeleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuItemDeleteActionPerformed
+                // TODO add your handling code here:
+        }//GEN-LAST:event_menuItemDeleteActionPerformed
+
 
         // Variables declaration - do not modify//GEN-BEGIN:variables
-        private javax.swing.JButton jButton1;
-        private javax.swing.JComboBox<String> jComboBox1;
-        private javax.swing.JComboBox<String> jComboBox2;
+        private javax.swing.JButton btnClearFilter;
+        private javax.swing.JComboBox<String> cbxStatus;
+        private javax.swing.JComboBox<String> cbxType;
         private javax.swing.JLabel jLabel1;
         private javax.swing.JLabel jLabel2;
         private javax.swing.JLabel jLabel3;
@@ -173,7 +216,10 @@ public class RegistrarRoomsManagementPanel extends javax.swing.JPanel {
         private javax.swing.JLabel jLabel5;
         private javax.swing.JPanel jPanel1;
         private javax.swing.JScrollPane jScrollPane1;
-        private javax.swing.JTable jTable1;
+        private javax.swing.JMenuItem menuItemDelete;
+        private javax.swing.JMenuItem menuItemUpdate;
+        private javax.swing.JPopupMenu popMenu;
+        private javax.swing.JTable tableSubjects;
         private javax.swing.JTextField txtSearch;
         // End of variables declaration//GEN-END:variables
 }
