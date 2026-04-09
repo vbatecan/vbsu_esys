@@ -7,12 +7,12 @@ package com.group5.paul_esys.screens.student;
 import com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTGitHubIJTheme;
 import com.group5.paul_esys.modules.courses.model.Course;
 import com.group5.paul_esys.modules.courses.services.CourseService;
+import com.group5.paul_esys.modules.enrollment_period.services.EnrollmentPeriodService;
 import com.group5.paul_esys.modules.enrollments.model.Enrollment;
 import com.group5.paul_esys.modules.enrollments.model.EnrollmentDetail;
 import com.group5.paul_esys.modules.enrollments.services.EnrollmentDetailService;
 import com.group5.paul_esys.modules.enrollments.services.EnrollmentService;
 import com.group5.paul_esys.modules.enrollments.services.StudentEnrolledSubjectService;
-import com.group5.paul_esys.modules.enrollment_period.services.EnrollmentPeriodService;
 import com.group5.paul_esys.modules.enums.EnrollmentDetailStatus;
 import com.group5.paul_esys.modules.enums.EnrollmentStatus;
 import com.group5.paul_esys.modules.enums.StudentEnrolledSubjectStatus;
@@ -328,7 +328,7 @@ public class StudentDashboard extends javax.swing.JFrame {
                 jPanel10 = new javax.swing.JPanel();
                 jLabel3 = new javax.swing.JLabel();
                 jScrollPane2 = new javax.swing.JScrollPane();
-                jTable2 = new javax.swing.JTable();
+                tableSchedules = new javax.swing.JTable();
                 jLabel12 = new javax.swing.JLabel();
                 jButton4 = new javax.swing.JButton();
                 jButton5 = new javax.swing.JButton();
@@ -675,33 +675,25 @@ public class StudentDashboard extends javax.swing.JFrame {
 
                 jPanel2.setBackground(new java.awt.Color(255, 255, 255));
                 jPanel2.setBorder(new com.group5.paul_esys.ui.RoundShadowBorder());
-                jPanel2.setForeground(new java.awt.Color(0, 0, 0));
 
                 tblSubjectCatalog.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 tblSubjectCatalog.setModel(new javax.swing.table.DefaultTableModel(
                         new Object [][] {
-                                {null, null, null, null, null, null, null, null},
-                                {null, null, null, null, null, null, null, null},
-                                {null, null, null, null, null, null, null, null},
-                                {null, null, null, null, null, null, null, null}
+                                {null, null, null, null},
+                                {null, null, null, null},
+                                {null, null, null, null},
+                                {null, null, null, null}
                         },
                         new String [] {
-                                "Code", "Subject Name", "Units", "Section", "Schedule", "Availability", "Offering ID", "Subject ID"
+                                "Subject Name", "Code", "Units", "Description"
                         }
                 ) {
-                        Class<?>[] types = new Class [] {
-                                java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
-                        };
-                        boolean[] canEdit = new boolean [] {
-                                false, false, false, false, false, false, false, false
+                        Class[] types = new Class [] {
+                                java.lang.String.class, java.lang.String.class, java.lang.Integer.class, java.lang.String.class
                         };
 
-                        public Class<?> getColumnClass(int columnIndex) {
+                        public Class getColumnClass(int columnIndex) {
                                 return types [columnIndex];
-                        }
-
-                        public boolean isCellEditable(int rowIndex, int columnIndex) {
-                                return canEdit [columnIndex];
                         }
                 });
                 jScrollPane1.setViewportView(tblSubjectCatalog);
@@ -859,18 +851,18 @@ public class StudentDashboard extends javax.swing.JFrame {
                 jLabel3.setText("Status: Pending Approval");
                 jPanel10.add(jLabel3);
 
-                jTable2.setModel(new javax.swing.table.DefaultTableModel(
+                tableSchedules.setModel(new javax.swing.table.DefaultTableModel(
                         new Object [][] {
-                                {null, null, null, null, null, null, null},
-                                {null, null, null, null, null, null, null},
-                                {null, null, null, null, null, null, null},
-                                {null, null, null, null, null, null, null}
+                                {null, null, null, null, null, null},
+                                {null, null, null, null, null, null},
+                                {null, null, null, null, null, null},
+                                {null, null, null, null, null, null}
                         },
                         new String [] {
-                                "Code", "Course Name", "Section", "Instructor", "Schedule", "Room", "Credits"
+                                "Code", "Course Name", "Instructor", "Schedule", "Room", "Credits"
                         }
                 ));
-                jScrollPane2.setViewportView(jTable2);
+                jScrollPane2.setViewportView(tableSchedules);
 
                 javax.swing.GroupLayout jPanel9Layout = new javax.swing.GroupLayout(jPanel9);
                 jPanel9.setLayout(jPanel9Layout);
@@ -1084,7 +1076,7 @@ public class StudentDashboard extends javax.swing.JFrame {
         }//GEN-LAST:event_btnSubmitScheduleActionPerformed
 
 	private void loadMySchedule() {
-		javax.swing.table.DefaultTableModel model = (javax.swing.table.DefaultTableModel) jTable2.getModel();
+		javax.swing.table.DefaultTableModel model = (javax.swing.table.DefaultTableModel) tableSchedules.getModel();
 		model.setRowCount(0);
 
                 List<Enrollment> studentEr = EnrollmentService.getInstance().getEnrollmentsByStudent(currentStudent.getStudentId());
@@ -1196,7 +1188,6 @@ public class StudentDashboard extends javax.swing.JFrame {
         private javax.swing.JScrollPane jScrollPane3;
         private javax.swing.JSeparator jSeparator1;
         private javax.swing.JSeparator jSeparator2;
-        private javax.swing.JTable jTable2;
         private javax.swing.JProgressBar pBarRegistration;
         private javax.swing.JPanel panelAcademicOverview;
         private javax.swing.JPanel panelCourseRegistration;
@@ -1204,6 +1195,7 @@ public class StudentDashboard extends javax.swing.JFrame {
         private javax.swing.JPanel panelEnrollmentProgress;
         private javax.swing.JPanel panelMySchedule;
         private javax.swing.JTabbedPane tabbedPane;
+        private javax.swing.JTable tableSchedules;
         private javax.swing.JTable tblSubjectCatalog;
         private javax.swing.JTextField txtBirthDate;
         private javax.swing.JTextField txtCourse;

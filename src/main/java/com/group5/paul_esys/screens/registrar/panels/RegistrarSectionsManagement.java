@@ -78,7 +78,6 @@ public class RegistrarSectionsManagement extends javax.swing.JPanel {
                 configurePopupMenu();
                 registerFilterListeners();
                 registerTableInteractionListeners();
-                registerButtonListeners();
 
                 initializeSections();
         }
@@ -132,12 +131,6 @@ public class RegistrarSectionsManagement extends javax.swing.JPanel {
                                 applyFilters();
                         }
                 });
-
-                cbxStatus.addItemListener(evt -> {
-                        if (evt.getStateChange() == ItemEvent.SELECTED) {
-                                applyFilters();
-                        }
-                });
         }
 
         private void registerTableInteractionListeners() {
@@ -159,11 +152,6 @@ public class RegistrarSectionsManagement extends javax.swing.JPanel {
                                 }
                         }
                 });
-        }
-
-        private void registerButtonListeners() {
-                btnAddSection.addActionListener(evt -> openCreateSectionDialog());
-                btnClearFilter.addActionListener(evt -> clearFilters());
         }
 
         private void selectRowFromPointer(MouseEvent evt) {
@@ -665,41 +653,43 @@ public class RegistrarSectionsManagement extends javax.swing.JPanel {
                 jPanel1.add(txtSearch, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 10, 340, 36));
 
                 jLabel4.setText("Status");
-                jPanel1.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(410, 20, -1, -1));
+                jPanel1.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(420, 20, -1, -1));
 
                 cbxStatus.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "OPEN", "CLOSED", "WAITLIST", "DISSOLVED" }));
                 cbxStatus.addItemListener(this::cbxStatusItemStateChanged);
-                jPanel1.add(cbxStatus, new org.netbeans.lib.awtextra.AbsoluteConstraints(450, 10, 280, 36));
+                jPanel1.add(cbxStatus, new org.netbeans.lib.awtextra.AbsoluteConstraints(460, 10, 280, 36));
 
                 btnAddSection.setBackground(new java.awt.Color(119, 0, 0));
                 btnAddSection.setForeground(new java.awt.Color(255, 255, 255));
                 btnAddSection.setText("Add Section");
                 btnAddSection.addActionListener(this::btnAddSectionActionPerformed);
-                jPanel1.add(btnAddSection, new org.netbeans.lib.awtextra.AbsoluteConstraints(950, 10, 100, 36));
+                jPanel1.add(btnAddSection, new org.netbeans.lib.awtextra.AbsoluteConstraints(850, 10, 150, 36));
 
                 btnClearFilter.setBackground(new java.awt.Color(119, 0, 0));
                 btnClearFilter.setForeground(new java.awt.Color(255, 255, 255));
                 btnClearFilter.setText("Clear Filter");
                 btnClearFilter.addActionListener(this::btnClearFilterActionPerformed);
-                jPanel1.add(btnClearFilter, new org.netbeans.lib.awtextra.AbsoluteConstraints(1057, 10, 100, 36));
+                jPanel1.add(btnClearFilter, new org.netbeans.lib.awtextra.AbsoluteConstraints(1007, 10, 150, 36));
 
                 add(jPanel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(6, 77, 1170, 600));
         }// </editor-fold>//GEN-END:initComponents
 
         private void btnAddSectionActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAddSectionActionPerformed
-                // TODO add your handling code here:
+                openCreateSectionDialog();
         }//GEN-LAST:event_btnAddSectionActionPerformed
 
         private void btnClearFilterActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnClearFilterActionPerformed
-                // TODO add your handling code here:
+                clearFilters();
         }//GEN-LAST:event_btnClearFilterActionPerformed
 
         private void txtSearchKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_txtSearchKeyReleased
-                // TODO add your handling code here:
+                applyFilters();
         }//GEN-LAST:event_txtSearchKeyReleased
 
         private void cbxStatusItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cbxStatusItemStateChanged
-                // TODO add your handling code here:
+                if (evt.getStateChange() == ItemEvent.SELECTED) {
+                        applyFilters();
+                }
         }//GEN-LAST:event_cbxStatusItemStateChanged
 
 
