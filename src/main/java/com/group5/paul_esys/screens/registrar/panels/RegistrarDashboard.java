@@ -331,7 +331,7 @@ public class RegistrarDashboard extends javax.swing.JPanel {
         }//GEN-LAST:event_txtSearchKeyReleased
 
         private void btnApproveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnApproveActionPerformed
-                processSelectedApplications(EnrollmentStatus.APPROVED, "approve");
+                processSelectedApplications(EnrollmentStatus.ENROLLED, "approve");
         }//GEN-LAST:event_btnApproveActionPerformed
 
         private void btnDeclineActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnDeclineActionPerformed
