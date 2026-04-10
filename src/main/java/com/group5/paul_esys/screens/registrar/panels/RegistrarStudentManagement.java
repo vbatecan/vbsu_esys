@@ -18,6 +18,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.table.DefaultTableModel;
 
 /**
@@ -30,6 +31,8 @@ public final class RegistrarStudentManagement extends javax.swing.JPanel {
         private final CourseService courseService = CourseService.getInstance();
         private List<Student> students = new ArrayList<>();
         private final Map<Long, String> courseNameById = new LinkedHashMap<>();
+
+        private transient SwingWorker<?, ?> currentWorker;
 
         /**
          * Creates new form StudentManagementPanel
@@ -45,11 +48,29 @@ public final class RegistrarStudentManagement extends javax.swing.JPanel {
                 this.initializeStudents();
         }
 
-        private void loadCourseNameLookup() {
-                courseNameById.clear();
-                for (Course course : courseService.getAllCourses()) {
-                        courseNameById.put(course.getId(), course.getCourseName());
+        private void setLoading(boolean loading) {
+                setCursor(loading ? java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.WAIT_CURSOR)
+                                : java.awt.Cursor.getDefaultCursor());
+                btnRefresh.setEnabled(!loading);
+                btnAddStudent.setEnabled(!loading);
+        }
+
+        private void cancelCurrentWorker() {
+                if (currentWorker != null && !currentWorker.isDone()) {
+                        currentWorker.cancel(true);
                 }
+        }
+
+        private void executeAsync(SwingWorker<?, ?> worker) {
+                cancelCurrentWorker();
+                currentWorker = worker;
+                setLoading(true);
+                worker.addPropertyChangeListener(evt -> {
+                        if ("state".equals(evt.getPropertyName()) && SwingWorker.StateValue.DONE == evt.getNewValue()) {
+                                setLoading(false);
+                        }
+                });
+                worker.execute();
         }
 
         private Student getSelectedStudent() {
@@ -137,11 +158,36 @@ public final class RegistrarStudentManagement extends javax.swing.JPanel {
                 txtStudentLastName.setText(student.getLastName());
                 txtStudentCourse.setText(courseNameById.getOrDefault(student.getCourseId(), "N/A"));
                 txtStudentYearLevel.setText(student.getYearLevel() == null ? "" : String.valueOf(student.getYearLevel()));
-                txtStudentEmailAddress.setText(
-                        student.getUserId() == null
-                                ? ""
-                                : studentService.getUserEmailByUserId(student.getUserId()).orElse("")
-                );
+
+                if (student.getUserId() == null) {
+                        txtStudentEmailAddress.setText("");
+                        return;
+                }
+
+                txtStudentEmailAddress.setText("Loading...");
+                Long userId = student.getUserId();
+
+                SwingWorker<String, Void> emailWorker = new SwingWorker<>() {
+                        @Override
+                        protected String doInBackground() {
+                                return studentService.getUserEmailByUserId(userId).orElse("");
+                        }
+
+                        @Override
+                        protected void done() {
+                                try {
+                                        String email = get();
+                                        if (!isCancelled()) {
+                                                txtStudentEmailAddress.setText(email);
+                                        }
+                                } catch (Exception e) {
+                                        if (!isCancelled()) {
+                                                txtStudentEmailAddress.setText("");
+                                        }
+                                }
+                        }
+                };
+                emailWorker.execute();
         }
 
 	/**
@@ -561,17 +607,36 @@ public final class RegistrarStudentManagement extends javax.swing.JPanel {
                         return;
                 }
 
-                studentService.deleteAll(selectedStudents);
-                initializeStudents();
+                executeAsync(new SwingWorker<Boolean, Void>() {
+                        @Override
+                        protected Boolean doInBackground() {
+                                studentService.deleteAll(selectedStudents);
+                                return true;
+                        }
 
-                JOptionPane.showMessageDialog(
-                        this,
-                        selectedStudents.size() == 1
-                                ? "Student deleted successfully."
-                                : selectedStudents.size() + " students deleted successfully.",
-                        "Delete Student",
-                        JOptionPane.INFORMATION_MESSAGE
-                );
+                        @Override
+                        protected void done() {
+                                try {
+                                        get();
+                                        initializeStudents();
+                                        JOptionPane.showMessageDialog(
+                                                RegistrarStudentManagement.this,
+                                                selectedStudents.size() == 1
+                                                        ? "Student deleted successfully."
+                                                        : selectedStudents.size() + " students deleted successfully.",
+                                                "Delete Student",
+                                                JOptionPane.INFORMATION_MESSAGE
+                                        );
+                                } catch (Exception e) {
+                                        JOptionPane.showMessageDialog(
+                                                RegistrarStudentManagement.this,
+                                                "Failed to delete student(s): " + e.getMessage(),
+                                                "Error",
+                                                JOptionPane.ERROR_MESSAGE
+                                        );
+                                }
+                        }
+                });
         }//GEN-LAST:event_menuItemDeleteStudentActionPerformed
 
         private void menuItemUpdateStudentActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuItemUpdateStudentActionPerformed
@@ -707,49 +772,84 @@ public final class RegistrarStudentManagement extends javax.swing.JPanel {
         }
 
 	public void initializeStudents() {
-                loadCourseNameLookup();
-                students = studentService.list();
+                executeAsync(new SwingWorker<StudentLoadResult, Void>() {
+                        @Override
+                        protected StudentLoadResult doInBackground() {
+                                Map<Long, String> lookup = new LinkedHashMap<>();
+                                for (Course course : courseService.getAllCourses()) {
+                                        if (isCancelled()) return null;
+                                        lookup.put(course.getId(), course.getCourseName());
+                                }
 
-		DefaultTableModel model = (DefaultTableModel) tableRegistrarStudents.getModel();
-                model.setRowCount(0);
-
-                cbxCourseFilter.removeAllItems();
-                cbxCourseFilter.addItem("ALL");
-
-                cbxYearLevelFilter.removeAllItems();
-                cbxYearLevelFilter.addItem("ALL");
-
-                List<String> distinctCourses = new ArrayList<>();
-                List<String> distinctYearLevels = new ArrayList<>();
-
-		students.forEach(student -> {
-                        String courseName = courseNameById.getOrDefault(student.getCourseId(), "N/A");
-                        String yearLevel = String.valueOf(student.getYearLevel());
-                        String status = student.getStudentStatus() == null ? "N/A" : student.getStudentStatus().toString();
-
-                        model.addRow(new Object[]{
-                                student.getStudentId(),
-                                student.getFirstName(),
-                                student.getLastName(),
-                                courseName,
-                                status
-                        });
-
-                        if (!distinctCourses.contains(courseName)) {
-                                distinctCourses.add(courseName);
+                                if (isCancelled()) return null;
+                                List<Student> loadedStudents = studentService.list();
+                                return new StudentLoadResult(loadedStudents, lookup);
                         }
 
-                        if (!distinctYearLevels.contains(yearLevel)) {
-                                distinctYearLevels.add(yearLevel);
+                        @Override
+                        protected void done() {
+                                try {
+                                        StudentLoadResult result = get();
+                                        if (result == null || isCancelled()) return;
+
+                                        students = result.students;
+                                        courseNameById.clear();
+                                        courseNameById.putAll(result.courseLookup);
+
+                                        DefaultTableModel model = (DefaultTableModel) tableRegistrarStudents.getModel();
+                                        model.setRowCount(0);
+
+                                        cbxCourseFilter.removeAllItems();
+                                        cbxCourseFilter.addItem("ALL");
+
+                                        cbxYearLevelFilter.removeAllItems();
+                                        cbxYearLevelFilter.addItem("ALL");
+
+                                        List<String> distinctCourses = new ArrayList<>();
+                                        List<String> distinctYearLevels = new ArrayList<>();
+
+                                        for (Student student : students) {
+                                                String courseName = courseNameById.getOrDefault(student.getCourseId(), "N/A");
+                                                String yearLevel = String.valueOf(student.getYearLevel());
+                                                String status = student.getStudentStatus() == null ? "N/A" : student.getStudentStatus().toString();
+
+                                                model.addRow(new Object[]{
+                                                        student.getStudentId(),
+                                                        student.getFirstName(),
+                                                        student.getLastName(),
+                                                        courseName,
+                                                        status
+                                                });
+
+                                                if (!distinctCourses.contains(courseName)) {
+                                                        distinctCourses.add(courseName);
+                                                }
+
+                                                if (!distinctYearLevels.contains(yearLevel)) {
+                                                        distinctYearLevels.add(yearLevel);
+                                                }
+                                        }
+
+                                        distinctCourses.forEach(cbxCourseFilter::addItem);
+                                        distinctYearLevels.forEach(cbxYearLevelFilter::addItem);
+
+                                        tableRegistrarStudents.setModel(model);
+                                        populateStudentDetails(null);
+                                } catch (Exception e) {
+                                        if (!isCancelled()) {
+                                                JOptionPane.showMessageDialog(
+                                                        RegistrarStudentManagement.this,
+                                                        "Failed to load students: " + e.getMessage(),
+                                                        "Error",
+                                                        JOptionPane.ERROR_MESSAGE
+                                                );
+                                        }
+                                }
                         }
-		});
-
-                distinctCourses.forEach(cbxCourseFilter::addItem);
-                distinctYearLevels.forEach(cbxYearLevelFilter::addItem);
-
-		tableRegistrarStudents.setModel(model);
-                populateStudentDetails(null);
+                });
 	}
+
+        private record StudentLoadResult(List<Student> students, Map<Long, String> courseLookup) {}
 
         // Variables declaration - do not modify//GEN-BEGIN:variables
         private javax.swing.JButton btnAddStudent;

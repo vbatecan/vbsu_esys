@@ -21,6 +21,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
+import javax.swing.SwingWorker;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
@@ -42,6 +43,8 @@ public class RegistrarSubjectManagement extends javax.swing.JPanel {
         private List<Subject> subjects = new ArrayList<>();
         private List<Subject> filteredSubjects = new ArrayList<>();
 
+        private transient SwingWorker<?, ?> currentWorker;
+
 	/**
 	 * Creates new form RegistrarSubjectPanel
 	 */
@@ -49,6 +52,31 @@ public class RegistrarSubjectManagement extends javax.swing.JPanel {
 		initComponents();
 		initializeSubjectPanel();
 	}
+
+        private void setLoading(boolean loading) {
+                setCursor(loading ? java.awt.Cursor.getPredefinedCursor(java.awt.Cursor.WAIT_CURSOR)
+                                : java.awt.Cursor.getDefaultCursor());
+                btnCreateSubject.setEnabled(!loading);
+                btnClearFilter.setEnabled(!loading);
+        }
+
+        private void cancelCurrentWorker() {
+                if (currentWorker != null && !currentWorker.isDone()) {
+                        currentWorker.cancel(true);
+                }
+        }
+
+        private void executeAsync(SwingWorker<?, ?> worker) {
+                cancelCurrentWorker();
+                currentWorker = worker;
+                setLoading(true);
+                worker.addPropertyChangeListener(evt -> {
+                        if ("state".equals(evt.getPropertyName()) && SwingWorker.StateValue.DONE == evt.getNewValue()) {
+                                setLoading(false);
+                        }
+                });
+                worker.execute();
+        }
 
         private void initializeSubjectPanel() {
                 menuItemUpdateSubject.setText("Update Subject");
@@ -136,18 +164,46 @@ public class RegistrarSubjectManagement extends javax.swing.JPanel {
         }
 
         private void initializeSubjects() {
-                loadLookupData();
-                subjects = subjectService.getAllSubjects();
-                reloadDepartmentFilterOptions();
-                applyFilters();
+                executeAsync(new SwingWorker<SubjectLoadResult, Void>() {
+                        @Override
+                        protected SubjectLoadResult doInBackground() {
+                                Map<Long, String> lookup = new LinkedHashMap<>();
+                                for (Department department : departmentService.getAllDepartments()) {
+                                        if (isCancelled()) return null;
+                                        lookup.put(department.getId(), safeText(department.getDepartmentName(), "N/A"));
+                                }
+
+                                if (isCancelled()) return null;
+                                List<Subject> loadedSubjects = subjectService.getAllSubjects();
+                                return new SubjectLoadResult(loadedSubjects, lookup);
+                        }
+
+                        @Override
+                        protected void done() {
+                                try {
+                                        SubjectLoadResult result = get();
+                                        if (result == null || isCancelled()) return;
+
+                                        subjects = result.subjects;
+                                        departmentNameById.clear();
+                                        departmentNameById.putAll(result.departmentLookup);
+                                        reloadDepartmentFilterOptions();
+                                        applyFilters();
+                                } catch (Exception e) {
+                                        if (!isCancelled()) {
+                                                JOptionPane.showMessageDialog(
+                                                        RegistrarSubjectManagement.this,
+                                                        "Failed to load subjects: " + e.getMessage(),
+                                                        "Error",
+                                                        JOptionPane.ERROR_MESSAGE
+                                                );
+                                        }
+                                }
+                        }
+                });
         }
 
-        private void loadLookupData() {
-                departmentNameById.clear();
-                for (Department department : departmentService.getAllDepartments()) {
-                        departmentNameById.put(department.getId(), safeText(department.getDepartmentName(), "N/A"));
-                }
-        }
+        private record SubjectLoadResult(List<Subject> subjects, Map<Long, String> departmentLookup) {}
 
         private void reloadDepartmentFilterOptions() {
                 Object selectedDepartment = cbxDepartment.getSelectedItem();
@@ -317,24 +373,43 @@ public class RegistrarSubjectManagement extends javax.swing.JPanel {
                         return;
                 }
 
-                boolean deleted = subjectService.deleteSubject(selectedSubject.getId());
-                if (!deleted) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Failed to delete subject. It may be referenced by other records.",
-                                "Delete Subject",
-                                JOptionPane.ERROR_MESSAGE
-                        );
-                        return;
-                }
+                Long subjectId = selectedSubject.getId();
+                executeAsync(new SwingWorker<Boolean, Void>() {
+                        @Override
+                        protected Boolean doInBackground() {
+                                return subjectService.deleteSubject(subjectId);
+                        }
 
-                initializeSubjects();
-                JOptionPane.showMessageDialog(
-                        this,
-                        "Subject deleted successfully.",
-                        "Delete Subject",
-                        JOptionPane.INFORMATION_MESSAGE
-                );
+                        @Override
+                        protected void done() {
+                                try {
+                                        boolean deleted = get();
+                                        if (deleted) {
+                                                initializeSubjects();
+                                                JOptionPane.showMessageDialog(
+                                                        RegistrarSubjectManagement.this,
+                                                        "Subject deleted successfully.",
+                                                        "Delete Subject",
+                                                        JOptionPane.INFORMATION_MESSAGE
+                                                );
+                                        } else {
+                                                JOptionPane.showMessageDialog(
+                                                        RegistrarSubjectManagement.this,
+                                                        "Failed to delete subject. It may be referenced by other records.",
+                                                        "Delete Subject",
+                                                        JOptionPane.ERROR_MESSAGE
+                                                );
+                                        }
+                                } catch (Exception e) {
+                                        JOptionPane.showMessageDialog(
+                                                RegistrarSubjectManagement.this,
+                                                "Error deleting subject: " + e.getMessage(),
+                                                "Delete Subject",
+                                                JOptionPane.ERROR_MESSAGE
+                                        );
+                                }
+                        }
+                });
         }
 
 	/**

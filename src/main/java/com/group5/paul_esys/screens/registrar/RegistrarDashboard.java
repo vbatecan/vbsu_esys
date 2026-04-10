@@ -24,6 +24,8 @@ import com.group5.paul_esys.screens.registrar.panels.RegistrarSubjectManagement;
  */
 public final class RegistrarDashboard extends javax.swing.JFrame {
 
+    private final java.util.Set<Integer> loadedTabs = new java.util.HashSet<>();
+
     /**
      * Creates new form RegisterPortal
      */
@@ -44,17 +46,51 @@ public final class RegistrarDashboard extends javax.swing.JFrame {
         );
         this.windowBar1.setTitle("Welcome " + fullName);
 
-	// Add nung mga tabs
-	tabbedPaneStudents.add("Dashboard", new com.group5.paul_esys.screens.registrar.panels.RegistrarDashboard());
-	tabbedPaneStudents.add("Students", new RegistrarStudentManagement());
-    	tabbedPaneStudents.add("Subjects", new RegistrarSubjectManagement());
-	tabbedPaneStudents.add("Curriculums", new RegistrarCurriculumManagement());
-	tabbedPaneStudents.add("Rooms", new RegistrarRoomsManagementPanel());   
-	tabbedPaneStudents.add("Sections", new RegistrarSectionsManagement());
-        tabbedPaneStudents.add("Offerings", new RegistrarOfferingsManagement());
-        tabbedPaneStudents.add("Schedules", new RegistrarSchedulesManagement());
-	tabbedPaneStudents.add("Enrollment Periods", new RegistrarEnrollmentPeriodManagement());
-	tabbedPaneStudents.add("Departments", new RegistrarDepartmentManagement());
+	// Add nung mga tabs with lazy loading
+	tabbedPaneStudents.add("Dashboard", null);
+	tabbedPaneStudents.add("Students", null);
+    	tabbedPaneStudents.add("Subjects", null);
+	tabbedPaneStudents.add("Curriculums", null);
+	tabbedPaneStudents.add("Rooms", null);   
+	tabbedPaneStudents.add("Sections", null);
+        tabbedPaneStudents.add("Offerings", null);
+        tabbedPaneStudents.add("Schedules", null);
+	tabbedPaneStudents.add("Enrollment Periods", null);
+	tabbedPaneStudents.add("Departments", null);
+
+	loadTab(0);
+
+	tabbedPaneStudents.addChangeListener(evt -> {
+	    int selectedIndex = tabbedPaneStudents.getSelectedIndex();
+	    if (selectedIndex >= 0 && !loadedTabs.contains(selectedIndex)) {
+		loadTab(selectedIndex);
+	    }
+	});
+    }
+
+    private void loadTab(int tabIndex) {
+	if (loadedTabs.contains(tabIndex)) {
+	    return;
+	}
+
+	javax.swing.JPanel panel = switch (tabIndex) {
+	    case 0 -> new com.group5.paul_esys.screens.registrar.panels.RegistrarDashboard();
+	    case 1 -> new RegistrarStudentManagement();
+	    case 2 -> new RegistrarSubjectManagement();
+	    case 3 -> new RegistrarCurriculumManagement();
+	    case 4 -> new RegistrarRoomsManagementPanel();
+	    case 5 -> new RegistrarSectionsManagement();
+	    case 6 -> new RegistrarOfferingsManagement();
+	    case 7 -> new RegistrarSchedulesManagement();
+	    case 8 -> new RegistrarEnrollmentPeriodManagement();
+	    case 9 -> new RegistrarDepartmentManagement();
+	    default -> null;
+	};
+
+	if (panel != null) {
+	    tabbedPaneStudents.setComponentAt(tabIndex, panel);
+	    loadedTabs.add(tabIndex);
+	}
     }
 
     /**

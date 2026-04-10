@@ -9,6 +9,7 @@ import com.group5.paul_esys.modules.students.services.StudentService;
 import com.group5.paul_esys.modules.users.models.enums.Role;
 import com.group5.paul_esys.modules.users.models.user.LoginData;
 import com.group5.paul_esys.modules.users.models.user.UserInformation;
+import at.favre.lib.crypto.bcrypt.BCrypt;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -130,7 +131,18 @@ public class AuthService {
           return Optional.empty();
         }
 
-        // Bago imap out, need ko muna tignan kung anong type of user tapos get yung information.
+        String storedHash = rs.getString("password");
+        String plainPassword = loginData.getPassword();
+
+        BCrypt.Result result = BCrypt.verifyer().verify(
+          plainPassword.toCharArray(),
+          storedHash.toCharArray()
+        );
+
+        if (!result.verified) {
+          return Optional.empty();
+        }
+
         switch (rs.getString("role")) {
           case "REGISTRAR" -> {
             return Optional.of(getRegistrarInformation(rs, loginData));
@@ -147,6 +159,6 @@ public class AuthService {
       e.printStackTrace();
       return Optional.empty();
     }
-    return null;
+    return Optional.empty();
   }
 }
