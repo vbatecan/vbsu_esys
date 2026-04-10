@@ -1,5 +1,6 @@
 package com.group5.paul_esys.modules.sections.services;
 
+import com.group5.paul_esys.modules.enums.EnrollmentStatus;
 import com.group5.paul_esys.modules.sections.model.Section;
 import com.group5.paul_esys.modules.sections.utils.SectionUtils;
 import com.group5.paul_esys.modules.users.services.ConnectionService;
@@ -142,6 +143,52 @@ public class SectionService {
     }
 
     return enrolledCountBySectionId;
+  }
+
+  public long countReservedStudentsBySection(Long sectionId, Long enrollmentPeriodId, Long excludedEnrollmentId) {
+    if (sectionId == null || enrollmentPeriodId == null) {
+      return 0;
+    }
+
+    StringBuilder sql = new StringBuilder(
+      "SELECT COUNT(DISTINCT e.student_id) AS reserved_count "
+        + "FROM enrollments_details ed "
+        + "INNER JOIN enrollments e ON e.id = ed.enrollment_id "
+        + "INNER JOIN offerings o ON o.id = ed.offering_id "
+        + "WHERE o.section_id = ? "
+        + "AND e.enrollment_period_id = ? "
+        + "AND ed.status = ? "
+        + "AND e.status IN (?, ?, ?, ?)"
+    );
+
+    if (excludedEnrollmentId != null) {
+      sql.append(" AND e.id <> ?");
+    }
+
+    try (Connection conn = ConnectionService.getConnection();
+      PreparedStatement ps = conn.prepareStatement(sql.toString())) {
+      int paramIndex = 1;
+      ps.setLong(paramIndex++, sectionId);
+      ps.setLong(paramIndex++, enrollmentPeriodId);
+      ps.setString(paramIndex++, "SELECTED");
+      ps.setString(paramIndex++, EnrollmentStatus.DRAFT.name());
+      ps.setString(paramIndex++, EnrollmentStatus.SUBMITTED.name());
+      ps.setString(paramIndex++, EnrollmentStatus.APPROVED.name());
+      ps.setString(paramIndex++, EnrollmentStatus.ENROLLED.name());
+      if (excludedEnrollmentId != null) {
+        ps.setLong(paramIndex, excludedEnrollmentId);
+      }
+
+      try (ResultSet rs = ps.executeQuery()) {
+        if (rs.next()) {
+          return rs.getLong("reserved_count");
+        }
+      }
+    } catch (SQLException e) {
+      logger.error("ERROR: " + e.getMessage(), e);
+    }
+
+    return 0;
   }
 
   public boolean deleteSection(Long id) {
