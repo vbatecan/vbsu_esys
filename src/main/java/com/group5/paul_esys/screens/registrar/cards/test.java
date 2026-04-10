@@ -36,6 +36,8 @@ public class test extends javax.swing.JPanel {
                 facultyMemberCard4 = new com.group5.paul_esys.screens.registrar.cards.FacultyMemberCard();
                 facultyMemberCard2 = new com.group5.paul_esys.screens.registrar.cards.FacultyMemberCard();
                 facultyMemberCard5 = new com.group5.paul_esys.screens.registrar.cards.FacultyMemberCard();
+                jScrollPane2 = new javax.swing.JScrollPane();
+                jTable1 = new javax.swing.JTable();
 
                 jPanel3.setLayout(new java.awt.GridLayout(0, 1, 0, 8));
                 jPanel3.add(facultyMemberCard1);
@@ -46,6 +48,19 @@ public class test extends javax.swing.JPanel {
 
                 jScrollPane1.setViewportView(jPanel3);
 
+                jTable1.setModel(new javax.swing.table.DefaultTableModel(
+                        new Object [][] {
+                                {null, null, null, null},
+                                {null, null, null, null},
+                                {null, null, null, null},
+                                {null, null, null, null}
+                        },
+                        new String [] {
+                                "Title 1", "Title 2", "Title 3", "Title 4"
+                        }
+                ));
+                jScrollPane2.setViewportView(jTable1);
+
                 javax.swing.GroupLayout layout = new javax.swing.GroupLayout(this);
                 this.setLayout(layout);
                 layout.setHorizontalGroup(
@@ -53,14 +68,20 @@ public class test extends javax.swing.JPanel {
                         .addGroup(layout.createSequentialGroup()
                                 .addGap(29, 29, 29)
                                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, 412, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addContainerGap(398, Short.MAX_VALUE))
+                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
+                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                                .addContainerGap(447, Short.MAX_VALUE)
+                                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addContainerGap())
                 );
                 layout.setVerticalGroup(
                         layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, layout.createSequentialGroup()
+                        .addGroup(layout.createSequentialGroup()
                                 .addContainerGap(125, Short.MAX_VALUE)
                                 .addComponent(jScrollPane1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(183, 183, 183))
+                                .addGap(51, 51, 51)
+                                .addComponent(jScrollPane2, javax.swing.GroupLayout.PREFERRED_SIZE, 126, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addContainerGap())
                 );
         }// </editor-fold>//GEN-END:initComponents
 
@@ -73,5 +94,7 @@ public class test extends javax.swing.JPanel {
         private com.group5.paul_esys.screens.registrar.cards.FacultyMemberCard facultyMemberCard5;
         private javax.swing.JPanel jPanel3;
         private javax.swing.JScrollPane jScrollPane1;
+        private javax.swing.JScrollPane jScrollPane2;
+        private javax.swing.JTable jTable1;
         // End of variables declaration//GEN-END:variables
 }

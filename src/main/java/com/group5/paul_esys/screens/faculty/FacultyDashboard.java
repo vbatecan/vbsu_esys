@@ -4,6 +4,8 @@
  */
 package com.group5.paul_esys.screens.faculty;
 
+import com.group5.paul_esys.screens.faculty.panels.FacultyDashboardPanel;
+
 /**
  *
  * @author nytri
@@ -17,6 +19,7 @@ public class FacultyDashboard extends javax.swing.JFrame {
 	 */
 	public FacultyDashboard() {
 		initComponents();
+		tabbedPaneSideBar.add("Dashboard", new FacultyDashboardPanel());
 	}
 
 	/**
@@ -28,18 +31,17 @@ public class FacultyDashboard extends javax.swing.JFrame {
         // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
         private void initComponents() {
 
-                setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+                windowBar1 = new com.group5.paul_esys.components.WindowBar();
+                tabbedPaneSideBar = new javax.swing.JTabbedPane();
 
-                javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
-                getContentPane().setLayout(layout);
-                layout.setHorizontalGroup(
-                        layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGap(0, 1280, Short.MAX_VALUE)
-                );
-                layout.setVerticalGroup(
-                        layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGap(0, 720, Short.MAX_VALUE)
-                );
+                setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
+                getContentPane().setLayout(new javax.swing.BoxLayout(getContentPane(), javax.swing.BoxLayout.Y_AXIS));
+
+                windowBar1.setTitle("Faculty Dashboard");
+                getContentPane().add(windowBar1);
+
+                tabbedPaneSideBar.setPreferredSize(new java.awt.Dimension(1280, 720));
+                getContentPane().add(tabbedPaneSideBar);
 
                 pack();
         }// </editor-fold>//GEN-END:initComponents
@@ -70,5 +72,7 @@ public class FacultyDashboard extends javax.swing.JFrame {
 	}
 
         // Variables declaration - do not modify//GEN-BEGIN:variables
+        private javax.swing.JTabbedPane tabbedPaneSideBar;
+        private com.group5.paul_esys.components.WindowBar windowBar1;
         // End of variables declaration//GEN-END:variables
 }
