@@ -4,10 +4,12 @@ import com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTGitHubIJThem
 import com.group5.paul_esys.modules.registrar.model.Registrar;
 import com.group5.paul_esys.modules.users.services.UserSession;
 import com.group5.paul_esys.screens.registrar.panels.RegistrarCurriculumManagement;
+import com.group5.paul_esys.screens.registrar.panels.RegistrarDepartmentManagement;
+import com.group5.paul_esys.screens.registrar.panels.RegistrarEnrollmentPeriodManagement;
 import com.group5.paul_esys.screens.registrar.panels.RegistrarRoomsManagementPanel;
 import com.group5.paul_esys.screens.registrar.panels.RegistrarSectionsManagement;
+import com.group5.paul_esys.screens.registrar.panels.RegistrarStudentManagement;
 import com.group5.paul_esys.screens.registrar.panels.RegistrarSubjectManagement;
-import com.group5.paul_esys.screens.registrar.panels.StudentManagement;
 
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
@@ -42,11 +44,13 @@ public final class RegistrarDashboard extends javax.swing.JFrame {
 
 	// Add nung mga tabs
 	tabbedPaneStudents.add("Dashboard", new com.group5.paul_esys.screens.registrar.panels.RegistrarDashboard());
-	tabbedPaneStudents.add("Students", new StudentManagement());
+	tabbedPaneStudents.add("Students", new RegistrarStudentManagement());
     	tabbedPaneStudents.add("Subjects", new RegistrarSubjectManagement());
 	tabbedPaneStudents.add("Curriculums", new RegistrarCurriculumManagement());
 	tabbedPaneStudents.add("Rooms", new RegistrarRoomsManagementPanel());
 	tabbedPaneStudents.add("Sections", new RegistrarSectionsManagement());
+	tabbedPaneStudents.add("Enrollment Periods", new RegistrarEnrollmentPeriodManagement());
+	tabbedPaneStudents.add("Departments", new RegistrarDepartmentManagement());
     }
 
     /**
@@ -73,12 +77,10 @@ public final class RegistrarDashboard extends javax.swing.JFrame {
 
                 setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
                 setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
-                setResizable(false);
                 setSize(new java.awt.Dimension(1280, 720));
 
                 tabbedPaneStudents.setBackground(new java.awt.Color(255, 255, 255));
                 tabbedPaneStudents.setTabPlacement(javax.swing.JTabbedPane.LEFT);
-                tabbedPaneStudents.setMaximumSize(new java.awt.Dimension(1280, 720));
                 tabbedPaneStudents.setPreferredSize(new java.awt.Dimension(1280, 720));
 
                 windowBar1.setTitle("Welcome!");
