@@ -4,6 +4,15 @@
  */
 package com.group5.paul_esys.screens.registrar.forms;
 
+import com.group5.paul_esys.modules.enrollment_period.model.EnrollmentPeriod;
+import com.group5.paul_esys.modules.enrollment_period.services.EnrollmentPeriodService;
+import com.group5.paul_esys.modules.enrollment_period.utils.EnrollmentPeriodUtils;
+import java.util.Date;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import javax.swing.JFormattedTextField;
+import javax.swing.JOptionPane;
+
 /**
  *
  * @author nytri
@@ -11,20 +20,210 @@ package com.group5.paul_esys.screens.registrar.forms;
 public class EnrollmentPeriodForm extends javax.swing.JFrame {
 	
 	private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(EnrollmentPeriodForm.class.getName());
+        private static final Pattern SCHOOL_YEAR_PATTERN = Pattern.compile("^(\\d{4})\\s*-\\s*(\\d{4})$");
+
+        private final EnrollmentPeriodService enrollmentPeriodService = EnrollmentPeriodService.getInstance();
+        private final EnrollmentPeriod editingEnrollmentPeriod;
+        private final Runnable onSavedCallback;
 
 	/**
 	 * Creates new form EnrollmentPeriodF
 	 */
 	public EnrollmentPeriodForm() {
-		initComponents();
+		this(null, null);
 	}
+
+        public EnrollmentPeriodForm(EnrollmentPeriod editingEnrollmentPeriod, Runnable onSavedCallback) {
+                this.editingEnrollmentPeriod = editingEnrollmentPeriod;
+                this.onSavedCallback = onSavedCallback;
+                this.setUndecorated(true);
+                initComponents();
+                this.setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+                this.setLocationRelativeTo(null);
+                initializeForm();
+        }
+
+        private void initializeForm() {
+                configureDateSpinner(spinnerStartDate);
+                configureDateSpinner(spinnerEndDate);
+
+                if (editingEnrollmentPeriod == null) {
+                        windowBar1.setTitle("Enrollment Period Form");
+                        jLabel1.setText("Enrollment Period Form");
+                        jLabel2.setText("Start a new school period");
+                        btnSave.setText("Save");
+                        return;
+                }
+
+                windowBar1.setTitle("Update Enrollment Period");
+                jLabel1.setText("Update Enrollment Period");
+                jLabel2.setText("Update existing enrollment period");
+                btnSave.setText("Update");
+
+                txtSchoolYear.setText(EnrollmentPeriodUtils.safeText(editingEnrollmentPeriod.getSchoolYear(), ""));
+                txtSemester.setText(EnrollmentPeriodUtils.safeText(editingEnrollmentPeriod.getSemester(), ""));
+                textAreaDescription.setText(EnrollmentPeriodUtils.safeText(editingEnrollmentPeriod.getDescription(), ""));
+
+                if (editingEnrollmentPeriod.getStartDate() != null) {
+                        spinnerStartDate.setValue(editingEnrollmentPeriod.getStartDate());
+                }
+
+                if (editingEnrollmentPeriod.getEndDate() != null) {
+                        spinnerEndDate.setValue(editingEnrollmentPeriod.getEndDate());
+                }
+        }
+
+        private void configureDateSpinner(javax.swing.JSpinner spinner) {
+                spinner.setEditor(new javax.swing.JSpinner.DateEditor(spinner, "yyyy-MM-dd HH:mm"));
+                JFormattedTextField textField = ((javax.swing.JSpinner.DateEditor) spinner.getEditor()).getTextField();
+                textField.setColumns(16);
+        }
+
+        private String normalizeSchoolYear(String schoolYear) {
+                if (schoolYear == null) {
+                        return "";
+                }
+
+                return schoolYear.trim().replaceAll("\\s+", "");
+        }
+
+        private String normalizeSemester(String semester) {
+                if (semester == null) {
+                        return "";
+                }
+
+                return semester.trim();
+        }
+
+        private Date readSpinnerDate(javax.swing.JSpinner spinner) {
+                Object spinnerValue = spinner.getValue();
+                if (spinnerValue instanceof Date date) {
+                        return date;
+                }
+
+                return null;
+        }
+
+        private boolean isValidForm() {
+                String schoolYear = normalizeSchoolYear(txtSchoolYear.getText());
+                if (schoolYear.isEmpty()) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "School year is required.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                Matcher schoolYearMatcher = SCHOOL_YEAR_PATTERN.matcher(schoolYear);
+                if (!schoolYearMatcher.matches()) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "School year must follow YYYY-YYYY format.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                int firstYear = Integer.parseInt(schoolYearMatcher.group(1));
+                int secondYear = Integer.parseInt(schoolYearMatcher.group(2));
+                if (secondYear != firstYear + 1) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "School year must use consecutive years (for example 2025-2026).",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                String semester = normalizeSemester(txtSemester.getText());
+                if (semester.isEmpty()) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Semester is required.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                Date startDate = readSpinnerDate(spinnerStartDate);
+                Date endDate = readSpinnerDate(spinnerEndDate);
+
+                if (startDate == null || endDate == null) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Start date and end date are required.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                if (endDate.before(startDate)) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "End date must be on or after the start date.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                return true;
+        }
+
+        private void saveEnrollmentPeriod() {
+                if (!isValidForm()) {
+                        return;
+                }
+
+                EnrollmentPeriod period = editingEnrollmentPeriod == null ? new EnrollmentPeriod() : editingEnrollmentPeriod;
+                period
+                        .setSchoolYear(normalizeSchoolYear(txtSchoolYear.getText()))
+                        .setSemester(normalizeSemester(txtSemester.getText()))
+                        .setStartDate(readSpinnerDate(spinnerStartDate))
+                        .setEndDate(readSpinnerDate(spinnerEndDate))
+                        .setDescription(EnrollmentPeriodUtils.normalizeDescription(textAreaDescription.getText()));
+
+                boolean success = editingEnrollmentPeriod == null
+                        ? enrollmentPeriodService.createEnrollmentPeriod(period)
+                        : enrollmentPeriodService.updateEnrollmentPeriod(period);
+
+                if (!success) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Failed to save enrollment period. Please try again.",
+                                "Save Failed",
+                                JOptionPane.ERROR_MESSAGE
+                        );
+                        return;
+                }
+
+                JOptionPane.showMessageDialog(
+                        this,
+                        editingEnrollmentPeriod == null
+                                ? "Enrollment period created successfully."
+                                : "Enrollment period updated successfully.",
+                        "Success",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+
+                if (onSavedCallback != null) {
+                        onSavedCallback.run();
+                }
+
+                dispose();
+        }
 
 	/**
 	 * This method is called from within the constructor to initialize the
 	 * form. WARNING: Do NOT modify this code. The content of this method is
 	 * always regenerated by the Form Editor.
 	 */
-	@SuppressWarnings("unchecked")
         // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
         private void initComponents() {
 
@@ -167,7 +366,7 @@ public class EnrollmentPeriodForm extends javax.swing.JFrame {
         }// </editor-fold>//GEN-END:initComponents
 
         private void btnSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSaveActionPerformed
-                // TODO add your handling code here:
+                saveEnrollmentPeriod();
         }//GEN-LAST:event_btnSaveActionPerformed
 
         private void btnCanelActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnCanelActionPerformed
@@ -175,7 +374,9 @@ public class EnrollmentPeriodForm extends javax.swing.JFrame {
         }//GEN-LAST:event_btnCanelActionPerformed
 
         private void textAreaDescriptionKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_textAreaDescriptionKeyReleased
-                // TODO add your handling code here:
+                if (evt.getKeyCode() == java.awt.event.KeyEvent.VK_ENTER && evt.isControlDown()) {
+                        saveEnrollmentPeriod();
+                }
         }//GEN-LAST:event_textAreaDescriptionKeyReleased
 
 	/**

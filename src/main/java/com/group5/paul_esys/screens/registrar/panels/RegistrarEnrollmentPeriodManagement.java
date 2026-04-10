@@ -4,25 +4,243 @@
  */
 package com.group5.paul_esys.screens.registrar.panels;
 
+import com.group5.paul_esys.modules.enrollment_period.model.EnrollmentPeriod;
+import com.group5.paul_esys.modules.enrollment_period.services.EnrollmentPeriodService;
+import com.group5.paul_esys.modules.enrollment_period.utils.EnrollmentPeriodUtils;
+import com.group5.paul_esys.screens.registrar.forms.EnrollmentPeriodForm;
+import java.awt.event.ItemEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
+import javax.swing.JOptionPane;
+import javax.swing.table.DefaultTableModel;
+
 /**
  *
  * @author nytri
  */
 public class RegistrarEnrollmentPeriodManagement extends javax.swing.JPanel {
 
+        private static final String FILTER_ALL = "ALL";
+
+        private final EnrollmentPeriodService enrollmentPeriodService = EnrollmentPeriodService.getInstance();
+
+        private List<EnrollmentPeriod> enrollmentPeriods = new ArrayList<>();
+        private List<EnrollmentPeriod> filteredEnrollmentPeriods = new ArrayList<>();
+
 	/**
 	 * Creates new form EnrollmentPeriodManagement
 	 */
 	public RegistrarEnrollmentPeriodManagement() {
 		initComponents();
+		initializeEnrollmentPeriodsPanel();
 	}
+
+        private void initializeEnrollmentPeriodsPanel() {
+                menuItemUpdate.setText("Update Enrollment Period");
+                menuItemDelete.setText("Delete Enrollment Period");
+
+                tableEnrollmentPeriods.setSelectionMode(javax.swing.ListSelectionModel.SINGLE_SELECTION);
+                tableEnrollmentPeriods.setRowHeight(28);
+                tableEnrollmentPeriods.setComponentPopupMenu(popMenu);
+
+                resetStatusFilterModel();
+                registerTablePopupSelectionBehavior();
+                initializeEnrollmentPeriods();
+        }
+
+        private void resetStatusFilterModel() {
+                cbxStatus.removeAllItems();
+                cbxStatus.addItem(FILTER_ALL);
+                cbxStatus.addItem("OPEN");
+                cbxStatus.addItem("CLOSED");
+                cbxStatus.setSelectedItem(FILTER_ALL);
+        }
+
+        private void registerTablePopupSelectionBehavior() {
+                tableEnrollmentPeriods.addMouseListener(new MouseAdapter() {
+                        @Override
+                        public void mousePressed(MouseEvent evt) {
+                                selectRowFromPointer(evt);
+                        }
+
+                        @Override
+                        public void mouseReleased(MouseEvent evt) {
+                                selectRowFromPointer(evt);
+                        }
+
+                        @Override
+                        public void mouseClicked(MouseEvent evt) {
+                                if (javax.swing.SwingUtilities.isLeftMouseButton(evt) && evt.getClickCount() == 2) {
+                                        openUpdateEnrollmentPeriodForm();
+                                }
+                        }
+                });
+        }
+
+        private void selectRowFromPointer(MouseEvent evt) {
+                if (!evt.isPopupTrigger()) {
+                        return;
+                }
+
+                int row = tableEnrollmentPeriods.rowAtPoint(evt.getPoint());
+                if (row >= 0) {
+                        tableEnrollmentPeriods.setRowSelectionInterval(row, row);
+                }
+        }
+
+        private void initializeEnrollmentPeriods() {
+                enrollmentPeriods = enrollmentPeriodService.getAllEnrollmentPeriods();
+                applyFilters();
+        }
+
+        private void applyFilters() {
+                String searchTerm = txtSearch.getText() == null
+                        ? ""
+                        : txtSearch.getText().trim().toLowerCase();
+
+                String selectedStatus = cbxStatus.getSelectedItem() == null
+                        ? FILTER_ALL
+                        : cbxStatus.getSelectedItem().toString();
+
+                filteredEnrollmentPeriods = enrollmentPeriods
+                        .stream()
+                        .filter(period -> matchesSearch(period, searchTerm))
+                        .filter(period -> matchesStatus(period, selectedStatus))
+                        .collect(Collectors.toList());
+
+                populateTable(filteredEnrollmentPeriods);
+        }
+
+        private boolean matchesSearch(EnrollmentPeriod period, String searchTerm) {
+                if (searchTerm.isEmpty()) {
+                        return true;
+                }
+
+                String schoolYear = EnrollmentPeriodUtils.safeText(period.getSchoolYear(), "").toLowerCase();
+                String semester = EnrollmentPeriodUtils.safeText(period.getSemester(), "").toLowerCase();
+                String startDate = EnrollmentPeriodUtils.formatDateTime(period.getStartDate()).toLowerCase();
+                String endDate = EnrollmentPeriodUtils.formatDateTime(period.getEndDate()).toLowerCase();
+                String description = EnrollmentPeriodUtils.safeText(period.getDescription(), "").toLowerCase();
+                String status = EnrollmentPeriodUtils.resolveStatus(period).toLowerCase();
+
+                return schoolYear.contains(searchTerm)
+                        || semester.contains(searchTerm)
+                        || startDate.contains(searchTerm)
+                        || endDate.contains(searchTerm)
+                        || description.contains(searchTerm)
+                        || status.contains(searchTerm);
+        }
+
+        private boolean matchesStatus(EnrollmentPeriod period, String selectedStatus) {
+                if (FILTER_ALL.equals(selectedStatus)) {
+                        return true;
+                }
+
+                return EnrollmentPeriodUtils.resolveStatus(period).equals(selectedStatus);
+        }
+
+        private void populateTable(List<EnrollmentPeriod> periodsToDisplay) {
+                DefaultTableModel model = (DefaultTableModel) tableEnrollmentPeriods.getModel();
+                model.setRowCount(0);
+
+                for (EnrollmentPeriod period : periodsToDisplay) {
+                        model.addRow(new Object[]{
+                                EnrollmentPeriodUtils.safeText(period.getSchoolYear(), "N/A"),
+                                EnrollmentPeriodUtils.safeText(period.getSemester(), "N/A"),
+                                EnrollmentPeriodUtils.formatDateTime(period.getStartDate()),
+                                EnrollmentPeriodUtils.formatDateTime(period.getEndDate()),
+                                EnrollmentPeriodUtils.safeText(period.getDescription(), "-"),
+                                EnrollmentPeriodUtils.resolveStatus(period)
+                        });
+                }
+        }
+
+        private EnrollmentPeriod getSelectedEnrollmentPeriod() {
+                int selectedRow = tableEnrollmentPeriods.getSelectedRow();
+                if (selectedRow < 0) {
+                        return null;
+                }
+
+                int modelRow = tableEnrollmentPeriods.convertRowIndexToModel(selectedRow);
+                if (modelRow < 0 || modelRow >= filteredEnrollmentPeriods.size()) {
+                        return null;
+                }
+
+                return filteredEnrollmentPeriods.get(modelRow);
+        }
+
+        private void openUpdateEnrollmentPeriodForm() {
+                EnrollmentPeriod selectedPeriod = getSelectedEnrollmentPeriod();
+                if (selectedPeriod == null) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Please select an enrollment period to update.",
+                                "Update Enrollment Period",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return;
+                }
+
+                EnrollmentPeriodForm form = new EnrollmentPeriodForm(selectedPeriod, this::initializeEnrollmentPeriods);
+                form.setVisible(true);
+        }
+
+        private void deleteSelectedEnrollmentPeriod() {
+                EnrollmentPeriod selectedPeriod = getSelectedEnrollmentPeriod();
+                if (selectedPeriod == null) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Please select an enrollment period to delete.",
+                                "Delete Enrollment Period",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return;
+                }
+
+                String periodLabel = EnrollmentPeriodUtils.safeText(selectedPeriod.getSchoolYear(), "N/A")
+                        + " - "
+                        + EnrollmentPeriodUtils.safeText(selectedPeriod.getSemester(), "N/A");
+
+                int option = JOptionPane.showConfirmDialog(
+                        this,
+                        "Delete enrollment period " + periodLabel + "?",
+                        "Confirm Delete",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE
+                );
+
+                if (option != JOptionPane.YES_OPTION) {
+                        return;
+                }
+
+                boolean deleted = enrollmentPeriodService.deleteEnrollmentPeriod(selectedPeriod.getId());
+                if (!deleted) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Failed to delete enrollment period. It may be referenced by existing records.",
+                                "Delete Enrollment Period",
+                                JOptionPane.ERROR_MESSAGE
+                        );
+                        return;
+                }
+
+                initializeEnrollmentPeriods();
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Enrollment period deleted successfully.",
+                        "Delete Enrollment Period",
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+        }
 
 	/**
 	 * This method is called from within the constructor to initialize the
 	 * form. WARNING: Do NOT modify this code. The content of this method is
 	 * always regenerated by the Form Editor.
 	 */
-	@SuppressWarnings("unchecked")
         // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
         private void initComponents() {
 
@@ -73,14 +291,14 @@ public class RegistrarEnrollmentPeriodManagement extends javax.swing.JPanel {
                                 "School Year", "Semester", "Start Date", "End Date", "Description", "Status"
                         }
                 ) {
-                        Class[] types = new Class [] {
+                        Class<?>[] types = new Class<?> [] {
                                 java.lang.Object.class, java.lang.Object.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
                         };
                         boolean[] canEdit = new boolean [] {
                                 false, false, false, false, false, false
                         };
 
-                        public Class getColumnClass(int columnIndex) {
+                        public Class<?> getColumnClass(int columnIndex) {
                                 return types [columnIndex];
                         }
 
@@ -171,23 +389,26 @@ public class RegistrarEnrollmentPeriodManagement extends javax.swing.JPanel {
         }// </editor-fold>//GEN-END:initComponents
 
         private void menuItemUpdateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuItemUpdateActionPerformed
-                // TODO add your handling code here:
+                openUpdateEnrollmentPeriodForm();
         }//GEN-LAST:event_menuItemUpdateActionPerformed
 
         private void menuItemDeleteActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_menuItemDeleteActionPerformed
-                // TODO add your handling code here:
+                deleteSelectedEnrollmentPeriod();
         }//GEN-LAST:event_menuItemDeleteActionPerformed
 
         private void txtSearchKeyReleased(java.awt.event.KeyEvent evt) {//GEN-FIRST:event_txtSearchKeyReleased
-                // TODO add your handling code here:
+                applyFilters();
         }//GEN-LAST:event_txtSearchKeyReleased
 
         private void cbxStatusItemStateChanged(java.awt.event.ItemEvent evt) {//GEN-FIRST:event_cbxStatusItemStateChanged
-                // TODO add your handling code here:
+                if (evt.getStateChange() == ItemEvent.SELECTED) {
+                        applyFilters();
+                }
         }//GEN-LAST:event_cbxStatusItemStateChanged
 
         private void btnAddPeriodActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAddPeriodActionPerformed
-                // TODO add your handling code here:
+                EnrollmentPeriodForm form = new EnrollmentPeriodForm(null, this::initializeEnrollmentPeriods);
+                form.setVisible(true);
         }//GEN-LAST:event_btnAddPeriodActionPerformed
 
 

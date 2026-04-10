@@ -5,6 +5,7 @@ import com.group5.paul_esys.modules.enrollment_period.utils.EnrollmentPeriodUtil
 import com.group5.paul_esys.modules.users.services.ConnectionService;
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -25,6 +26,24 @@ public class EnrollmentPeriodService {
 
   public static EnrollmentPeriodService getInstance() {
     return INSTANCE;
+  }
+
+  private boolean hasDescriptionColumn(Connection conn) {
+    try {
+      DatabaseMetaData metadata = conn.getMetaData();
+      try (ResultSet rs = metadata.getColumns(null, null, "ENROLLMENT_PERIOD", "DESCRIPTION")) {
+        if (rs.next()) {
+          return true;
+        }
+      }
+
+      try (ResultSet rs = metadata.getColumns(null, null, "enrollment_period", "description")) {
+        return rs.next();
+      }
+    } catch (SQLException e) {
+      logger.error("ERROR: " + e.getMessage(), e);
+      return false;
+    }
   }
 
   public List<EnrollmentPeriod> getAllEnrollmentPeriods() {
@@ -73,16 +92,24 @@ public class EnrollmentPeriodService {
   }
 
   public boolean createEnrollmentPeriod(EnrollmentPeriod period) {
-    try (Connection conn = ConnectionService.getConnection();
-        PreparedStatement ps = conn.prepareStatement(
-            "INSERT INTO enrollment_period (school_year, semester, start_date, end_date) VALUES (?, ?, ?, ?)"
-        )) {
-      ps.setString(1, period.getSchoolYear());
-      ps.setString(2, period.getSemester());
-      ps.setTimestamp(3, new java.sql.Timestamp(period.getStartDate().getTime()));
-      ps.setTimestamp(4, new java.sql.Timestamp(period.getEndDate().getTime()));
-      
-      return ps.executeUpdate() > 0;
+    try (Connection conn = ConnectionService.getConnection()) {
+      boolean hasDescription = hasDescriptionColumn(conn);
+      String sql = hasDescription
+          ? "INSERT INTO enrollment_period (school_year, semester, start_date, end_date, description) VALUES (?, ?, ?, ?, ?)"
+          : "INSERT INTO enrollment_period (school_year, semester, start_date, end_date) VALUES (?, ?, ?, ?)";
+
+      try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setString(1, period.getSchoolYear());
+        ps.setString(2, period.getSemester());
+        ps.setTimestamp(3, EnrollmentPeriodUtils.toSqlTimestamp(period.getStartDate()));
+        ps.setTimestamp(4, EnrollmentPeriodUtils.toSqlTimestamp(period.getEndDate()));
+
+        if (hasDescription) {
+          ps.setString(5, EnrollmentPeriodUtils.normalizeDescription(period.getDescription()));
+        }
+
+        return ps.executeUpdate() > 0;
+      }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
       return false;
@@ -90,17 +117,27 @@ public class EnrollmentPeriodService {
   }
 
   public boolean updateEnrollmentPeriod(EnrollmentPeriod period) {
-    try (Connection conn = ConnectionService.getConnection();
-      PreparedStatement ps = conn.prepareStatement(
-        "UPDATE enrollment_period SET school_year = ?, semester = ?, start_date = ?, end_date = ? WHERE id = ?"
-      )) {
-      ps.setString(1, period.getSchoolYear());
-      ps.setString(2, period.getSemester());
-      ps.setTimestamp(3, new java.sql.Timestamp(period.getStartDate().getTime()));
-      ps.setTimestamp(4, new java.sql.Timestamp(period.getEndDate().getTime()));
-      ps.setLong(5, period.getId());
-      
-      return ps.executeUpdate() > 0;
+    try (Connection conn = ConnectionService.getConnection()) {
+      boolean hasDescription = hasDescriptionColumn(conn);
+      String sql = hasDescription
+          ? "UPDATE enrollment_period SET school_year = ?, semester = ?, start_date = ?, end_date = ?, description = ? WHERE id = ?"
+          : "UPDATE enrollment_period SET school_year = ?, semester = ?, start_date = ?, end_date = ? WHERE id = ?";
+
+      try (PreparedStatement ps = conn.prepareStatement(sql)) {
+        ps.setString(1, period.getSchoolYear());
+        ps.setString(2, period.getSemester());
+        ps.setTimestamp(3, EnrollmentPeriodUtils.toSqlTimestamp(period.getStartDate()));
+        ps.setTimestamp(4, EnrollmentPeriodUtils.toSqlTimestamp(period.getEndDate()));
+
+        if (hasDescription) {
+          ps.setString(5, EnrollmentPeriodUtils.normalizeDescription(period.getDescription()));
+          ps.setLong(6, period.getId());
+        } else {
+          ps.setLong(5, period.getId());
+        }
+
+        return ps.executeUpdate() > 0;
+      }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
       return false;

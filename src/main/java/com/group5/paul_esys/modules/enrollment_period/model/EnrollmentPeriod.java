@@ -10,6 +10,7 @@ public class EnrollmentPeriod {
   private String semester;
   private Date startDate;
   private Date endDate;
+  private String description;
   private Timestamp updatedAt;
   private Timestamp createdAt;
 
@@ -17,11 +18,16 @@ public class EnrollmentPeriod {
   }
 
   public EnrollmentPeriod(Long id, String schoolYear, String semester, Date startDate, Date endDate, Timestamp updatedAt, Timestamp createdAt) {
+    this(id, schoolYear, semester, startDate, endDate, null, updatedAt, createdAt);
+  }
+
+  public EnrollmentPeriod(Long id, String schoolYear, String semester, Date startDate, Date endDate, String description, Timestamp updatedAt, Timestamp createdAt) {
     this.id = id;
     this.schoolYear = schoolYear;
     this.semester = semester;
     this.startDate = startDate;
     this.endDate = endDate;
+    this.description = description;
     this.updatedAt = updatedAt;
     this.createdAt = createdAt;
   }
@@ -68,6 +74,15 @@ public class EnrollmentPeriod {
 
   public EnrollmentPeriod setEndDate(Date endDate) {
     this.endDate = endDate;
+    return this;
+  }
+
+  public String getDescription() {
+    return description;
+  }
+
+  public EnrollmentPeriod setDescription(String description) {
+    this.description = description;
     return this;
   }
 
