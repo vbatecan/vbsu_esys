@@ -9,6 +9,7 @@ import com.group5.paul_esys.modules.registrar.services.RegistrarScheduleManageme
 import com.group5.paul_esys.screens.registrar.forms.ScheduleEntryDialog;
 import java.awt.Color;
 import java.awt.Component;
+import java.awt.Dimension;
 import java.awt.Frame;
 import java.awt.Window;
 import java.awt.event.ItemEvent;
@@ -69,15 +70,32 @@ public class RegistrarSchedulesManagement extends javax.swing.JPanel {
     tableSchedules.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
     tableSchedules.setRowHeight(28);
     tableSchedules.setAutoCreateRowSorter(false);
+    tableSchedules.setAutoResizeMode(JTable.AUTO_RESIZE_OFF);
+
+    int[] preferredWidths = {120, 220, 95, 80, 130, 100, 170, 180, 130};
+    for (int column = 0; column < preferredWidths.length; column++) {
+      tableSchedules.getColumnModel().getColumn(column).setPreferredWidth(preferredWidths[column]);
+    }
   }
 
   private void initializeSchedulePanel() {
     configureScheduleTableComponent();
+    configureResponsiveLayout();
     applyStaticComponentStyles();
     configureConflictRenderer();
 
     initializeDayFilterOptions();
     reloadSchedules();
+  }
+
+  private void configureResponsiveLayout() {
+    panelFilters.setMinimumSize(new Dimension(0, panelFilters.getPreferredSize().height));
+    panelList.setMinimumSize(new Dimension(0, 0));
+    scrollSchedules.setMinimumSize(new Dimension(0, 0));
+
+    panelSummary.setMinimumSize(new Dimension(380, 0));
+    panelSummary.setPreferredSize(new Dimension(380, panelSummary.getPreferredSize().height));
+    summaryRows.setLayout(new java.awt.GridLayout(8, 2, 10, 6));
   }
 
   private void applyStaticComponentStyles() {
@@ -707,14 +725,14 @@ public class RegistrarSchedulesManagement extends javax.swing.JPanel {
                                 "Subject Code", "Subject Name", "Section", "Day", "Time", "Room", "Faculty", "Enrollment Period", "Conflict"
                         }
                 ) {
-                        Class[] types = new Class [] {
+                        Class<?>[] types = new Class<?> [] {
                                 java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
                         };
                         boolean[] canEdit = new boolean [] {
                                 false, false, false, false, false, false, false, false, false
                         };
 
-                        public Class getColumnClass(int columnIndex) {
+                        public Class<?> getColumnClass(int columnIndex) {
                                 return types [columnIndex];
                         }
 
@@ -734,6 +752,7 @@ public class RegistrarSchedulesManagement extends javax.swing.JPanel {
                                 tableSchedulesMouseReleased(evt);
                         }
                 });
+                      tableSchedules.getSelectionModel().addListSelectionListener(this::tableSchedulesSelectionValueChanged);
                 scrollSchedules.setViewportView(tableSchedules);
 
                 javax.swing.GroupLayout panelListLayout = new javax.swing.GroupLayout(panelList);
