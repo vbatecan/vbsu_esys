@@ -157,6 +157,7 @@ CREATE TABLE student_enrolled_subjects
     offering_id         bigint      NOT NULL,
     semester_subject_id bigint      NOT NULL,
     status              varchar(20) CHECK (status IN ('ENROLLED', 'COMPLETED', 'DROPPED')) NOT NULL DEFAULT 'ENROLLED',
+    is_selected         boolean NOT NULL DEFAULT false,
     created_at          timestamp default current_timestamp,
     updated_at          timestamp default current_timestamp
 );

@@ -226,6 +226,7 @@ CREATE TABLE IF NOT EXISTS student_enrolled_subjects
     subject_id bigint,
     semester_id bigint NOT NULL,
     status varchar(20) CHECK (status IN ('ENROLLED', 'COMPLETED', 'DROPPED')) DEFAULT 'ENROLLED',
+    is_selected BOOLEAN NOT NULL DEFAULT FALSE,
     created_at timestamp default current_timestamp(),
     updated_at timestamp default current_timestamp(),
     FOREIGN KEY (student_id) REFERENCES students(student_id),
