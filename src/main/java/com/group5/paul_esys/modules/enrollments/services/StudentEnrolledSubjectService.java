@@ -5,6 +5,7 @@ import com.group5.paul_esys.modules.enrollments.model.StudentEnrolledSubject;
 import com.group5.paul_esys.modules.enrollments.utils.StudentEnrolledSubjectUtils;
 import com.group5.paul_esys.modules.users.services.ConnectionService;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -98,14 +99,31 @@ public class StudentEnrolledSubjectService {
       Long semesterSubjectId,
       StudentEnrolledSubjectStatus status
   ) {
+    return upsertStatus(studentId, enrollmentId, offeringId, semesterSubjectId, status, true);
+  }
+
+  public boolean upsertStatus(
+      String studentId,
+      Long enrollmentId,
+      Long offeringId,
+      Long semesterSubjectId,
+      StudentEnrolledSubjectStatus status,
+      boolean selected
+  ) {
     String selectSql = "SELECT 1 FROM student_enrolled_subjects WHERE student_id = ? AND offering_id = ?";
-    String insertSql = "INSERT INTO student_enrolled_subjects (student_id, enrollment_id, offering_id, semester_subject_id, status) VALUES (?, ?, ?, ?, ?)";
-    String updateSql = "UPDATE student_enrolled_subjects SET enrollment_id = ?, semester_subject_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE student_id = ? AND offering_id = ?";
 
     try (
       Connection conn = ConnectionService.getConnection();
       PreparedStatement selectPs = conn.prepareStatement(selectSql)
     ) {
+      boolean hasSelectedColumn = hasSelectedColumn(conn);
+      String insertSql = hasSelectedColumn
+          ? "INSERT INTO student_enrolled_subjects (student_id, enrollment_id, offering_id, semester_subject_id, status, is_selected) VALUES (?, ?, ?, ?, ?, ?)"
+          : "INSERT INTO student_enrolled_subjects (student_id, enrollment_id, offering_id, semester_subject_id, status) VALUES (?, ?, ?, ?, ?)";
+      String updateSql = hasSelectedColumn
+          ? "UPDATE student_enrolled_subjects SET enrollment_id = ?, semester_subject_id = ?, status = ?, is_selected = ?, updated_at = CURRENT_TIMESTAMP WHERE student_id = ? AND offering_id = ?"
+          : "UPDATE student_enrolled_subjects SET enrollment_id = ?, semester_subject_id = ?, status = ?, updated_at = CURRENT_TIMESTAMP WHERE student_id = ? AND offering_id = ?";
+
       selectPs.setString(1, studentId);
       selectPs.setLong(2, offeringId);
 
@@ -116,8 +134,14 @@ public class StudentEnrolledSubjectService {
             updatePs.setLong(1, enrollmentId);
             updatePs.setLong(2, semesterSubjectId);
             updatePs.setString(3, status.name());
-            updatePs.setString(4, studentId);
-            updatePs.setLong(5, offeringId);
+
+            int parameterIndex = 4;
+            if (hasSelectedColumn) {
+              updatePs.setBoolean(parameterIndex++, selected);
+            }
+
+            updatePs.setString(parameterIndex++, studentId);
+            updatePs.setLong(parameterIndex, offeringId);
             updated = updatePs.executeUpdate() > 0;
           }
         } else {
@@ -127,6 +151,11 @@ public class StudentEnrolledSubjectService {
             insertPs.setLong(3, offeringId);
             insertPs.setLong(4, semesterSubjectId);
             insertPs.setString(5, status.name());
+
+            if (hasSelectedColumn) {
+              insertPs.setBoolean(6, selected);
+            }
+
             updated = insertPs.executeUpdate() > 0;
           }
         }
@@ -137,6 +166,24 @@ public class StudentEnrolledSubjectService {
       }
 
       return updated;
+    } catch (SQLException e) {
+      logger.error("ERROR: " + e.getMessage(), e);
+      return false;
+    }
+  }
+
+  private boolean hasSelectedColumn(Connection conn) {
+    try {
+      DatabaseMetaData metadata = conn.getMetaData();
+      try (ResultSet rs = metadata.getColumns(null, null, "STUDENT_ENROLLED_SUBJECTS", "IS_SELECTED")) {
+        if (rs.next()) {
+          return true;
+        }
+      }
+
+      try (ResultSet rs = metadata.getColumns(null, null, "student_enrolled_subjects", "is_selected")) {
+        return rs.next();
+      }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
       return false;

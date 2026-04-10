@@ -10,6 +10,7 @@ public class StudentEnrolledSubject {
   private Long offeringId;
   private Long semesterSubjectId;
   private StudentEnrolledSubjectStatus status;
+  private boolean selected;
   private Timestamp createdAt;
   private Timestamp updatedAt;
 
@@ -22,6 +23,7 @@ public class StudentEnrolledSubject {
       Long offeringId,
       Long semesterSubjectId,
       StudentEnrolledSubjectStatus status,
+      boolean selected,
       Timestamp createdAt,
       Timestamp updatedAt
   ) {
@@ -30,6 +32,7 @@ public class StudentEnrolledSubject {
     this.offeringId = offeringId;
     this.semesterSubjectId = semesterSubjectId;
     this.status = status;
+    this.selected = selected;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
   }
@@ -76,6 +79,15 @@ public class StudentEnrolledSubject {
 
   public StudentEnrolledSubject setStatus(StudentEnrolledSubjectStatus status) {
     this.status = status;
+    return this;
+  }
+
+  public boolean isSelected() {
+    return selected;
+  }
+
+  public StudentEnrolledSubject setSelected(boolean selected) {
+    this.selected = selected;
     return this;
   }
 
