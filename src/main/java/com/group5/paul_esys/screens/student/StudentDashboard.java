@@ -266,11 +266,12 @@ public class StudentDashboard extends javax.swing.JFrame {
                 Map<Long, Long> selectedOfferingBySubject = new HashMap<>();
 
                 List<Enrollment> enrollments = EnrollmentService.getInstance().getEnrollmentsByStudent(currentStudent.getStudentId());
-                if (enrollments == null || enrollments.isEmpty()) {
+                Optional<Enrollment> scheduleEnrollment = resolveEnrollmentForSchedule(enrollments);
+                if (scheduleEnrollment.isEmpty()) {
                         return selectedOfferingBySubject;
                 }
 
-                Enrollment latest = enrollments.get(0);
+                Enrollment latest = scheduleEnrollment.get();
                 List<EnrollmentDetail> details = EnrollmentDetailService.getInstance().getEnrollmentDetailsByEnrollment(latest.getId());
                 for (EnrollmentDetail detail : details) {
                         if (detail.getStatus() != EnrollmentDetailStatus.SELECTED) {
@@ -285,6 +286,59 @@ public class StudentDashboard extends javax.swing.JFrame {
                 }
 
                 return selectedOfferingBySubject;
+        }
+
+        private Optional<Enrollment> resolveEnrollmentForSchedule(List<Enrollment> enrollments) {
+                if (enrollments == null || enrollments.isEmpty()) {
+                        return Optional.empty();
+                }
+
+                Optional<Long> activeEnrollmentPeriodId = EnrollmentPeriodService.getInstance()
+                  .getCurrentEnrollmentPeriod()
+                  .map(EnrollmentPeriod::getId);
+
+                Optional<Enrollment> activeEnrollmentWithSchedule = activeEnrollmentPeriodId.flatMap(periodId ->
+                  enrollments.stream()
+                    .filter(enrollment -> periodId.equals(enrollment.getEnrollmentPeriodId()))
+                    .filter(this::hasSelectedEnrollmentDetails)
+                    .findFirst()
+                );
+                if (activeEnrollmentWithSchedule.isPresent()) {
+                        return activeEnrollmentWithSchedule;
+                }
+
+                Optional<Enrollment> latestEnrollmentWithSchedule = enrollments.stream()
+                  .filter(this::hasSelectedEnrollmentDetails)
+                  .findFirst();
+                if (latestEnrollmentWithSchedule.isPresent()) {
+                        return latestEnrollmentWithSchedule;
+                }
+
+                Optional<Enrollment> activeEnrollment = activeEnrollmentPeriodId.flatMap(periodId ->
+                  enrollments.stream()
+                    .filter(enrollment -> periodId.equals(enrollment.getEnrollmentPeriodId()))
+                    .findFirst()
+                );
+                if (activeEnrollment.isPresent()) {
+                        return activeEnrollment;
+                }
+
+                return Optional.of(enrollments.get(0));
+        }
+
+        private boolean hasSelectedEnrollmentDetails(Enrollment enrollment) {
+                if (enrollment == null || enrollment.getId() == null) {
+                        return false;
+                }
+
+                List<EnrollmentDetail> details = EnrollmentDetailService.getInstance().getEnrollmentDetailsByEnrollment(enrollment.getId());
+                for (EnrollmentDetail detail : details) {
+                        if (detail.getStatus() == EnrollmentDetailStatus.SELECTED) {
+                                return true;
+                        }
+                }
+
+                return false;
         }
 
         private void addSubjectCatalogRow(
@@ -513,6 +567,7 @@ public class StudentDashboard extends javax.swing.JFrame {
                 btnSubmitSchedule = new javax.swing.JButton();
                 jScrollPane3 = new javax.swing.JScrollPane();
                 jList1 = new javax.swing.JList<>();
+                btnSaveDraft = new javax.swing.JButton();
                 labelAnnouncement = new javax.swing.JLabel();
                 panelMySchedule = new javax.swing.JPanel();
                 jPanel9 = new javax.swing.JPanel();
@@ -941,7 +996,9 @@ public class StudentDashboard extends javax.swing.JFrame {
                 jLabel17.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
                 jLabel17.setText("0 / n units");
 
+                btnSubmitSchedule.setBackground(new java.awt.Color(119, 0, 0));
                 btnSubmitSchedule.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
+                btnSubmitSchedule.setForeground(new java.awt.Color(255, 255, 255));
                 btnSubmitSchedule.setText("Submit Schedule");
                 btnSubmitSchedule.addActionListener(this::btnSubmitScheduleActionPerformed);
 
@@ -951,6 +1008,12 @@ public class StudentDashboard extends javax.swing.JFrame {
                         public String getElementAt(int i) { return strings[i]; }
                 });
                 jScrollPane3.setViewportView(jList1);
+
+                btnSaveDraft.setBackground(new java.awt.Color(119, 0, 0));
+                btnSaveDraft.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
+                btnSaveDraft.setForeground(new java.awt.Color(255, 255, 255));
+                btnSaveDraft.setText("Save as Draft");
+                btnSaveDraft.addActionListener(this::btnSaveDraftActionPerformed);
 
                 javax.swing.GroupLayout jPanel8Layout = new javax.swing.GroupLayout(jPanel8);
                 jPanel8.setLayout(jPanel8Layout);
@@ -964,10 +1027,6 @@ public class StudentDashboard extends javax.swing.JFrame {
                                                 .addComponent(jLabel15)
                                                 .addGap(0, 150, Short.MAX_VALUE)))
                                 .addContainerGap())
-                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel8Layout.createSequentialGroup()
-                                .addGap(0, 0, Short.MAX_VALUE)
-                                .addComponent(btnSubmitSchedule, javax.swing.GroupLayout.PREFERRED_SIZE, 219, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(67, 67, 67))
                         .addGroup(jPanel8Layout.createSequentialGroup()
                                 .addContainerGap()
                                 .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -979,6 +1038,12 @@ public class StudentDashboard extends javax.swing.JFrame {
                                                 .addGap(0, 0, Short.MAX_VALUE))
                                         .addComponent(jScrollPane3, javax.swing.GroupLayout.Alignment.TRAILING))
                                 .addContainerGap())
+                        .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel8Layout.createSequentialGroup()
+                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                .addGroup(jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                        .addComponent(btnSaveDraft, javax.swing.GroupLayout.PREFERRED_SIZE, 219, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(btnSubmitSchedule, javax.swing.GroupLayout.PREFERRED_SIZE, 219, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addGap(66, 66, 66))
                 );
                 jPanel8Layout.setVerticalGroup(
                         jPanel8Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -986,7 +1051,7 @@ public class StudentDashboard extends javax.swing.JFrame {
                                 .addGap(11, 11, 11)
                                 .addComponent(jLabel15)
                                 .addGap(11, 11, 11)
-                                .addComponent(jScrollPane3)
+                                .addComponent(jScrollPane3, javax.swing.GroupLayout.DEFAULT_SIZE, 365, Short.MAX_VALUE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(jSeparator1, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -995,9 +1060,11 @@ public class StudentDashboard extends javax.swing.JFrame {
                                 .addComponent(jLabel17)
                                 .addGap(18, 18, 18)
                                 .addComponent(jSeparator2, javax.swing.GroupLayout.PREFERRED_SIZE, 10, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(32, 32, 32)
+                                .addGap(26, 26, 26)
+                                .addComponent(btnSaveDraft)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(btnSubmitSchedule)
-                                .addGap(54, 54, 54))
+                                .addGap(26, 26, 26))
                 );
 
                 labelAnnouncement.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
@@ -1311,17 +1378,22 @@ public class StudentDashboard extends javax.swing.JFrame {
                 reloadStudentDashboardData();
         }//GEN-LAST:event_btnSubmitScheduleActionPerformed
 
+        private void btnSaveDraftActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSaveDraftActionPerformed
+                // TODO add your handling code here:
+        }//GEN-LAST:event_btnSaveDraftActionPerformed
+
 	private void loadMySchedule() {
                 DefaultTableModel model = (DefaultTableModel) tableSchedules.getModel();
 		model.setRowCount(0);
 
                 List<Enrollment> studentEr = EnrollmentService.getInstance().getEnrollmentsByStudent(currentStudent.getStudentId());
-		if (studentEr == null || studentEr.isEmpty()) {
+                Optional<Enrollment> scheduleEnrollment = resolveEnrollmentForSchedule(studentEr);
+		if (scheduleEnrollment.isEmpty()) {
                         updateEnrollmentStatusPresentation(null);
 			return;
 		}
 
-                Enrollment active = studentEr.get(0);
+                Enrollment active = scheduleEnrollment.get();
                 updateEnrollmentStatusPresentation(active);
                 List<EnrollmentDetail> details = EnrollmentDetailService.getInstance().getEnrollmentDetailsByEnrollment(active.getId());
 
@@ -1474,6 +1546,7 @@ public class StudentDashboard extends javax.swing.JFrame {
 	}
 
         // Variables declaration - do not modify//GEN-BEGIN:variables
+        private javax.swing.JButton btnSaveDraft;
         private javax.swing.JButton btnSearchSubject;
         private javax.swing.JButton btnSubmitSchedule;
         private javax.swing.JButton jButton4;
