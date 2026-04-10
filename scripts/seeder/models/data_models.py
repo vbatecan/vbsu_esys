@@ -12,6 +12,7 @@ class Department:
 
     id: int
     department_name: str
+    department_code: str
     description: str
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
@@ -24,6 +25,15 @@ class Department:
     @name.setter
     def name(self, value: str) -> None:
         self.department_name = value
+
+    @property
+    def code(self) -> str:
+        """Backward-compatible alias for department_code."""
+        return self.department_code
+
+    @code.setter
+    def code(self, value: str) -> None:
+        self.department_code = value
 
 
 @dataclass

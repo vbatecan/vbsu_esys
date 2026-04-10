@@ -25,6 +25,7 @@ class DepartmentSeeder(BaseSeeder):
         CREATE TABLE TABLE_NAME (
             id BIGINT NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
             department_name VARCHAR(48),
+            department_code VARCHAR(24),
             description CLOB,
             updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -53,11 +54,11 @@ class DepartmentSeeder(BaseSeeder):
 
         cursor = self.db_manager.connection.cursor()
         try:
-            for name, description in tqdm(
+            for code, name, description in tqdm(
                 DEPARTMENT_DATA[:count], desc="Creating departments", unit="dept"
             ):
                 last_id = self.execute_insert(
-                    "departments", ["department_name", "description"], [name, description],
+                    "departments", ["department_name", "department_code", "description"], [name, code, description],
                     cursor=cursor
                 )
 
@@ -65,6 +66,7 @@ class DepartmentSeeder(BaseSeeder):
                     Department(
                         id=last_id,
                         department_name=name,
+                        department_code=code,
                         description=description,
                     )
                 )

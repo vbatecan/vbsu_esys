@@ -269,6 +269,7 @@ CREATE TABLE IF NOT EXISTS departments
 (
     id              bigint PRIMARY KEY AUTO_INCREMENT,
     department_name varchar(48),
+    department_code varchar(24),
     description     text,
     updated_at      timestamp default current_timestamp(),
     created_at      timestamp default current_timestamp()

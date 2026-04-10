@@ -6,6 +6,7 @@ public class Department {
 
   private Long id;
   private String departmentName;
+  private String departmentCode;
   private String description;
   private Timestamp updatedAt;
   private Timestamp createdAt;
@@ -14,8 +15,13 @@ public class Department {
   }
 
   public Department(Long id, String departmentName, String description, Timestamp updatedAt, Timestamp createdAt) {
+    this(id, departmentName, null, description, updatedAt, createdAt);
+  }
+
+  public Department(Long id, String departmentName, String departmentCode, String description, Timestamp updatedAt, Timestamp createdAt) {
     this.id = id;
     this.departmentName = departmentName;
+    this.departmentCode = departmentCode;
     this.description = description;
     this.updatedAt = updatedAt;
     this.createdAt = createdAt;
@@ -36,6 +42,15 @@ public class Department {
 
   public Department setDepartmentName(String departmentName) {
     this.departmentName = departmentName;
+    return this;
+  }
+
+  public String getDepartmentCode() {
+    return departmentCode;
+  }
+
+  public Department setDepartmentCode(String departmentCode) {
+    this.departmentCode = departmentCode;
     return this;
   }
 

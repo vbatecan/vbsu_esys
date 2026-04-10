@@ -11,6 +11,7 @@ public class DepartmentUtils {
     return new Department(
         rs.getLong("id"),
         rs.getString("department_name"),
+        rs.getString("department_code"),
         rs.getString("description"),
         rs.getTimestamp("updated_at"),
         rs.getTimestamp("created_at")

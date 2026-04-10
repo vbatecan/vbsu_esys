@@ -60,10 +60,11 @@ public class DepartmentService {
   public boolean createDepartment(Department department) {
     try (Connection conn = ConnectionService.getConnection();
         PreparedStatement ps = conn.prepareStatement(
-            "INSERT INTO departments (department_name, description) VALUES (?, ?)"
+            "INSERT INTO departments (department_name, department_code, description) VALUES (?, ?, ?)"
         )) {
       ps.setString(1, department.getDepartmentName());
-      ps.setString(2, department.getDescription());
+      ps.setString(2, department.getDepartmentCode());
+      ps.setString(3, department.getDescription());
       
       return ps.executeUpdate() > 0;
     } catch (SQLException e) {
@@ -75,11 +76,12 @@ public class DepartmentService {
   public boolean updateDepartment(Department department) {
     try (Connection conn = ConnectionService.getConnection();
       PreparedStatement ps = conn.prepareStatement(
-        "UPDATE departments SET department_name = ?, description = ? WHERE id = ?"
+        "UPDATE departments SET department_name = ?, department_code = ?, description = ? WHERE id = ?"
       )) {
       ps.setString(1, department.getDepartmentName());
-      ps.setString(2, department.getDescription());
-      ps.setLong(3, department.getId());
+      ps.setString(2, department.getDepartmentCode());
+      ps.setString(3, department.getDescription());
+      ps.setLong(4, department.getId());
       
       return ps.executeUpdate() > 0;
     } catch (SQLException e) {

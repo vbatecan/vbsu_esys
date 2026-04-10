@@ -339,6 +339,7 @@ CREATE TABLE departments
 (
     id              bigint NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     department_name varchar(48),
+    department_code varchar(24),
     description     clob,
     updated_at      timestamp default current_timestamp,
     created_at      timestamp default current_timestamp

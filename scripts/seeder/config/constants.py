@@ -12,33 +12,39 @@ from typing import List, Tuple, Dict, Any
 # Department Data
 # =============================================================================
 
-DEPARTMENT_DATA: List[Tuple[str, str]] = [
+DEPARTMENT_DATA: List[Tuple[str, str, str]] = [
     (
+        "COE",
         "College of Engineering",
         "Offers various engineering programs including Civil, Electrical, Mechanical, and Computer Engineering",
     ),
     (
+        "CBA",
         "College of Business Administration",
         "Provides business education with majors in Management, Accounting, Marketing, and Finance",
     ),
     (
+        "CAS",
         "College of Arts and Sciences",
         "Liberal arts college offering programs in Humanities, Social Sciences, and Natural Sciences",
     ),
     (
+        "CED",
         "College of Education",
         "Teacher education institution producing future educators and school administrators",
     ),
     (
+        "CON",
         "College of Nursing",
         "Healthcare education provider offering Bachelor of Science in Nursing",
     ),
     (
+        "CIT",
         "College of Information Technology",
         "Technology-focused college offering Computer Science, Information Technology, and Data Science programs",
     ),
-    ("College of Architecture", "Architecture and design education provider"),
-    ("College of Law", "Legal education institution offering Juris Doctor program"),
+    ("CAR", "College of Architecture", "Architecture and design education provider"),
+    ("CLAW", "College of Law", "Legal education institution offering Juris Doctor program"),
 ]
 
 # =============================================================================
