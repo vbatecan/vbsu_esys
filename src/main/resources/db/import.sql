@@ -151,6 +151,9 @@ CREATE TABLE IF NOT EXISTS faculty
     user_id       bigint,
     first_name    varchar(128),
     last_name     varchar(128),
+    middle_name   varchar(48),
+    contact_number varchar(20),
+    birthdate     date,
     department_id bigint,
     updated_at    timestamp default current_timestamp(),
     created_at    timestamp default current_timestamp()
