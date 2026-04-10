@@ -164,6 +164,7 @@ public class RegistrarScheduleManagementService {
     String sql = """
         SELECT
           o.id AS offering_id,
+          o.subject_id,
           o.enrollment_period_id,
           ep.school_year,
           ep.semester,
@@ -183,6 +184,7 @@ public class RegistrarScheduleManagementService {
         """;
 
     List<ScheduleOfferingOption> options = new ArrayList<>();
+  Map<Long, String> prerequisiteLabelBySubjectId = new HashMap<>();
     try (
         Connection conn = ConnectionService.getConnection();
         PreparedStatement ps = conn.prepareStatement(sql);
@@ -201,6 +203,17 @@ public class RegistrarScheduleManagementService {
         String sectionCode = safeText(rs.getString("section_code"), "N/A");
         String subjectCode = safeText(rs.getString("subject_code"), "N/A");
         String subjectName = safeText(rs.getString("subject_name"), "N/A");
+        Long subjectId = rsGetLong(rs, "subject_id");
+
+        String prerequisiteLabel = "None";
+        if (subjectId != null) {
+          if (prerequisiteLabelBySubjectId.containsKey(subjectId)) {
+            prerequisiteLabel = prerequisiteLabelBySubjectId.get(subjectId);
+          } else {
+            prerequisiteLabel = resolvePrerequisiteLabel(conn, subjectId);
+            prerequisiteLabelBySubjectId.put(subjectId, prerequisiteLabel);
+          }
+        }
 
         String label = sectionCode
             + " | " + subjectCode + " - " + subjectName
@@ -214,6 +227,7 @@ public class RegistrarScheduleManagementService {
             sectionCode,
             subjectCode,
             subjectName,
+            prerequisiteLabel,
             label
         ));
       }
@@ -223,6 +237,37 @@ public class RegistrarScheduleManagementService {
     }
 
     return options;
+  }
+
+  private String resolvePrerequisiteLabel(Connection conn, Long subjectId) throws SQLException {
+    String sql = """
+        SELECT
+          pre.subject_code,
+          pre.subject_name
+        FROM prerequisites p
+        INNER JOIN subjects pre ON pre.id = p.pre_subject_id
+        WHERE p.subject_id = ?
+        ORDER BY pre.subject_code, pre.subject_name
+        """;
+
+    List<String> prerequisiteParts = new ArrayList<>();
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, subjectId);
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          String code = safeText(rs.getString("subject_code"), "N/A");
+          String name = safeText(rs.getString("subject_name"), "N/A");
+          prerequisiteParts.add(code + " - " + name);
+        }
+      }
+    }
+
+    if (prerequisiteParts.isEmpty()) {
+      return "None";
+    }
+
+    return String.join(", ", prerequisiteParts);
   }
 
   public List<ScheduleLookupOption> getRoomOptions() {

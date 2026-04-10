@@ -27,7 +27,7 @@ public class SemesterSubjectService {
 
   public List<SemesterSubject> getAllSemesterSubjects() {
     List<SemesterSubject> semesterSubjects = new ArrayList<>();
-    String sql = "SELECT * FROM semester_subjects ORDER BY semester_id, subject_id";
+    String sql = "SELECT id, semester_id, subject_id, created_at, updated_at FROM semester_subjects ORDER BY semester_id, subject_id";
 
     try (
       Connection conn = ConnectionService.getConnection();
@@ -45,7 +45,7 @@ public class SemesterSubjectService {
   }
 
   public Optional<SemesterSubject> getSemesterSubjectById(Long id) {
-    String sql = "SELECT * FROM semester_subjects WHERE id = ?";
+    String sql = "SELECT id, semester_id, subject_id, created_at, updated_at FROM semester_subjects WHERE id = ?";
 
     try (
       Connection conn = ConnectionService.getConnection();
@@ -66,7 +66,7 @@ public class SemesterSubjectService {
 
   public List<SemesterSubject> getSemesterSubjectsBySemester(Long semesterId) {
     List<SemesterSubject> semesterSubjects = new ArrayList<>();
-    String sql = "SELECT * FROM semester_subjects WHERE semester_id = ? ORDER BY subject_id";
+    String sql = "SELECT id, semester_id, subject_id, created_at, updated_at FROM semester_subjects WHERE semester_id = ? ORDER BY subject_id";
 
     try (
       Connection conn = ConnectionService.getConnection();
@@ -87,7 +87,7 @@ public class SemesterSubjectService {
 
   public List<SemesterSubject> getSemesterSubjectsBySubject(Long subjectId) {
     List<SemesterSubject> semesterSubjects = new ArrayList<>();
-    String sql = "SELECT * FROM semester_subjects WHERE subject_id = ? ORDER BY semester_id";
+    String sql = "SELECT id, semester_id, subject_id, created_at, updated_at FROM semester_subjects WHERE subject_id = ? ORDER BY semester_id";
 
     try (
       Connection conn = ConnectionService.getConnection();
@@ -107,7 +107,7 @@ public class SemesterSubjectService {
   }
 
   public Optional<SemesterSubject> getBySemesterAndSubject(Long semesterId, Long subjectId) {
-    String sql = "SELECT * FROM semester_subjects WHERE semester_id = ? AND subject_id = ?";
+    String sql = "SELECT id, semester_id, subject_id, created_at, updated_at FROM semester_subjects WHERE semester_id = ? AND subject_id = ?";
 
     try (
       Connection conn = ConnectionService.getConnection();

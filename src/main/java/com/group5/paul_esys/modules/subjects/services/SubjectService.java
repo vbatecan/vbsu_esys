@@ -41,6 +41,56 @@ public class SubjectService {
     return subjects;
   }
 
+  public List<SubjectWithDepartment> getAllSubjectsWithDepartments() {
+    List<SubjectWithDepartment> results = new ArrayList<>();
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement(
+            "SELECT s.id, s.subject_name, s.subject_code, s.units, s.description, s.department_id, " +
+            "s.created_at, s.updated_at, " +
+            "d.id as dept_id, d.department_name, d.department_code " +
+            "FROM subjects s " +
+            "LEFT JOIN departments d ON s.department_id = d.id " +
+            "ORDER BY s.subject_code"
+        );
+        ResultSet rs = ps.executeQuery()) {
+      while (rs.next()) {
+        Subject subject = new Subject(
+            rs.getLong("id"),
+            rs.getString("subject_name"),
+            rs.getString("subject_code"),
+            rs.getFloat("units"),
+            rs.getString("description"),
+            rs.getLong("department_id"),
+            rs.getTimestamp("updated_at"),
+            rs.getTimestamp("created_at")
+        );
+        String departmentName = rs.getString("department_name");
+        results.add(new SubjectWithDepartment(subject, departmentName));
+      }
+    } catch (SQLException e) {
+      logger.error("ERROR: " + e.getMessage(), e);
+    }
+    return results;
+  }
+
+  public static class SubjectWithDepartment {
+    private final Subject subject;
+    private final String departmentName;
+
+    public SubjectWithDepartment(Subject subject, String departmentName) {
+      this.subject = subject;
+      this.departmentName = departmentName;
+    }
+
+    public Subject getSubject() {
+      return subject;
+    }
+
+    public String getDepartmentName() {
+      return departmentName;
+    }
+  }
+
   public Optional<Subject> getSubjectById(Long id) {
     try (Connection conn = ConnectionService.getConnection();
         PreparedStatement ps = conn.prepareStatement("SELECT * FROM subjects WHERE id = ?")) {

@@ -20,6 +20,7 @@ public class ScheduleService {
 
   private static final ScheduleService INSTANCE = new ScheduleService();
   private static final Logger logger = LoggerFactory.getLogger(ScheduleService.class);
+  private static final String SCHEDULE_COLUMNS = "id, offering_id, room_id, faculty_id, day, start_time, end_time, updated_at, created_at";
 
   private ScheduleService() {
   }
@@ -31,7 +32,7 @@ public class ScheduleService {
   public List<Schedule> getAllSchedules() {
     List<Schedule> schedules = new ArrayList<>();
     try (Connection conn = ConnectionService.getConnection();
-        PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules ORDER BY day, start_time");
+        PreparedStatement ps = conn.prepareStatement("SELECT " + SCHEDULE_COLUMNS + " FROM schedules ORDER BY day, start_time");
         ResultSet rs = ps.executeQuery()) {
       while (rs.next()) {
         schedules.add(ScheduleUtils.mapResultSetToSchedule(rs));
@@ -44,7 +45,7 @@ public class ScheduleService {
 
   public Optional<Schedule> getScheduleById(Long id) {
     try (Connection conn = ConnectionService.getConnection();
-        PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules WHERE id = ?")) {
+        PreparedStatement ps = conn.prepareStatement("SELECT " + SCHEDULE_COLUMNS + " FROM schedules WHERE id = ?")) {
       ps.setLong(1, id);
 
       try (ResultSet rs = ps.executeQuery()) {
@@ -62,7 +63,7 @@ public class ScheduleService {
     List<Schedule> schedules = new ArrayList<>();
     try (Connection conn = ConnectionService.getConnection();
         PreparedStatement ps = conn.prepareStatement(
-            "SELECT s.* FROM schedules s "
+            "SELECT s." + SCHEDULE_COLUMNS.replace(", ", ", s.") + " FROM schedules s "
                 + "INNER JOIN offerings o ON o.id = s.offering_id "
                 + "WHERE o.section_id = ? ORDER BY s.day, s.start_time"
         )) {
@@ -82,7 +83,7 @@ public class ScheduleService {
   public List<Schedule> getSchedulesByOffering(Long offeringId) {
     List<Schedule> schedules = new ArrayList<>();
     try (Connection conn = ConnectionService.getConnection();
-        PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules WHERE offering_id = ? ORDER BY day, start_time")) {
+        PreparedStatement ps = conn.prepareStatement("SELECT " + SCHEDULE_COLUMNS + " FROM schedules WHERE offering_id = ? ORDER BY day, start_time")) {
       ps.setLong(1, offeringId);
 
       try (ResultSet rs = ps.executeQuery()) {
@@ -99,7 +100,7 @@ public class ScheduleService {
   public List<Schedule> getSchedulesByFaculty(Long facultyId) {
     List<Schedule> schedules = new ArrayList<>();
     try (Connection conn = ConnectionService.getConnection();
-        PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules WHERE faculty_id = ? ORDER BY day, start_time")) {
+        PreparedStatement ps = conn.prepareStatement("SELECT " + SCHEDULE_COLUMNS + " FROM schedules WHERE faculty_id = ? ORDER BY day, start_time")) {
       ps.setLong(1, facultyId);
 
       try (ResultSet rs = ps.executeQuery()) {
@@ -116,7 +117,7 @@ public class ScheduleService {
   public List<Schedule> getSchedulesByRoom(Long roomId) {
     List<Schedule> schedules = new ArrayList<>();
     try (Connection conn = ConnectionService.getConnection();
-        PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules WHERE room_id = ? ORDER BY day, start_time")) {
+        PreparedStatement ps = conn.prepareStatement("SELECT " + SCHEDULE_COLUMNS + " FROM schedules WHERE room_id = ? ORDER BY day, start_time")) {
       ps.setLong(1, roomId);
 
       try (ResultSet rs = ps.executeQuery()) {
@@ -133,7 +134,7 @@ public class ScheduleService {
   public List<Schedule> getSchedulesByDay(DayOfWeek day) {
     List<Schedule> schedules = new ArrayList<>();
     try (Connection conn = ConnectionService.getConnection();
-        PreparedStatement ps = conn.prepareStatement("SELECT * FROM schedules WHERE day = ? ORDER BY start_time")) {
+        PreparedStatement ps = conn.prepareStatement("SELECT " + SCHEDULE_COLUMNS + " FROM schedules WHERE day = ? ORDER BY start_time")) {
       ps.setString(1, day.name());
 
       try (ResultSet rs = ps.executeQuery()) {

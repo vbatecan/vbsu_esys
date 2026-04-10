@@ -4,7 +4,7 @@ public class Config {
 
   // Dito yung mga credentials para sa db connection
   public static final String DB_NAME = "university_db";
-  public static final String DB_URL = "jdbc:derby://0.tcp.ap.ngrok.io:14926/" + DB_NAME;
+  public static final String DB_URL = "jdbc:derby://localhost:1527/" + DB_NAME;
   public static final String DB_SCHEMA = "APP";
   public static final String DB_USER = "app";
   public static final String DB_PASS = "derby";

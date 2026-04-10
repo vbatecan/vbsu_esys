@@ -32,7 +32,7 @@ public class StudentService {
     }
 
     public Optional<Student> get(String studentId) {
-        String sql = "SELECT * FROM students WHERE student_id = ?";
+        String sql = "SELECT student_id, user_id, first_name, last_name, middle_name, birthdate, student_status, course_id, year_level, created_at FROM students WHERE student_id = ?";
         try (
             Connection conn = ConnectionService.getConnection();
             PreparedStatement stmt = conn.prepareStatement(sql)
@@ -40,11 +40,7 @@ public class StudentService {
             stmt.setString(1, studentId);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    if (rs.getRow() > 0) {
-                        return Optional.of(StudentMapper.mapToStudent(rs));
-                    } else {
-                        return Optional.empty();
-                    }
+                    return Optional.of(StudentMapper.mapToStudent(rs));
                 }
             }
         } catch (SQLException e) {
@@ -242,29 +238,72 @@ public class StudentService {
     public String generateStudentId() {
         int currentYear = Year.now().getValue();
 
+        List<String> candidates = new ArrayList<>();
         for (int i = 0; i < 50; i++) {
             int randomNumber = ThreadLocalRandom.current().nextInt(10000, 100000);
-            String candidate = currentYear + "-" + randomNumber;
-            if (get(candidate).isEmpty()) {
-                return candidate;
-            }
+            candidates.add(currentYear + "-" + randomNumber);
         }
 
-        String sql = "SELECT COUNT(*) AS total FROM students";
+        String existingId = findExistingStudentId(candidates);
+        if (existingId == null) {
+            return candidates.get(0);
+        }
+
+        String sql = "SELECT MAX(CAST(SUBSTRING(student_id FROM LOCATE('-', student_id) + 1) AS INTEGER)) AS max_seq FROM students WHERE student_id LIKE ?";
         try (
             Connection conn = ConnectionService.getConnection();
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            ResultSet rs = stmt.executeQuery()
+            PreparedStatement stmt = conn.prepareStatement(sql)
         ) {
-            if (rs.next()) {
-                int nextCount = rs.getInt("total") + 1;
-                return String.format("%d-%05d", currentYear, nextCount);
+            stmt.setString(1, currentYear + "-%");
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next()) {
+                    int maxSeq = rs.getInt("max_seq");
+                    if (rs.wasNull()) {
+                        maxSeq = 0;
+                    }
+                    return String.format("%d-%05d", currentYear, maxSeq + 1);
+                }
             }
         } catch (SQLException e) {
             logger.error(e.getMessage());
         }
 
         return currentYear + "-99999";
+    }
+
+    private String findExistingStudentId(List<String> candidates) {
+        if (candidates.isEmpty()) {
+            return null;
+        }
+
+        StringBuilder placeholders = new StringBuilder();
+        for (int i = 0; i < candidates.size(); i++) {
+            placeholders.append("?");
+            if (i < candidates.size() - 1) {
+                placeholders.append(",");
+            }
+        }
+
+        String sql = "SELECT student_id FROM students WHERE student_id IN (" + placeholders + ")";
+        try (
+            Connection conn = ConnectionService.getConnection();
+            PreparedStatement stmt = conn.prepareStatement(sql)
+        ) {
+            for (int i = 0; i < candidates.size(); i++) {
+                stmt.setString(i + 1, candidates.get(i));
+            }
+
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    String existingId = rs.getString("student_id");
+                    candidates.remove(existingId);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error(e.getMessage());
+        }
+
+        return candidates.isEmpty() ? candidates.get(0) : null;
     }
 
     public void delete(String studentId) {
@@ -289,7 +328,7 @@ public class StudentService {
     }
 
     public Optional<Student> getStudentByUserId(Long userId) {
-        String sql = "SELECT * FROM students WHERE user_id = ?";
+        String sql = "SELECT student_id, user_id, first_name, last_name, middle_name, birthdate, student_status, course_id, year_level, created_at FROM students WHERE user_id = ?";
         try (
             Connection conn = ConnectionService.getConnection();
             PreparedStatement stmt = conn.prepareStatement(sql)
@@ -297,11 +336,7 @@ public class StudentService {
             stmt.setLong(1, userId);
             try (ResultSet rs = stmt.executeQuery()) {
                 if (rs.next()) {
-                    if (rs.getRow() > 0) {
-                        return Optional.of(StudentMapper.mapToStudent(rs));
-                    } else {
-                        return Optional.empty();
-                    }
+                    return Optional.of(StudentMapper.mapToStudent(rs));
                 }
             }
         } catch (SQLException e) {
@@ -312,7 +347,7 @@ public class StudentService {
     }
 
     public List<Student> list() {
-        String sql = "SELECT * FROM students";
+        String sql = "SELECT student_id, user_id, first_name, last_name, middle_name, birthdate, student_status, course_id, year_level, created_at FROM students";
         try (
             Connection conn = ConnectionService.getConnection();
             PreparedStatement stmt = conn.prepareStatement(sql)
@@ -341,10 +376,10 @@ public class StudentService {
 
             return students;
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.error(e.getMessage(), e);
         }
 
-        return List.of(); // Placeholder muna
+        return List.of();
     }
 
     public void deleteAll(List<Student> students) {

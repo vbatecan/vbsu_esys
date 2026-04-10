@@ -176,4 +176,30 @@ public class CurriculumService {
       return false;
     }
   }
+
+  public float getTotalUnitsForSemester(Long curriculumId, String semesterLabel) {
+    String sql = "SELECT COALESCE(SUM(s.units), 0) as total_units " +
+                 "FROM semester sem " +
+                 "JOIN semester_subjects ss ON ss.semester_id = sem.id " +
+                 "JOIN subjects s ON s.id = ss.subject_id " +
+                 "WHERE sem.curriculum_id = ? AND sem.semester = ?";
+
+    try (
+      Connection conn = ConnectionService.getConnection();
+      PreparedStatement ps = conn.prepareStatement(sql)
+    ) {
+      ps.setLong(1, curriculumId);
+      ps.setString(2, semesterLabel);
+
+      try (ResultSet rs = ps.executeQuery()) {
+        if (rs.next()) {
+          return rs.getFloat("total_units");
+        }
+      }
+    } catch (SQLException e) {
+      logger.error("ERROR: " + e.getMessage(), e);
+    }
+
+    return 0.0f;
+  }
 }

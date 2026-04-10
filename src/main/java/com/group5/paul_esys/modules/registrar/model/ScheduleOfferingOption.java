@@ -7,6 +7,7 @@ public record ScheduleOfferingOption(
     String sectionCode,
     String subjectCode,
     String subjectName,
+    String prerequisiteLabel,
     String label
 ) {
 }

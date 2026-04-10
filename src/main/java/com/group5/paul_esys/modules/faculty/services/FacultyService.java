@@ -29,10 +29,12 @@ public class FacultyService {
     return INSTANCE;
   }
 
+  private static final String FACULTY_COLUMNS = "id, user_id, first_name, last_name, middle_name, contact_number, birthdate, department_id, updated_at, created_at";
+
   public List<Faculty> getAllFaculty() {
     List<Faculty> faculty = new ArrayList<>();
     try (Connection conn = ConnectionService.getConnection();
-        PreparedStatement ps = conn.prepareStatement("SELECT * FROM faculty ORDER BY last_name, first_name");
+        PreparedStatement ps = conn.prepareStatement("SELECT " + FACULTY_COLUMNS + " FROM faculty ORDER BY last_name, first_name");
         ResultSet rs = ps.executeQuery()) {
       while (rs.next()) {
         faculty.add(FacultyUtils.mapResultSetToFaculty(rs));
@@ -45,7 +47,7 @@ public class FacultyService {
 
   public Optional<Faculty> getFacultyById(Long id) {
     try (Connection conn = ConnectionService.getConnection();
-        PreparedStatement ps = conn.prepareStatement("SELECT * FROM faculty WHERE id = ?")) {
+        PreparedStatement ps = conn.prepareStatement("SELECT " + FACULTY_COLUMNS + " FROM faculty WHERE id = ?")) {
       ps.setLong(1, id);
 
       try (ResultSet rs = ps.executeQuery()) {
@@ -61,7 +63,7 @@ public class FacultyService {
 
   public Optional<Faculty> getFacultyByUserId(Long userId) {
     try (Connection conn = ConnectionService.getConnection();
-        PreparedStatement ps = conn.prepareStatement("SELECT * FROM faculty WHERE user_id = ?")) {
+        PreparedStatement ps = conn.prepareStatement("SELECT " + FACULTY_COLUMNS + " FROM faculty WHERE user_id = ?")) {
       ps.setLong(1, userId);
 
       try (ResultSet rs = ps.executeQuery()) {
@@ -78,7 +80,7 @@ public class FacultyService {
   public List<Faculty> getFacultyByDepartment(Long departmentId) {
     List<Faculty> faculty = new ArrayList<>();
     try (Connection conn = ConnectionService.getConnection();
-        PreparedStatement ps = conn.prepareStatement("SELECT * FROM faculty WHERE department_id = ? ORDER BY last_name, first_name")) {
+        PreparedStatement ps = conn.prepareStatement("SELECT " + FACULTY_COLUMNS + " FROM faculty WHERE department_id = ? ORDER BY last_name, first_name")) {
       ps.setLong(1, departmentId);
 
       try (ResultSet rs = ps.executeQuery()) {
