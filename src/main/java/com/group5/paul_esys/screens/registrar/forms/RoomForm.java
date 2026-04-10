@@ -165,20 +165,25 @@ public class RoomForm extends javax.swing.JFrame {
 
                 jPanel1.setBackground(new java.awt.Color(255, 255, 255));
                 jPanel1.setPreferredSize(new java.awt.Dimension(432, 82));
+                jPanel1.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
                 jLabel1.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 jLabel1.setText("Room");
+                jPanel1.add(jLabel1, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 316, -1, -1));
 
                 jLabel2.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 jLabel2.setText("Capacity");
+                jPanel1.add(jLabel2, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 382, -1, -1));
 
                 jLabel3.setFont(new java.awt.Font("Poppins", 0, 18)); // NOI18N
                 jLabel3.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
                 jLabel3.setText("Rooms Form");
+                jPanel1.add(jLabel3, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 20, 283, -1));
 
                 txtRoom.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 txtRoom.setBorder(new com.group5.paul_esys.ui.TextFieldRoundBorder());
                 txtRoom.addActionListener(this::txtRoomActionPerformed);
+                jPanel1.add(txtRoom, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 346, 283, -1));
 
                 spinnerCapacity.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 spinnerCapacity.setModel(new javax.swing.SpinnerNumberModel(0, 0, 500, 1));
@@ -187,98 +192,47 @@ public class RoomForm extends javax.swing.JFrame {
                                 spinnerCapacityKeyReleased(evt);
                         }
                 });
+                jPanel1.add(spinnerCapacity, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 412, 283, -1));
 
                 btnCancel.setBackground(new java.awt.Color(255, 234, 234));
                 btnCancel.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 btnCancel.setText("Cancel");
                 btnCancel.addActionListener(this::btnCancelActionPerformed);
+                jPanel1.add(btnCancel, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 450, 100, -1));
 
                 btnSave.setBackground(new java.awt.Color(255, 234, 234));
                 btnSave.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 btnSave.setText("Save");
                 btnSave.addActionListener(this::btnSaveActionPerformed);
+                jPanel1.add(btnSave, new org.netbeans.lib.awtextra.AbsoluteConstraints(220, 450, 100, -1));
 
                 jLabel4.setForeground(new java.awt.Color(102, 102, 102));
                 jLabel4.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
                 jLabel4.setText("Add/Update a room");
+                jPanel1.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 50, 283, -1));
 
                 txtRoom1.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 txtRoom1.setBorder(new com.group5.paul_esys.ui.TextFieldRoundBorder());
                 txtRoom1.addActionListener(this::txtRoom1ActionPerformed);
+                jPanel1.add(txtRoom1, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 120, 283, -1));
 
                 jLabel5.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 jLabel5.setText("Building");
+                jPanel1.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 90, -1, -1));
 
                 jLabel6.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 jLabel6.setText("Room Status");
+                jPanel1.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 236, -1, -1));
 
                 jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "AVAILABLE", "UNAVAILABLE", "MAINTENANCE" }));
+                jPanel1.add(jComboBox1, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 266, 283, 40));
 
                 jLabel7.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 jLabel7.setText("Room Type");
+                jPanel1.add(jLabel7, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 156, -1, -1));
 
                 jComboBox2.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "LECTURE", "LAB", "SEMINAR", "AUDITORIUM", "OTHER" }));
-
-                javax.swing.GroupLayout jPanel1Layout = new javax.swing.GroupLayout(jPanel1);
-                jPanel1.setLayout(jPanel1Layout);
-                jPanel1Layout.setHorizontalGroup(
-                        jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addGap(60, 60, 60)
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                        .addComponent(jLabel5)
-                                        .addComponent(jLabel7)
-                                        .addComponent(jLabel6)
-                                        .addComponent(jLabel1)
-                                        .addComponent(jLabel2)
-                                        .addGroup(jPanel1Layout.createSequentialGroup()
-                                                .addGap(24, 24, 24)
-                                                .addComponent(btnCancel, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 32, Short.MAX_VALUE)
-                                                .addComponent(btnSave, javax.swing.GroupLayout.PREFERRED_SIZE, 100, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                .addGap(27, 27, 27))
-                                        .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                        .addComponent(txtRoom1)
-                                        .addComponent(jComboBox2, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                        .addComponent(jComboBox1, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                        .addComponent(txtRoom)
-                                        .addComponent(spinnerCapacity)
-                                        .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
-                                .addContainerGap(60, Short.MAX_VALUE))
-                );
-                jPanel1Layout.setVerticalGroup(
-                        jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                        .addGroup(jPanel1Layout.createSequentialGroup()
-                                .addGap(20, 20, 20)
-                                .addComponent(jLabel3)
-                                .addGap(2, 2, 2)
-                                .addComponent(jLabel4)
-                                .addGap(23, 23, 23)
-                                .addComponent(jLabel5)
-                                .addGap(8, 8, 8)
-                                .addComponent(txtRoom1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(4, 4, 4)
-                                .addComponent(jLabel7)
-                                .addGap(8, 8, 8)
-                                .addComponent(jComboBox2, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(10, 10, 10)
-                                .addComponent(jLabel6)
-                                .addGap(8, 8, 8)
-                                .addComponent(jComboBox1, javax.swing.GroupLayout.PREFERRED_SIZE, 40, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(10, 10, 10)
-                                .addComponent(jLabel1)
-                                .addGap(8, 8, 8)
-                                .addComponent(txtRoom, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(4, 4, 4)
-                                .addComponent(jLabel2)
-                                .addGap(8, 8, 8)
-                                .addComponent(spinnerCapacity, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                        .addComponent(btnCancel)
-                                        .addComponent(btnSave))
-                                .addGap(21, 21, 21))
-                );
+                jPanel1.add(jComboBox2, new org.netbeans.lib.awtextra.AbsoluteConstraints(60, 186, 283, 40));
 
                 javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
                 getContentPane().setLayout(layout);

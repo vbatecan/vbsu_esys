@@ -334,13 +334,13 @@ public class StudentEnrollmentForm extends javax.swing.JFrame {
                 btnClose.setBackground(new java.awt.Color(255, 234, 234));
                 btnClose.setText("Cancel");
                 btnClose.addActionListener(this::btnCloseActionPerformed);
-                jPanel1.add(btnClose, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 490, 150, -1));
+                jPanel1.add(btnClose, new org.netbeans.lib.awtextra.AbsoluteConstraints(40, 490, 150, -1));
 
                 btnRegister.setBackground(new java.awt.Color(255, 234, 234));
                 btnRegister.setText("Register");
                 btnRegister.setEnabled(false);
                 btnRegister.addActionListener(this::btnRegisterActionPerformed);
-                jPanel1.add(btnRegister, new org.netbeans.lib.awtextra.AbsoluteConstraints(210, 490, 150, -1));
+                jPanel1.add(btnRegister, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 490, 150, -1));
 
                 jComboBox1.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "REGULAR", "IRREGULAR" }));
                 jPanel1.add(jComboBox1, new org.netbeans.lib.awtextra.AbsoluteConstraints(30, 300, 330, -1));

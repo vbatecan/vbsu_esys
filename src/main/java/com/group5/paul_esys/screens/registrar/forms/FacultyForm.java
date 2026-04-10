@@ -4,6 +4,14 @@
  */
 package com.group5.paul_esys.screens.registrar.forms;
 
+import com.group5.paul_esys.modules.departments.model.Department;
+import com.group5.paul_esys.modules.departments.services.DepartmentService;
+import com.group5.paul_esys.modules.faculty.model.Faculty;
+import com.group5.paul_esys.modules.faculty.services.FacultyService;
+import java.util.LinkedHashMap;
+import java.util.Map;
+import javax.swing.JOptionPane;
+
 /**
  *
  * @author Shan
@@ -11,12 +19,227 @@ package com.group5.paul_esys.screens.registrar.forms;
 public class FacultyForm extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(FacultyForm.class.getName());
+        private final FacultyService facultyService = FacultyService.getInstance();
+        private final DepartmentService departmentService = DepartmentService.getInstance();
+
+        private final Map<String, Long> departmentIdByLabel = new LinkedHashMap<>();
+        private final Map<Long, String> departmentLabelById = new LinkedHashMap<>();
+
+        private final Faculty editingFaculty;
+        private final Runnable onSavedCallback;
+        private final Long preferredDepartmentId;
 
     /**
      * Creates new form FacultyForm
      */
     public FacultyForm() {
-        initComponents();
+                this(null, null, null);
+        }
+
+        public FacultyForm(Faculty editingFaculty, Long preferredDepartmentId, Runnable onSavedCallback) {
+                this.editingFaculty = editingFaculty;
+                this.onSavedCallback = onSavedCallback;
+                this.preferredDepartmentId = preferredDepartmentId;
+                this.setUndecorated(true);
+                initComponents();
+                initializeForm();
+        }
+
+        private void initializeForm() {
+                setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
+                setLocationRelativeTo(null);
+
+                btnCancel.addActionListener(evt -> dispose());
+                loadDepartments();
+
+                if (editingFaculty == null) {
+                        selectPreferredDepartment();
+                        return;
+                }
+
+                jLabel1.setText("Update Faculty");
+                jLabel2.setText("Update existing faculty member");
+                btnSave.setText("Update");
+
+                txtFirstName.setText(editingFaculty.getFirstName() == null ? "" : editingFaculty.getFirstName());
+                txtLastName.setText(editingFaculty.getLastName() == null ? "" : editingFaculty.getLastName());
+                txtEmail.setText(
+                        editingFaculty.getUserId() == null
+                                ? ""
+                                : facultyService.getUserEmailByUserId(editingFaculty.getUserId()).orElse("")
+                );
+
+                if (editingFaculty.getDepartmentId() != null) {
+                        String departmentLabel = departmentLabelById.get(editingFaculty.getDepartmentId());
+                        if (departmentLabel != null) {
+                                cbxDepartment.setSelectedItem(departmentLabel);
+                        }
+                }
+        }
+
+        private void loadDepartments() {
+                cbxDepartment.removeAllItems();
+                departmentIdByLabel.clear();
+                departmentLabelById.clear();
+
+                for (Department department : departmentService.getAllDepartments()) {
+                        String label = buildDepartmentLabel(department);
+                        cbxDepartment.addItem(label);
+                        departmentIdByLabel.put(label, department.getId());
+                        departmentLabelById.put(department.getId(), label);
+                }
+        }
+
+        private String buildDepartmentLabel(Department department) {
+                String name = department.getDepartmentName() == null || department.getDepartmentName().trim().isEmpty()
+                        ? "Department"
+                        : department.getDepartmentName().trim();
+
+                String code = department.getDepartmentCode() == null ? "" : department.getDepartmentCode().trim();
+                if (code.isEmpty()) {
+                        return name + " - ID " + department.getId();
+                }
+
+                return name + " (" + code + ") - ID " + department.getId();
+        }
+
+        private void selectPreferredDepartment() {
+                if (preferredDepartmentId == null) {
+                        return;
+                }
+
+                String departmentLabel = departmentLabelById.get(preferredDepartmentId);
+                if (departmentLabel != null) {
+                        cbxDepartment.setSelectedItem(departmentLabel);
+                }
+        }
+
+        private boolean isValidForm() {
+                if (txtFirstName.getText() == null || txtFirstName.getText().trim().isEmpty()) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "First name is required.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                if (txtLastName.getText() == null || txtLastName.getText().trim().isEmpty()) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Last name is required.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                if (txtEmail.getText() == null || txtEmail.getText().trim().isEmpty()) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Email is required.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                String email = txtEmail.getText().trim();
+                if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Email format is invalid.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                Object selectedDepartment = cbxDepartment.getSelectedItem();
+                if (selectedDepartment == null || !departmentIdByLabel.containsKey(selectedDepartment.toString())) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Please select a department.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                return true;
+        }
+
+        private String buildInitialPassword(String lastName) {
+                String safeLastName = lastName.trim().replaceAll("\\s+", "");
+                if (safeLastName.isEmpty()) {
+                        safeLastName = "faculty";
+                }
+                return safeLastName + "123!";
+        }
+
+        private void saveFaculty() {
+                if (!isValidForm()) {
+                        return;
+                }
+
+                String firstName = txtFirstName.getText().trim();
+                String lastName = txtLastName.getText().trim();
+                String email = txtEmail.getText().trim();
+                Long departmentId = departmentIdByLabel.get(cbxDepartment.getSelectedItem().toString());
+
+                Faculty faculty = editingFaculty == null ? new Faculty() : editingFaculty;
+                faculty
+                        .setFirstName(firstName)
+                        .setLastName(lastName)
+                        .setDepartmentId(departmentId);
+
+                if (editingFaculty == null) {
+                        String initialPassword = buildInitialPassword(lastName);
+                        boolean created = facultyService.registerFaculty(email, initialPassword, faculty).isPresent();
+
+                        if (!created) {
+                                JOptionPane.showMessageDialog(
+                                        this,
+                                        "Failed to create faculty. Please try again.",
+                                        "Save Failed",
+                                        JOptionPane.ERROR_MESSAGE
+                                );
+                                return;
+                        }
+
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Faculty created successfully.\nInitial Password: " + initialPassword,
+                                "Success",
+                                JOptionPane.INFORMATION_MESSAGE
+                        );
+                } else {
+                        boolean updated = facultyService.updateFacultyWithEmail(faculty, email);
+
+                        if (!updated) {
+                                JOptionPane.showMessageDialog(
+                                        this,
+                                        "Failed to update faculty. Please try again.",
+                                        "Save Failed",
+                                        JOptionPane.ERROR_MESSAGE
+                                );
+                                return;
+                        }
+
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Faculty updated successfully.",
+                                "Success",
+                                JOptionPane.INFORMATION_MESSAGE
+                        );
+                }
+
+                if (onSavedCallback != null) {
+                        onSavedCallback.run();
+                }
+
+                dispose();
     }
 
     /**
@@ -24,7 +247,6 @@ public class FacultyForm extends javax.swing.JFrame {
      * WARNING: Do NOT modify this code. The content of this method is always
      * regenerated by the Form Editor.
      */
-    @SuppressWarnings("unchecked")
         // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
         private void initComponents() {
 
@@ -44,10 +266,8 @@ public class FacultyForm extends javax.swing.JFrame {
                 btnCancel = new javax.swing.JButton();
 
                 setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-                getContentPane().setLayout(new javax.swing.BoxLayout(getContentPane(), javax.swing.BoxLayout.Y_AXIS));
 
                 windowBar1.setTitle("Faculty Form");
-                getContentPane().add(windowBar1);
 
                 jPanel1.setBackground(new java.awt.Color(255, 255, 255));
 
@@ -142,13 +362,26 @@ public class FacultyForm extends javax.swing.JFrame {
                                 .addContainerGap(18, Short.MAX_VALUE))
                 );
 
-                getContentPane().add(jPanel1);
+                javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+                getContentPane().setLayout(layout);
+                layout.setHorizontalGroup(
+                        layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addComponent(windowBar1, javax.swing.GroupLayout.PREFERRED_SIZE, 346, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                );
+                layout.setVerticalGroup(
+                        layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(layout.createSequentialGroup()
+                                .addComponent(windowBar1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(0, 0, 0)
+                                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                );
 
                 pack();
         }// </editor-fold>//GEN-END:initComponents
 
         private void btnSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSaveActionPerformed
-                // TODO add your handling code here:
+                saveFaculty();
         }//GEN-LAST:event_btnSaveActionPerformed
 
     /**

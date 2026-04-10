@@ -320,7 +320,8 @@ public class UpdateStudentForm extends javax.swing.JDialog {
 
                 jComboBox4.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Set Student Year Level", "1st Year", "2nd Year", "3rd Year", "4th Year", "5th Year", "6th Year" }));
 
-                jButton1.setBackground(new java.awt.Color(255, 234, 234));
+                jButton1.setBackground(new java.awt.Color(119, 0, 0));
+                jButton1.setForeground(new java.awt.Color(255, 255, 255));
                 jButton1.setText("Update");
 
                 jButton2.setBackground(new java.awt.Color(119, 0, 0));
@@ -340,7 +341,8 @@ public class UpdateStudentForm extends javax.swing.JDialog {
                                                 .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                                 .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 115, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 115, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                                .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 115, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addGap(41, 41, 41))
                                         .addGroup(jPanel1Layout.createSequentialGroup()
                                                 .addGap(48, 48, 48)
                                                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -422,7 +424,7 @@ public class UpdateStudentForm extends javax.swing.JDialog {
                                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                                         .addComponent(jButton1, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE)
                                         .addComponent(jButton2, javax.swing.GroupLayout.PREFERRED_SIZE, 36, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                .addGap(0, 30, Short.MAX_VALUE))
+                                .addGap(0, 46, Short.MAX_VALUE))
                 );
 
                 getContentPane().add(jPanel1, java.awt.BorderLayout.CENTER);

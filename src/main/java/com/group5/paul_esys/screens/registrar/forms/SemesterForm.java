@@ -177,10 +177,8 @@ public class SemesterForm extends javax.swing.JFrame {
                 jLabel4 = new javax.swing.JLabel();
 
                 setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-                getContentPane().setLayout(new javax.swing.BoxLayout(getContentPane(), javax.swing.BoxLayout.Y_AXIS));
 
                 windowBar1.setTitle("Semester");
-                getContentPane().add(windowBar1);
 
                 jPanel1.setBackground(new java.awt.Color(255, 255, 255));
                 jPanel1.setAlignmentX(0.1F);
@@ -211,20 +209,33 @@ public class SemesterForm extends javax.swing.JFrame {
                 btnSave.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 btnSave.setText("Save");
                 btnSave.addActionListener(this::btnSaveActionPerformed);
-                jPanel1.add(btnSave, new org.netbeans.lib.awtextra.AbsoluteConstraints(220, 230, 100, -1));
+                jPanel1.add(btnSave, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 230, 100, -1));
 
                 btnCancel.setBackground(new java.awt.Color(255, 234, 234));
                 btnCancel.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 btnCancel.setText("Cancel");
                 btnCancel.addActionListener(this::btnCancelActionPerformed);
-                jPanel1.add(btnCancel, new org.netbeans.lib.awtextra.AbsoluteConstraints(70, 230, 100, -1));
+                jPanel1.add(btnCancel, new org.netbeans.lib.awtextra.AbsoluteConstraints(90, 230, 100, -1));
 
                 jLabel4.setForeground(new java.awt.Color(153, 153, 153));
                 jLabel4.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
                 jLabel4.setText("Start a new Semester");
                 jPanel1.add(jLabel4, new org.netbeans.lib.awtextra.AbsoluteConstraints(70, 50, 250, -1));
 
-                getContentPane().add(jPanel1);
+                javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+                getContentPane().setLayout(layout);
+                layout.setHorizontalGroup(
+                        layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addComponent(windowBar1, javax.swing.GroupLayout.PREFERRED_SIZE, 387, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, 387, javax.swing.GroupLayout.PREFERRED_SIZE)
+                );
+                layout.setVerticalGroup(
+                        layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(layout.createSequentialGroup()
+                                .addComponent(windowBar1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(0, 0, 0)
+                                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, 301, javax.swing.GroupLayout.PREFERRED_SIZE))
+                );
 
                 pack();
         }// </editor-fold>//GEN-END:initComponents

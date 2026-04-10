@@ -165,10 +165,8 @@ public class CourseForm extends javax.swing.JFrame {
                 jLabel5 = new javax.swing.JLabel();
 
                 setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-                getContentPane().setLayout(new javax.swing.BoxLayout(getContentPane(), javax.swing.BoxLayout.Y_AXIS));
 
                 windowBar2.setTitle("Course Form");
-                getContentPane().add(windowBar2);
 
                 jPanel1.setBackground(new java.awt.Color(255, 255, 255));
                 jPanel1.setAlignmentX(0.1F);
@@ -202,13 +200,13 @@ public class CourseForm extends javax.swing.JFrame {
                 btnCancel.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 btnCancel.setText("Cancel");
                 btnCancel.addActionListener(this::btnCancelActionPerformed);
-                jPanel1.add(btnCancel, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 410, 100, -1));
+                jPanel1.add(btnCancel, new org.netbeans.lib.awtextra.AbsoluteConstraints(100, 410, 100, -1));
 
                 btnSave.setBackground(new java.awt.Color(255, 234, 234));
                 btnSave.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 btnSave.setText("Save");
                 btnSave.addActionListener(this::btnSaveActionPerformed);
-                jPanel1.add(btnSave, new org.netbeans.lib.awtextra.AbsoluteConstraints(230, 410, 100, -1));
+                jPanel1.add(btnSave, new org.netbeans.lib.awtextra.AbsoluteConstraints(210, 410, 100, -1));
 
                 txtAreaDescription.setColumns(20);
                 txtAreaDescription.setRows(5);
@@ -226,7 +224,20 @@ public class CourseForm extends javax.swing.JFrame {
                 jLabel5.setText("Add/Update a Course");
                 jPanel1.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 60, 250, -1));
 
-                getContentPane().add(jPanel1);
+                javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+                getContentPane().setLayout(layout);
+                layout.setHorizontalGroup(
+                        layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addComponent(windowBar2, javax.swing.GroupLayout.PREFERRED_SIZE, 415, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, 415, javax.swing.GroupLayout.PREFERRED_SIZE)
+                );
+                layout.setVerticalGroup(
+                        layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(layout.createSequentialGroup()
+                                .addComponent(windowBar2, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(0, 0, 0)
+                                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, 486, javax.swing.GroupLayout.PREFERRED_SIZE))
+                );
 
                 pack();
         }// </editor-fold>//GEN-END:initComponents

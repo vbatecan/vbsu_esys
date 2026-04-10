@@ -6,7 +6,6 @@ package com.group5.paul_esys.screens.registrar.forms;
 
 import com.group5.paul_esys.modules.sections.model.Section;
 import com.group5.paul_esys.modules.sections.services.SectionService;
-import java.awt.event.ActionListener;
 import java.util.List;
 import javax.swing.JOptionPane;
 
@@ -219,13 +218,11 @@ public class SectionForm extends javax.swing.JFrame {
                 btnSave = new javax.swing.JButton();
                 btnCancel = new javax.swing.JButton();
 
-                setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-                getContentPane().setLayout(new javax.swing.BoxLayout(getContentPane(), javax.swing.BoxLayout.Y_AXIS));
+                setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
                 windowBar1.setName(""); // NOI18N
                 windowBar1.setPreferredSize(new java.awt.Dimension(354, 36));
                 windowBar1.setTitle("Section Form");
-                getContentPane().add(windowBar1);
 
                 jPanel1.setBackground(new java.awt.Color(255, 255, 255));
                 jPanel1.setAlignmentX(0.5f);
@@ -267,15 +264,28 @@ public class SectionForm extends javax.swing.JFrame {
                 btnSave.setForeground(new java.awt.Color(255, 255, 255));
                 btnSave.setText("Save");
                 btnSave.addActionListener(this::btnSaveActionPerformed);
-                jPanel1.add(btnSave, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 320, -1, -1));
+                jPanel1.add(btnSave, new org.netbeans.lib.awtextra.AbsoluteConstraints(200, 330, -1, -1));
 
                 btnCancel.setBackground(new java.awt.Color(119, 0, 0));
                 btnCancel.setForeground(new java.awt.Color(255, 255, 255));
                 btnCancel.setText("Cancel");
                 btnCancel.addActionListener(this::btnCancelActionPerformed);
-                jPanel1.add(btnCancel, new org.netbeans.lib.awtextra.AbsoluteConstraints(110, 320, -1, -1));
+                jPanel1.add(btnCancel, new org.netbeans.lib.awtextra.AbsoluteConstraints(110, 330, -1, -1));
 
-                getContentPane().add(jPanel1);
+                javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+                getContentPane().setLayout(layout);
+                layout.setHorizontalGroup(
+                        layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addComponent(windowBar1, javax.swing.GroupLayout.PREFERRED_SIZE, 380, javax.swing.GroupLayout.PREFERRED_SIZE)
+                        .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                );
+                layout.setVerticalGroup(
+                        layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(layout.createSequentialGroup()
+                                .addComponent(windowBar1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(0, 0, 0)
+                                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, 383, javax.swing.GroupLayout.PREFERRED_SIZE))
+                );
 
                 pack();
         }// </editor-fold>//GEN-END:initComponents

@@ -143,13 +143,15 @@ public class DepartmentForm extends javax.swing.JFrame {
                 txtAreaDescription = new javax.swing.JTextArea();
 
                 setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
-                getContentPane().setLayout(new javax.swing.BoxLayout(getContentPane(), javax.swing.BoxLayout.Y_AXIS));
+                setResizable(false);
+                setSize(new java.awt.Dimension(514, 510));
 
                 windowBar1.setTitle("Department Form");
-                getContentPane().add(windowBar1);
 
                 jPanel1.setBackground(new java.awt.Color(255, 255, 255));
-                jPanel1.setAlignmentX(0.1F);
+                jPanel1.setAlignmentY(0.5F);
+                jPanel1.setMaximumSize(new java.awt.Dimension(500, 500));
+                jPanel1.setPreferredSize(new java.awt.Dimension(400, 400));
                 jPanel1.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
 
                 jLabel4.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
@@ -205,7 +207,20 @@ public class DepartmentForm extends javax.swing.JFrame {
 
                 jPanel1.add(jScrollPane1, new org.netbeans.lib.awtextra.AbsoluteConstraints(80, 280, 250, 120));
 
-                getContentPane().add(jPanel1);
+                javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
+                getContentPane().setLayout(layout);
+                layout.setHorizontalGroup(
+                        layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addComponent(jPanel1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                        .addComponent(windowBar1, javax.swing.GroupLayout.PREFERRED_SIZE, 0, Short.MAX_VALUE)
+                );
+                layout.setVerticalGroup(
+                        layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                        .addGroup(layout.createSequentialGroup()
+                                .addComponent(windowBar1, javax.swing.GroupLayout.PREFERRED_SIZE, 37, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(0, 0, 0)
+                                .addComponent(jPanel1, javax.swing.GroupLayout.PREFERRED_SIZE, 467, javax.swing.GroupLayout.PREFERRED_SIZE))
+                );
 
                 pack();
         }// </editor-fold>//GEN-END:initComponents
