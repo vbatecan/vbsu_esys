@@ -33,19 +33,25 @@ public class StudentSchedulesForm extends javax.swing.JFrame {
         private final Student student;
         private final String courseName;
         private final String emailAddress;
+        private final Long enrollmentId;
         private TableRowSorter<DefaultTableModel> scheduleRowSorter;
 
 	/**
 	 * Creates new form StudentSchedulesForm
 	 */
 	public StudentSchedulesForm() {
-		this(null, null, null);
+		this(null, null, null, null);
 	}
 
         public StudentSchedulesForm(Student student, String courseName, String emailAddress) {
+                this(student, courseName, emailAddress, null);
+        }
+
+        public StudentSchedulesForm(Student student, String courseName, String emailAddress, Long enrollmentId) {
                 this.student = student;
                 this.courseName = courseName;
                 this.emailAddress = emailAddress;
+                this.enrollmentId = enrollmentId;
                 initComponents();
                 initializeForm();
 	}
@@ -117,7 +123,10 @@ public class StudentSchedulesForm extends javax.swing.JFrame {
                         return;
                 }
 
-                List<StudentScheduleRow> loadedRows = registrarStudentScheduleService.getStudentSchedules(student.getStudentId());
+                List<StudentScheduleRow> loadedRows = registrarStudentScheduleService.getStudentSchedules(
+                        student.getStudentId(),
+                        enrollmentId
+                );
                 scheduleRows.addAll(loadedRows);
                 String resolvedCourseName = resolveCourseName();
 

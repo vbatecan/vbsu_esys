@@ -20,7 +20,7 @@ public class RegistrarEnrollmentService {
   private static final RegistrarEnrollmentService INSTANCE = new RegistrarEnrollmentService();
   private static final Logger logger = LoggerFactory.getLogger(RegistrarEnrollmentService.class);
 
-  private static final String APPLICATIONS_QUERY = """
+  private static final String APPLICATIONS_QUERY_BASE = """
       SELECT
         e.id AS enrollment_id,
         e.student_id,
@@ -30,7 +30,6 @@ public class RegistrarEnrollmentService {
         e.status
       FROM enrollments e
       INNER JOIN students s ON s.student_id = e.student_id
-      ORDER BY e.created_at DESC
       """;
 
   private RegistrarEnrollmentService() {
@@ -41,15 +40,31 @@ public class RegistrarEnrollmentService {
   }
 
   public List<EnrollmentApplication> getEnrollmentApplications() {
+    return getEnrollmentApplications(null);
+  }
+
+  public List<EnrollmentApplication> getEnrollmentApplications(Long enrollmentPeriodId) {
     List<EnrollmentApplication> applications = new ArrayList<>();
 
-    try (Connection conn = ConnectionService.getConnection();
-         PreparedStatement ps = conn.prepareStatement(APPLICATIONS_QUERY);
-         ResultSet rs = ps.executeQuery()) {
+    String sql = APPLICATIONS_QUERY_BASE;
+    if (enrollmentPeriodId != null) {
+      sql += " WHERE e.enrollment_period_id = ?";
+    }
+    sql += " ORDER BY e.created_at DESC";
 
-      while (rs.next()) {
-        applications.add(mapRowToApplication(rs));
+    try (Connection conn = ConnectionService.getConnection();
+         PreparedStatement ps = conn.prepareStatement(sql)) {
+
+      if (enrollmentPeriodId != null) {
+        ps.setLong(1, enrollmentPeriodId);
       }
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          applications.add(mapRowToApplication(rs));
+        }
+      }
+
     } catch (SQLException e) {
       logger.error("ERROR: {}", e.getMessage(), e);
     }

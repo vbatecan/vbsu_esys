@@ -37,12 +37,19 @@ public class RegistrarStudentScheduleService {
     }
 
     public List<StudentScheduleRow> getStudentSchedules(String studentId) {
+        return getStudentSchedules(studentId, null);
+    }
+
+    public List<StudentScheduleRow> getStudentSchedules(String studentId, Long enrollmentId) {
         if (studentId == null || studentId.isBlank()) {
             return List.of();
         }
 
-        Optional<EnrollmentSnapshot> latestEnrollment = getLatestEnrollmentSnapshot(studentId);
-        if (latestEnrollment.isEmpty()) {
+        Optional<EnrollmentSnapshot> enrollmentSnapshot = enrollmentId == null
+            ? getLatestEnrollmentSnapshot(studentId)
+            : getEnrollmentSnapshot(studentId, enrollmentId);
+
+        if (enrollmentSnapshot.isEmpty()) {
             return List.of();
         }
 
@@ -82,7 +89,7 @@ public class RegistrarStudentScheduleService {
             Connection conn = ConnectionService.getConnection();
             PreparedStatement ps = conn.prepareStatement(sql)
         ) {
-            ps.setLong(1, latestEnrollment.get().enrollmentId());
+            ps.setLong(1, enrollmentSnapshot.get().enrollmentId());
             ps.setString(2, EnrollmentDetailStatus.SELECTED.name());
 
             try (ResultSet rs = ps.executeQuery()) {
@@ -123,6 +130,33 @@ public class RegistrarStudentScheduleService {
         }
 
         return schedules;
+    }
+
+    private Optional<EnrollmentSnapshot> getEnrollmentSnapshot(String studentId, Long enrollmentId) {
+        String sql = """
+            SELECT id, enrollment_period_id
+            FROM enrollments
+            WHERE student_id = ?
+              AND id = ?
+            FETCH FIRST 1 ROWS ONLY
+            """;
+
+        try (
+            Connection conn = ConnectionService.getConnection();
+            PreparedStatement ps = conn.prepareStatement(sql)
+        ) {
+            ps.setString(1, studentId);
+            ps.setLong(2, enrollmentId);
+            try (ResultSet rs = ps.executeQuery()) {
+                if (rs.next()) {
+                    return Optional.of(new EnrollmentSnapshot(rsGetLong(rs, "id"), rsGetLong(rs, "enrollment_period_id")));
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("ERROR: {}", e.getMessage(), e);
+        }
+
+        return Optional.empty();
     }
 
     public List<SectionScheduleOption> getAvailableSectionSchedules(

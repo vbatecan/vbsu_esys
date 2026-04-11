@@ -91,6 +91,31 @@ public class EnrollmentPeriodService {
     return Optional.empty();
   }
 
+  public Optional<EnrollmentPeriod> getLatestEnrollmentPeriod() {
+    String sql = "SELECT * FROM enrollment_period ORDER BY created_at DESC";
+
+    try (Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ResultSet rs = ps.executeQuery()) {
+      if (rs.next()) {
+        return Optional.of(EnrollmentPeriodUtils.mapResultSetToEnrollmentPeriod(rs));
+      }
+    } catch (SQLException e) {
+      logger.error("ERROR: " + e.getMessage(), e);
+    }
+
+    return Optional.empty();
+  }
+
+  public Optional<EnrollmentPeriod> getCurrentOrLatestEnrollmentPeriod() {
+    Optional<EnrollmentPeriod> current = getCurrentEnrollmentPeriod();
+    if (current.isPresent()) {
+      return current;
+    }
+
+    return getLatestEnrollmentPeriod();
+  }
+
   public boolean createEnrollmentPeriod(EnrollmentPeriod period) {
     try (Connection conn = ConnectionService.getConnection()) {
       boolean hasDescription = hasDescriptionColumn(conn);
