@@ -7,8 +7,6 @@ package com.group5.paul_esys.screens.student;
 import com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTGitHubIJTheme;
 import com.group5.paul_esys.modules.courses.model.Course;
 import com.group5.paul_esys.modules.courses.services.CourseService;
-import com.group5.paul_esys.modules.curriculum.model.Curriculum;
-import com.group5.paul_esys.modules.curriculum.services.CurriculumService;
 import com.group5.paul_esys.modules.enrollment_period.model.EnrollmentPeriod;
 import com.group5.paul_esys.modules.enrollment_period.services.EnrollmentPeriodService;
 import com.group5.paul_esys.modules.enrollments.model.Enrollment;
@@ -60,66 +58,22 @@ public class StudentDashboard extends javax.swing.JFrame {
         private static final int CATALOG_COL_UNITS = 3;
         private static final int CATALOG_COL_OFFERING_ID = 7;
         private static final int CATALOG_COL_SUBJECT_ID = 8;
+        private static final float MAX_ENROLLMENT_UNITS = 24.0f;
 
 	private Student currentStudent;
         private final DefaultListModel<String> selectedSubjectsModel = new DefaultListModel<>();
         private boolean hasActiveEnrollmentPeriod;
-        private int activeBackgroundTasks;
-        private float maxEnrollmentUnits = 24.0f;
+                                private int activeBackgroundTasks;
 
-        private record StudentOverviewSnapshot(
-          String courseName,
-          String enrollmentStatus,
-          float totalUnits,
-          long selectedSubjectCount,
-          String sectionCode,
-          EnrollmentStatus progressStatus
-        ) {
-        }
+                                private record SubjectCatalogSnapshot(
+                                        boolean activeEnrollmentPeriod,
+                                        String announcementText,
+                                        String catalogLabel,
+                                        List<Object[]> rows
+                                ) {
+                                }
 
-        private record SubjectCatalogSnapshot(
-          boolean activeEnrollmentPeriod,
-          String announcementText,
-          String catalogLabel,
-          List<Object[]> rows,
-          float maxUnits
-        ) {
-        }
-
-        private record ScheduleSnapshot(
-          EnrollmentStatus enrollmentStatus,
-          List<Object[]> rows
-        ) {
-        }
-
-        private record SelectedCatalogRow(
-          Long offeringId,
-          Long subjectId,
-          float units
-        ) {
-        }
-
-        private record PersistOutcome(
-          boolean success,
-          boolean refreshData,
-          String title,
-          String message,
-          int messageType
-        ) {
-                private static PersistOutcome success(String message) {
-                        return new PersistOutcome(true, true, "Success", message, JOptionPane.INFORMATION_MESSAGE);
-                }
-
-                private static PersistOutcome error(String title, String message, boolean refreshData) {
-                        return new PersistOutcome(false, refreshData, title, message, JOptionPane.ERROR_MESSAGE);
-                }
-
-                private static PersistOutcome warning(String title, String message, boolean refreshData) {
-                        return new PersistOutcome(false, refreshData, title, message, JOptionPane.WARNING_MESSAGE);
-                }
-        }
-
-	/**
+                                /**
 	 * Creates new form Dashboard
 	 */
 	public StudentDashboard() {
@@ -154,7 +108,7 @@ public class StudentDashboard extends javax.swing.JFrame {
 		this.windowBar1.setTitle("Welcome " + fullName);
 		this.currentStudent = student;
                 initializeDashboardUi();
-                initializeStudentProfileFields(student);
+                initStudentData(student);
                 reloadStudentDashboardData();
 	}
 
@@ -165,9 +119,9 @@ public class StudentDashboard extends javax.swing.JFrame {
         }
 
         private void reloadStudentDashboardData() {
-                loadStudentOverviewAsync();
+                initStudentData(currentStudent);
                 loadSubjectCatalogAsync(txtSearch.getText());
-                loadMyScheduleAsync();
+                loadMySchedule();
         }
 
         private void beginBackgroundTask() {
@@ -230,207 +184,6 @@ public class StudentDashboard extends javax.swing.JFrame {
                         }
                 };
                 worker.execute();
-        }
-
-        private void initializeStudentProfileFields(Student student) {
-                txtStudentID.setText(student.getStudentId());
-                txtFirstName.setText(student.getFirstName());
-                txtLastName.setText(student.getLastName());
-                txtMiddleName.setText(student.getMiddleName() != null ? student.getMiddleName() : "");
-                txtEmailAddress.setText(UserSession.getInstance().getUserInformation().getEmail());
-                txtBirthDate.setText(student.getBirthdate() != null ? student.getBirthdate().toString() : "");
-                txtStudentStatus.setText(student.getStudentStatus().toString());
-                txtYearLevel.setText(student.getYearLevel() != null ? student.getYearLevel().toString() : "");
-                txtCourse.setText("N/A");
-                txtEnrollmentStatus.setText("NOT ENROLLED");
-                txtTotalUnits.setText(formatUnits(0.0f));
-                txtTotalSubjects.setText("0");
-                txtSections.setText("None");
-
-                txtStudentID.setEditable(false);
-                txtFirstName.setEditable(false);
-                txtLastName.setEditable(false);
-                txtMiddleName.setEditable(false);
-                txtEmailAddress.setEditable(false);
-                txtBirthDate.setEditable(false);
-                txtStudentStatus.setEditable(false);
-                txtYearLevel.setEditable(false);
-                txtCourse.setEditable(false);
-                txtTotalSubjects.setEditable(false);
-                txtTotalUnits.setEditable(false);
-                txtEnrollmentStatus.setEditable(false);
-                txtSections.setEditable(false);
-
-                updateEnrollmentStatusPresentation((EnrollmentStatus) null);
-        }
-
-        private void loadStudentOverviewAsync() {
-                executeDatabaseTask(
-                  () -> fetchStudentOverviewSnapshot(currentStudent),
-                  this::applyStudentOverviewSnapshot,
-                  "Failed to load student overview."
-                );
-        }
-
-        private StudentOverviewSnapshot fetchStudentOverviewSnapshot(Student student) {
-                String courseName = "N/A";
-                Optional<Course> course = CourseService.getInstance().getCourseById(student.getCourseId());
-                if (course.isPresent()) {
-                        courseName = safeText(course.get().getCourseName(), "N/A");
-                }
-
-                String enrollmentStatus = "NOT ENROLLED";
-                float totalUnits = 0.0f;
-                long selectedSubjectCount = 0;
-                String sectionCode = "None";
-                EnrollmentStatus progressStatus = null;
-
-                List<Enrollment> enrollments = EnrollmentService.getInstance().getEnrollmentsByStudent(student.getStudentId());
-                if (enrollments != null && !enrollments.isEmpty()) {
-                        Enrollment latest = enrollments.get(0);
-                        progressStatus = latest.getStatus();
-                        enrollmentStatus = safeText(progressStatus == null ? null : progressStatus.name(), "NOT ENROLLED");
-                        totalUnits = latest.getTotalUnits() == null ? 0.0f : latest.getTotalUnits();
-
-                        List<EnrollmentDetail> details = EnrollmentDetailService.getInstance().getEnrollmentDetailsByEnrollment(latest.getId());
-                        for (EnrollmentDetail detail : details) {
-                                if (detail.getStatus() != EnrollmentDetailStatus.SELECTED) {
-                                        continue;
-                                }
-
-                                selectedSubjectCount++;
-                                if (!"None".equals(sectionCode)) {
-                                        continue;
-                                }
-
-                                Optional<Offering> offering = OfferingService.getInstance().getOfferingById(detail.getOfferingId());
-                                if (offering.isEmpty()) {
-                                        continue;
-                                }
-
-                                Optional<Section> section = SectionService.getInstance().getSectionById(offering.get().getSectionId());
-                                if (section.isPresent()) {
-                                        sectionCode = safeText(section.get().getSectionCode(), "None");
-                                }
-                        }
-                }
-
-                return new StudentOverviewSnapshot(
-                  courseName,
-                  enrollmentStatus,
-                  totalUnits,
-                  selectedSubjectCount,
-                  sectionCode,
-                  progressStatus
-                );
-        }
-
-        private void applyStudentOverviewSnapshot(StudentOverviewSnapshot snapshot) {
-                txtCourse.setText(snapshot.courseName());
-                txtEnrollmentStatus.setText(snapshot.enrollmentStatus());
-                txtTotalUnits.setText(formatUnits(snapshot.totalUnits()));
-                txtTotalSubjects.setText(String.valueOf(snapshot.selectedSubjectCount()));
-                txtSections.setText(snapshot.sectionCode());
-                updateEnrollmentStatusPresentation(snapshot.progressStatus());
-        }
-
-        private void loadMyScheduleAsync() {
-                executeDatabaseTask(
-                  this::fetchScheduleSnapshot,
-                  this::applyScheduleSnapshot,
-                  "Failed to load schedule."
-                );
-        }
-
-        private ScheduleSnapshot fetchScheduleSnapshot() {
-                List<Enrollment> studentEnrollments = EnrollmentService.getInstance().getEnrollmentsByStudent(currentStudent.getStudentId());
-                Optional<Enrollment> scheduleEnrollment = resolveEnrollmentForSchedule(studentEnrollments);
-                if (scheduleEnrollment.isEmpty()) {
-                        return new ScheduleSnapshot(null, List.of());
-                }
-
-                Enrollment active = scheduleEnrollment.get();
-                List<Object[]> rows = new ArrayList<>();
-                List<EnrollmentDetail> details = EnrollmentDetailService.getInstance().getEnrollmentDetailsByEnrollment(active.getId());
-                for (EnrollmentDetail detail : details) {
-                        if (detail.getStatus() != EnrollmentDetailStatus.SELECTED) {
-                                continue;
-                        }
-
-                        Optional<Offering> offering = OfferingService.getInstance().getOfferingById(detail.getOfferingId());
-                        if (offering.isEmpty()) {
-                                continue;
-                        }
-
-                        Optional<Subject> subject = SubjectService.getInstance().getSubjectById(offering.get().getSubjectId());
-                        Optional<Section> section = SectionService.getInstance().getSectionById(offering.get().getSectionId());
-                        if (subject.isEmpty() || section.isEmpty()) {
-                                continue;
-                        }
-
-                        List<Schedule> schedules = ScheduleService.getInstance().getSchedulesByOffering(offering.get().getId());
-                        StringBuilder schedString = new StringBuilder();
-                        StringBuilder roomString = new StringBuilder();
-                        StringBuilder facultyString = new StringBuilder();
-                        for (Schedule sched : schedules) {
-                                if (sched.getStartTime() == null || sched.getEndTime() == null) {
-                                        continue;
-                                }
-
-                                schedString.append(sched.getDay().toString()).append(" ")
-                                  .append(sched.getStartTime().toString().substring(0, 5)).append("-")
-                                  .append(sched.getEndTime().toString().substring(0, 5)).append(" ");
-
-                                com.group5.paul_esys.modules.rooms.services.RoomService.getInstance().getRoomById(sched.getRoomId())
-                                  .ifPresent(room -> roomString.append(room.getRoom()).append(" "));
-
-                                com.group5.paul_esys.modules.faculty.services.FacultyService.getInstance().getFacultyById(sched.getFacultyId())
-                                  .ifPresent(faculty -> facultyString.append(faculty.getLastName()).append(", ").append(faculty.getFirstName()).append(" "));
-                        }
-
-                        String scheduleValue = schedString.length() == 0
-                          ? safeText(section.get().getSectionCode(), "N/A") + " | TBA"
-                          : safeText(section.get().getSectionCode(), "N/A") + " | " + schedString.toString().trim();
-                        String roomValue = roomString.length() == 0 ? "TBA" : roomString.toString().trim();
-                        String facultyValue = facultyString.length() == 0 ? "TBA" : facultyString.toString().trim();
-                        float units = detail.getUnits() == null
-                          ? (subject.get().getUnits() == null ? 0.0f : subject.get().getUnits())
-                          : detail.getUnits();
-
-                        rows.add(new Object[]{
-                                safeText(subject.get().getSubjectCode(), "N/A"),
-                                safeText(subject.get().getSubjectName(), "N/A"),
-                                facultyValue,
-                                scheduleValue,
-                                roomValue,
-                                formatUnits(units)
-                        });
-                }
-
-                return new ScheduleSnapshot(active.getStatus(), rows);
-        }
-
-        private void applyScheduleSnapshot(ScheduleSnapshot snapshot) {
-                DefaultTableModel model = (DefaultTableModel) tableSchedules.getModel();
-                model.setRowCount(0);
-                for (Object[] row : snapshot.rows()) {
-                        model.addRow(row);
-                }
-
-                updateEnrollmentStatusPresentation(snapshot.enrollmentStatus());
-        }
-
-        private void applyPersistOutcome(PersistOutcome outcome) {
-                if (outcome.refreshData()) {
-                        reloadStudentDashboardData();
-                }
-
-                JOptionPane.showMessageDialog(
-                  this,
-                  outcome.message(),
-                  outcome.title(),
-                  outcome.messageType()
-                );
         }
 
         private void configureSubjectCatalogTable() {
@@ -507,7 +260,7 @@ public class StudentDashboard extends javax.swing.JFrame {
                         totalUnits += units;
                 }
 
-                jLabel17.setText(formatUnits(totalUnits) + " / " + formatUnits(maxEnrollmentUnits) + " units");
+                jLabel17.setText(formatUnits(totalUnits) + " / " + formatUnits(MAX_ENROLLMENT_UNITS) + " units");
         }
 
 	private void loadSubjectCatalogAsync(String keyword) {
@@ -530,8 +283,7 @@ public class StudentDashboard extends javax.swing.JFrame {
                           activePeriod,
                           "",
                           "Subject Catalog - No enrollment period configured",
-                          List.of(),
-                          24.0f
+                          List.of()
                         );
                 }
 
@@ -544,7 +296,7 @@ public class StudentDashboard extends javax.swing.JFrame {
 
                 List<Offering> offerings = OfferingService.getInstance().getOfferingsByEnrollmentPeriod(enrollmentPeriod.getId());
                 if (offerings.isEmpty()) {
-                        return new SubjectCatalogSnapshot(activePeriod, announcement, catalogLabel, List.of(), 24.0f);
+                        return new SubjectCatalogSnapshot(activePeriod, announcement, catalogLabel, List.of());
                 }
 
                 Set<Long> allowedSemesterSubjectIds = StudentEnrollmentEligibilityService.getInstance().getEligibleSemesterSubjectIds(
@@ -557,8 +309,7 @@ public class StudentDashboard extends javax.swing.JFrame {
                           activePeriod,
                           announcement,
                           "Subject Catalog - " + periodLabel + " (No eligible subjects for current semester progress)",
-                          List.of(),
-                          24.0f
+                          List.of()
                         );
                 }
 
@@ -605,38 +356,13 @@ public class StudentDashboard extends javax.swing.JFrame {
                         rows.add(buildSubjectCatalogRow(subject, section, offering, isSelected));
                 }
 
-                return new SubjectCatalogSnapshot(activePeriod, announcement, catalogLabel, rows, calculateMaxEnrollmentUnits(enrollmentPeriod));
-        }
-
-        private float calculateMaxEnrollmentUnits(EnrollmentPeriod enrollmentPeriod) {
-                try {
-                        Optional<Course> course = CourseService.getInstance().getCourseById(currentStudent.getCourseId());
-                        if (course.isEmpty()) {
-                                return 24.0f;
-                        }
-
-                        List<Curriculum> curriculums = CurriculumService.getInstance().getCurriculumsByCourse(course.get().getId());
-                        if (curriculums.isEmpty()) {
-                                return 24.0f;
-                        }
-
-                        Curriculum latestCurriculum = curriculums.get(0);
-                        float totalUnits = CurriculumService.getInstance().getTotalUnitsForSemester(
-                                latestCurriculum.getId(),
-                                enrollmentPeriod.getSemester()
-                        );
-
-                        return totalUnits > 0 ? totalUnits : 24.0f;
-                } catch (Exception e) {
-                        return 24.0f;
-                }
+                return new SubjectCatalogSnapshot(activePeriod, announcement, catalogLabel, rows);
         }
 
         private void applySubjectCatalogSnapshot(SubjectCatalogSnapshot snapshot) {
                 hasActiveEnrollmentPeriod = snapshot.activeEnrollmentPeriod();
                 labelAnnouncement.setText(snapshot.announcementText());
                 jLabel14.setText(snapshot.catalogLabel());
-                maxEnrollmentUnits = snapshot.maxUnits();
 
                 DefaultTableModel model = (DefaultTableModel) tblSubjectCatalog.getModel();
                 model.setRowCount(0);
@@ -774,10 +500,86 @@ public class StudentDashboard extends javax.swing.JFrame {
                 return value instanceof Boolean checked && checked;
         }
 
-        
+        private List<Integer> getCheckedCatalogModelRows(DefaultTableModel catalogModel) {
+                List<Integer> checkedRows = new ArrayList<>();
+                for (int modelRow = 0; modelRow < catalogModel.getRowCount(); modelRow++) {
+                        if (isCatalogRowChecked(catalogModel, modelRow)) {
+                                checkedRows.add(modelRow);
+                        }
+                }
 
-        private void updateEnrollmentStatusPresentation(EnrollmentStatus status) {
-                if (status == null) {
+                return checkedRows;
+        }
+
+	private void initStudentData(Student student) {
+		txtStudentID.setText(student.getStudentId());
+		txtFirstName.setText(student.getFirstName());
+		txtLastName.setText(student.getLastName());
+		txtMiddleName.setText(student.getMiddleName() != null ? student.getMiddleName() : "");
+		txtEmailAddress.setText(UserSession.getInstance().getUserInformation().getEmail());
+		txtBirthDate.setText(student.getBirthdate() != null ? student.getBirthdate().toString() : "");
+		txtStudentStatus.setText(student.getStudentStatus().toString());
+		txtYearLevel.setText(student.getYearLevel() != null ? student.getYearLevel().toString() : "");
+                txtCourse.setText("N/A");
+
+		Optional<Course> course = CourseService.getInstance().getCourseById(student.getCourseId());
+		course.ifPresent(c -> txtCourse.setText(c.getCourseName()));
+
+		List<Enrollment> enrollments = EnrollmentService.getInstance().getEnrollmentsByStudent(student.getStudentId());
+		if (enrollments != null && !enrollments.isEmpty()) {
+                        Enrollment latest = enrollments.get(0);
+                        txtEnrollmentStatus.setText(safeText(latest.getStatus() == null ? null : latest.getStatus().name(), "NOT ENROLLED"));
+                        txtTotalUnits.setText(formatUnits(latest.getTotalUnits() == null ? 0.0f : latest.getTotalUnits()));
+
+			List<EnrollmentDetail> details = EnrollmentDetailService.getInstance().getEnrollmentDetailsByEnrollment(latest.getId());
+                        long selectedCount = details.stream().filter(detail -> detail.getStatus() == EnrollmentDetailStatus.SELECTED).count();
+                        txtTotalSubjects.setText(String.valueOf(selectedCount));
+
+                        String sectionCode = "None";
+                        for (EnrollmentDetail detail : details) {
+                                if (detail.getStatus() != EnrollmentDetailStatus.SELECTED) {
+                                        continue;
+                                }
+
+                                Optional<Offering> offering = OfferingService.getInstance().getOfferingById(detail.getOfferingId());
+                                if (offering.isEmpty()) {
+                                        continue;
+                                }
+
+                                Optional<Section> section = SectionService.getInstance().getSectionById(offering.get().getSectionId());
+                                if (section.isPresent()) {
+                                        sectionCode = section.get().getSectionCode();
+                                        break;
+                                }
+                        }
+
+                        txtSections.setText(sectionCode);
+                        updateEnrollmentStatusPresentation(latest);
+		} else {
+			txtEnrollmentStatus.setText("NOT ENROLLED");
+                        txtTotalUnits.setText(formatUnits(0.0f));
+			txtTotalSubjects.setText("0");
+			txtSections.setText("None");
+                        updateEnrollmentStatusPresentation(null);
+		}
+
+		txtStudentID.setEditable(false);
+		txtFirstName.setEditable(false);
+		txtLastName.setEditable(false);
+		txtMiddleName.setEditable(false);
+		txtEmailAddress.setEditable(false);
+		txtBirthDate.setEditable(false);
+		txtStudentStatus.setEditable(false);
+		txtYearLevel.setEditable(false);
+		txtCourse.setEditable(false);
+		txtTotalSubjects.setEditable(false);
+		txtTotalUnits.setEditable(false);
+		txtEnrollmentStatus.setEditable(false);
+		txtSections.setEditable(false);
+	}
+
+        private void updateEnrollmentStatusPresentation(Enrollment enrollment) {
+                if (enrollment == null || enrollment.getStatus() == null) {
                         jLabel3.setText("Status: Not Enrolled");
                         pBarRegistration.setValue(0);
                         pBarRegistration.setStringPainted(true);
@@ -785,7 +587,7 @@ public class StudentDashboard extends javax.swing.JFrame {
                         return;
                 }
 
-                int progress = switch (status) {
+                int progress = switch (enrollment.getStatus()) {
                         case DRAFT -> 25;
                         case SUBMITTED -> 50;
                         case APPROVED -> 75;
@@ -793,7 +595,7 @@ public class StudentDashboard extends javax.swing.JFrame {
                         case CANCELLED -> 0;
                 };
 
-                jLabel3.setText("Status: " + status.name());
+                jLabel3.setText("Status: " + enrollment.getStatus().name());
                 pBarRegistration.setValue(progress);
                 pBarRegistration.setStringPainted(true);
                 pBarRegistration.setString(progress + "%");
@@ -1573,144 +1375,120 @@ public class StudentDashboard extends javax.swing.JFrame {
                         return;
                 }
 
-                DefaultTableModel catalogModel = (DefaultTableModel) tblSubjectCatalog.getModel();
-                List<SelectedCatalogRow> selectedRows = getCheckedCatalogRows(catalogModel);
-                if (selectedRows.isEmpty()) {
+                                                                DefaultTableModel catalogModel = (DefaultTableModel) tblSubjectCatalog.getModel();
+                                                                List<Integer> selectedRows = getCheckedCatalogModelRows(catalogModel);
+                                                                if (selectedRows.isEmpty()) {
                         String actionLabel = targetStatus == EnrollmentStatus.SUBMITTED ? "submit" : "save as draft";
                         JOptionPane.showMessageDialog(this, "Please select offerings to " + actionLabel + ".", "Error", JOptionPane.ERROR_MESSAGE);
                         return;
                 }
 
-                executeDatabaseTask(
-                  () -> persistSelectedScheduleInBackground(targetStatus, selectedRows),
-                  this::applyPersistOutcome,
-                  "Failed to save enrollment schedule."
-                );
-        }
-
-        private List<SelectedCatalogRow> getCheckedCatalogRows(DefaultTableModel catalogModel) {
-                List<SelectedCatalogRow> selectedRows = new ArrayList<>();
-                for (int modelRow = 0; modelRow < catalogModel.getRowCount(); modelRow++) {
-                        if (!isCatalogRowChecked(catalogModel, modelRow)) {
-                                continue;
-                        }
-
-                        selectedRows.add(new SelectedCatalogRow(
-                          parseLongCell(catalogModel.getValueAt(modelRow, CATALOG_COL_OFFERING_ID)),
-                          parseLongCell(catalogModel.getValueAt(modelRow, CATALOG_COL_SUBJECT_ID)),
-                          parseUnitsCell(catalogModel.getValueAt(modelRow, CATALOG_COL_UNITS))
-                        ));
+                                                                Optional<EnrollmentPeriod> activeEnrollmentPeriod = EnrollmentPeriodService.getInstance().getCurrentEnrollmentPeriod();
+                                                                if (activeEnrollmentPeriod.isEmpty()) {
+                        showValidationErrorAndRefresh("Validation Error", "No active enrollment period is available.");
+                        return;
                 }
 
-                return selectedRows;
-        }
+                                                                EnrollmentPeriod enrollmentPeriod = activeEnrollmentPeriod.get();
+                                                                Long activeEnrollmentPeriodId = enrollmentPeriod.getId();
+                                                                Set<Long> allowedSemesterSubjectIds = StudentEnrollmentEligibilityService.getInstance().getEligibleSemesterSubjectIds(
+                                                                        currentStudent.getStudentId(),
+                                                                        enrollmentPeriod.getSemester(),
+                                                                        currentStudent.getYearLevel()
+                                                                );
+                                                                if (allowedSemesterSubjectIds.isEmpty()) {
+                                                                                                showValidationErrorAndRefresh(
+                                                                                                        "Validation Error",
+                                                                                                        "No eligible subjects are available for your current semester progress."
+                                                                                                );
+                                                                                                return;
+                                                                }
 
-        private PersistOutcome persistSelectedScheduleInBackground(
-                EnrollmentStatus targetStatus,
-                List<SelectedCatalogRow> selectedRows
-        ) {
-                Optional<EnrollmentPeriod> activeEnrollmentPeriod = EnrollmentPeriodService.getInstance().getCurrentEnrollmentPeriod();
-                if (activeEnrollmentPeriod.isEmpty()) {
-                        return PersistOutcome.error("Validation Error", "No active enrollment period is available.", true);
-                }
-
-                EnrollmentPeriod enrollmentPeriod = activeEnrollmentPeriod.get();
-                Long activeEnrollmentPeriodId = enrollmentPeriod.getId();
-                Set<Long> allowedSemesterSubjectIds = StudentEnrollmentEligibilityService.getInstance().getEligibleSemesterSubjectIds(
-                  currentStudent.getStudentId(),
-                  enrollmentPeriod.getSemester(),
-                  currentStudent.getYearLevel()
-                );
-                if (allowedSemesterSubjectIds.isEmpty()) {
-                        return PersistOutcome.error(
-                          "Validation Error",
-                          "No eligible subjects are available for your current semester progress.",
-                          true
-                        );
-                }
-
-                Optional<Enrollment> existingEnrollment = findEnrollmentByPeriod(activeEnrollmentPeriodId);
+                                                                Optional<Enrollment> existingEnrollment = findEnrollmentByPeriod(activeEnrollmentPeriodId);
                 if (existingEnrollment.isPresent() && isFinalizedEnrollment(existingEnrollment.get())) {
-                        return PersistOutcome.warning(
-                          "Enrollment Locked",
+                        JOptionPane.showMessageDialog(
+                          this,
                           "Your enrollment for the active period is already finalized.",
-                          false
+                          "Enrollment Locked",
+                          JOptionPane.WARNING_MESSAGE
                         );
+                        return;
                 }
 
                 Long existingEnrollmentId = existingEnrollment.map(Enrollment::getId).orElse(null);
+
                 List<Schedule> selectedSchedules = new ArrayList<>();
                 List<OfferingSelection> selectedOfferings = new ArrayList<>();
                 Map<Long, Section> selectedSectionsById = new HashMap<>();
                 Map<Long, Integer> selectedSectionRoomCapacity = new HashMap<>();
                 Set<Long> selectedSubjectIds = new HashSet<>();
-                for (SelectedCatalogRow row : selectedRows) {
-                        if (row.offeringId() == null) {
-                                return PersistOutcome.error("Validation Error", "A selected row has an invalid offering reference.", true);
+                for (Integer modelRow : selectedRows) {
+                        Long offeringId = parseLongCell(catalogModel.getValueAt(modelRow, CATALOG_COL_OFFERING_ID));
+                        if (offeringId == null) {
+                                showValidationErrorAndRefresh("Validation Error", "A selected row has an invalid offering reference.");
+                                return;
                         }
 
-                        Optional<Offering> offeringOpt = OfferingService.getInstance().getOfferingById(row.offeringId());
+                        Optional<Offering> offeringOpt = OfferingService.getInstance().getOfferingById(offeringId);
                         if (offeringOpt.isEmpty()) {
-                                return PersistOutcome.error(
-                                  "Validation Error",
-                                  "Offering #" + row.offeringId() + " no longer exists. Please reselect your subjects.",
-                                  true
-                                );
+                                showValidationErrorAndRefresh("Validation Error", "Offering #" + offeringId + " no longer exists. Please reselect your subjects.");
+                                return;
                         }
 
                         Offering offering = offeringOpt.get();
-                        if (!activeEnrollmentPeriodId.equals(offering.getEnrollmentPeriodId())) {
-                                return PersistOutcome.error(
+                                                                                                if (!activeEnrollmentPeriodId.equals(offering.getEnrollmentPeriodId())) {
+                                showValidationErrorAndRefresh(
                                   "Validation Conflict",
-                                  "Offering #" + offering.getId() + " belongs to a different enrollment period. Your catalog has been refreshed.",
-                                  true
+                                  "Offering #" + offering.getId() + " belongs to a different enrollment period. Your catalog has been refreshed."
                                 );
+                                return;
                         }
 
-                        if (offering.getSemesterSubjectId() == null || !allowedSemesterSubjectIds.contains(offering.getSemesterSubjectId())) {
-                                return PersistOutcome.error(
-                                  "Validation Conflict",
-                                  "Offering #" + offering.getId()
-                                    + " is outside your eligible semester subjects (current semester + backtracking only).",
-                                  true
-                                );
-                        }
+                                                                                                if (offering.getSemesterSubjectId() == null || !allowedSemesterSubjectIds.contains(offering.getSemesterSubjectId())) {
+                                                                                                                                showValidationErrorAndRefresh(
+                                                                                                                                        "Validation Conflict",
+                                                                                                                                        "Offering #" + offering.getId()
+                                                                                                                                                + " is outside your eligible semester subjects (current semester + backtracking only)."
+                                                                                                                                );
+                                                                                                                                return;
+                                                                                                }
 
-                        if (row.subjectId() == null || !row.subjectId().equals(offering.getSubjectId())) {
-                                return PersistOutcome.error(
+                        Long subjectIdFromTable = parseLongCell(catalogModel.getValueAt(modelRow, CATALOG_COL_SUBJECT_ID));
+                        if (subjectIdFromTable == null || !subjectIdFromTable.equals(offering.getSubjectId())) {
+                                showValidationErrorAndRefresh(
                                   "Validation Conflict",
-                                  "Subject data for offering #" + offering.getId() + " is stale or invalid. Please review the updated catalog.",
-                                  true
+                                  "Subject data for offering #" + offering.getId() + " is stale or invalid. Please review the updated catalog."
                                 );
+                                return;
                         }
 
                         Optional<Subject> subjectOpt = SubjectService.getInstance().getSubjectById(offering.getSubjectId());
                         if (subjectOpt.isEmpty()) {
-                                return PersistOutcome.error(
+                                showValidationErrorAndRefresh(
                                   "Validation Error",
-                                  "Subject details for offering #" + offering.getId() + " are missing.",
-                                  true
+                                  "Subject details for offering #" + offering.getId() + " are missing."
                                 );
+                                return;
                         }
 
                         Subject subject = subjectOpt.get();
                         if (!selectedSubjectIds.add(subject.getId())) {
-                                return PersistOutcome.error(
+                                showValidationErrorAndRefresh(
                                   "Validation Conflict",
                                   "Duplicate subject selection detected for "
                                     + safeText(subject.getSubjectCode(), "Unknown Subject")
-                                    + ".",
-                                  true
+                                    + "."
                                 );
+                                return;
                         }
 
                         Optional<Section> sectionOpt = SectionService.getInstance().getSectionById(offering.getSectionId());
                         if (sectionOpt.isEmpty()) {
-                                return PersistOutcome.error(
+                                showValidationErrorAndRefresh(
                                   "Validation Error",
-                                  "Section details for offering #" + offering.getId() + " are missing.",
-                                  true
+                                  "Section details for offering #" + offering.getId() + " are missing."
                                 );
+                                return;
                         }
 
                         Section section = sectionOpt.get();
@@ -1719,47 +1497,47 @@ public class StudentDashboard extends javax.swing.JFrame {
 
                         List<Schedule> schedules = ScheduleService.getInstance().getSchedulesByOffering(offering.getId());
                         if (schedules.isEmpty()) {
-                                return PersistOutcome.error(
+                                showValidationErrorAndRefresh(
                                   "Validation Error",
-                                  "Offering for " + sectionLabel + " has no schedule record.",
-                                  true
+                                  "Offering for " + sectionLabel + " has no schedule record."
                                 );
+                                return;
                         }
 
                         for (Schedule newSchedule : schedules) {
                                 if (newSchedule.getDay() == null || newSchedule.getStartTime() == null || newSchedule.getEndTime() == null) {
-                                        return PersistOutcome.error(
+                                        showValidationErrorAndRefresh(
                                           "Validation Error",
-                                          "Offering for " + sectionLabel + " has an incomplete schedule definition.",
-                                          true
+                                          "Offering for " + sectionLabel + " has an incomplete schedule definition."
                                         );
+                                        return;
                                 }
 
                                 if (newSchedule.getRoomId() == null) {
-                                        return PersistOutcome.error(
+                                        showValidationErrorAndRefresh(
                                           "Validation Error",
-                                          "Offering for " + sectionLabel + " has no room assigned.",
-                                          true
+                                          "Offering for " + sectionLabel + " has no room assigned."
                                         );
+                                        return;
                                 }
 
                                 Optional<Room> roomOpt = RoomService.getInstance().getRoomById(newSchedule.getRoomId());
                                 if (roomOpt.isEmpty()) {
-                                        return PersistOutcome.error(
+                                        showValidationErrorAndRefresh(
                                           "Validation Error",
-                                          "Room #" + newSchedule.getRoomId() + " for " + sectionLabel + " no longer exists.",
-                                          true
+                                          "Room #" + newSchedule.getRoomId() + " for " + sectionLabel + " no longer exists."
                                         );
+                                        return;
                                 }
 
                                 int roomCapacity = normalizeCapacity(roomOpt.get().getCapacity());
                                 if (roomCapacity <= 0) {
-                                        return PersistOutcome.error(
+                                        showValidationErrorAndRefresh(
                                           "Validation Error",
                                           "Room " + safeText(roomOpt.get().getRoom(), "#" + roomOpt.get().getId())
-                                            + " for " + sectionLabel + " has no valid capacity.",
-                                          true
+                                            + " for " + sectionLabel + " has no valid capacity."
                                         );
+                                        return;
                                 }
                                 selectedSectionRoomCapacity.merge(section.getId(), roomCapacity, Math::min);
 
@@ -1782,28 +1560,29 @@ public class StudentDashboard extends javax.swing.JFrame {
                                         long start2 = existingSchedule.getStartTime().getTime();
                                         long end2 = existingSchedule.getEndTime().getTime();
                                         if (start1 < end2 && end1 > start2) {
-                                                return PersistOutcome.error(
+                                                showValidationErrorAndRefresh(
                                                   "Schedule Conflict",
                                                   "Schedule conflict in " + sectionLabel + " on " + newSchedule.getDay()
                                                     + ". Time " + newSchedule.getStartTime().toString().substring(0, 5)
                                                     + "-" + newSchedule.getEndTime().toString().substring(0, 5)
-                                                    + " overlaps with another selected subject.",
-                                                  true
+                                                    + " overlaps with another selected subject."
                                                 );
+                                                return;
                                         }
                                 }
                         }
 
                         selectedSchedules.addAll(schedules);
-                        float authoritativeUnits = subject.getUnits() == null ? row.units() : subject.getUnits();
-                        if (subject.getUnits() != null && Math.abs(row.units() - authoritativeUnits) > 0.001f) {
-                                return PersistOutcome.error(
+                        float units = parseUnitsCell(catalogModel.getValueAt(modelRow, CATALOG_COL_UNITS));
+                        float authoritativeUnits = subject.getUnits() == null ? units : subject.getUnits();
+                        if (subject.getUnits() != null && Math.abs(units - authoritativeUnits) > 0.001f) {
+                                showValidationErrorAndRefresh(
                                   "Validation Conflict",
                                   "Units for " + safeText(subject.getSubjectCode(), "the selected subject")
-                                    + " changed from " + formatUnits(row.units()) + " to " + formatUnits(authoritativeUnits)
-                                    + ". Please review your selection.",
-                                  true
+                                    + " changed from " + formatUnits(units) + " to " + formatUnits(authoritativeUnits)
+                                    + ". Please review your selection."
                                 );
+                                return;
                         }
 
                         selectedOfferings.add(new OfferingSelection(offering, authoritativeUnits));
@@ -1815,40 +1594,36 @@ public class StudentDashboard extends javax.swing.JFrame {
 
                         int roomCapacity = selectedSectionRoomCapacity.getOrDefault(sectionId, 0);
                         if (roomCapacity <= 0) {
-                                return PersistOutcome.error(
+                                showValidationErrorAndRefresh(
                                   "Validation Error",
                                   "Section " + safeText(section.getSectionCode(), "#" + sectionId)
-                                    + " has no valid room capacity configured.",
-                                  true
+                                    + " has no valid room capacity configured."
                                 );
+                                return;
                         }
 
                         int sectionCapacity = normalizeCapacity(section.getCapacity());
                         int effectiveCapacity = sectionCapacity > 0 ? Math.min(sectionCapacity, roomCapacity) : roomCapacity;
                         long reservedByOthers = SectionService.getInstance()
-                          .countReservedStudentsBySection(sectionId, activeEnrollmentPeriodId, existingEnrollmentId);
+                                                                                                        .countReservedStudentsBySection(sectionId, activeEnrollmentPeriodId, existingEnrollmentId);
                         long projectedReserved = reservedByOthers + 1;
 
                         if (projectedReserved > effectiveCapacity) {
-                                return PersistOutcome.error(
+                                showValidationErrorAndRefresh(
                                   "Capacity Conflict",
                                   "Section " + safeText(section.getSectionCode(), "#" + sectionId)
                                     + " exceeds capacity. Current reserved: " + reservedByOthers
                                     + ", projected: " + projectedReserved
                                     + ", allowed: " + effectiveCapacity
-                                    + " (based on configured room/section capacity).",
-                                  true
+                                    + " (based on configured room/section capacity)."
                                 );
+                                return;
                         }
                 }
 
                 Enrollment activeEnrollment = resolveOrCreateEnrollment(activeEnrollmentPeriodId, targetStatus);
                 if (activeEnrollment == null) {
-                        return PersistOutcome.error(
-                          "Error",
-                          "Failed to resolve enrollment for the active period.",
-                          false
-                        );
+                        return;
                 }
 
                 Map<Long, EnrollmentDetail> existingDetailsByOfferingId = new HashMap<>();
@@ -1872,7 +1647,8 @@ public class StudentDashboard extends javax.swing.JFrame {
 
                         existingDetail.setStatus(EnrollmentDetailStatus.DROPPED);
                         if (!EnrollmentDetailService.getInstance().updateEnrollmentDetail(existingDetail)) {
-                                return PersistOutcome.error("Error", "Failed to update dropped enrollment detail.", false);
+                                JOptionPane.showMessageDialog(this, "Failed to update dropped enrollment detail.", "Error", JOptionPane.ERROR_MESSAGE);
+                                return;
                         }
 
                         Optional<Offering> droppedOffering = OfferingService.getInstance().getOfferingById(existingDetail.getOfferingId());
@@ -1906,7 +1682,8 @@ public class StudentDashboard extends javax.swing.JFrame {
                         }
 
                         if (!persisted) {
-                                return PersistOutcome.error("Error", "Failed to persist enrollment detail.", false);
+                                JOptionPane.showMessageDialog(this, "Failed to persist enrollment detail.", "Error", JOptionPane.ERROR_MESSAGE);
+                                return;
                         }
 
                         if (selection.offering.getSemesterSubjectId() != null) {
@@ -1922,7 +1699,7 @@ public class StudentDashboard extends javax.swing.JFrame {
                 }
 
                 activeEnrollment.setStatus(targetStatus);
-                activeEnrollment.setMaxUnits(maxEnrollmentUnits);
+                activeEnrollment.setMaxUnits(MAX_ENROLLMENT_UNITS);
                 activeEnrollment.setTotalUnits(sumSelectedUnits(activeEnrollment.getId()));
                 if (targetStatus == EnrollmentStatus.SUBMITTED) {
                         if (activeEnrollment.getSubmittedAt() == null) {
@@ -1933,13 +1710,20 @@ public class StudentDashboard extends javax.swing.JFrame {
                 }
 
                 if (!EnrollmentService.getInstance().updateEnrollment(activeEnrollment)) {
-                        return PersistOutcome.error("Error", "Failed to update enrollment summary.", false);
+                        JOptionPane.showMessageDialog(this, "Failed to update enrollment summary.", "Error", JOptionPane.ERROR_MESSAGE);
+                        return;
                 }
 
                 String successMessage = targetStatus == EnrollmentStatus.SUBMITTED
                   ? "Enrollment submitted successfully."
                   : "Draft saved successfully.";
-                return PersistOutcome.success(successMessage);
+                JOptionPane.showMessageDialog(this, successMessage, "Success", JOptionPane.INFORMATION_MESSAGE);
+                reloadStudentDashboardData();
+        }
+
+        private void showValidationErrorAndRefresh(String title, String message) {
+                reloadStudentDashboardData();
+                JOptionPane.showMessageDialog(this, message, title, JOptionPane.ERROR_MESSAGE);
         }
 
         private Optional<Enrollment> findEnrollmentByPeriod(Long enrollmentPeriodId) {
@@ -1958,7 +1742,76 @@ public class StudentDashboard extends javax.swing.JFrame {
                   || enrollment.getStatus() == EnrollmentStatus.ENROLLED;
         }
 
-	
+	private void loadMySchedule() {
+                DefaultTableModel model = (DefaultTableModel) tableSchedules.getModel();
+		model.setRowCount(0);
+
+                List<Enrollment> studentEr = EnrollmentService.getInstance().getEnrollmentsByStudent(currentStudent.getStudentId());
+                Optional<Enrollment> scheduleEnrollment = resolveEnrollmentForSchedule(studentEr);
+		if (scheduleEnrollment.isEmpty()) {
+                        updateEnrollmentStatusPresentation(null);
+			return;
+		}
+
+                Enrollment active = scheduleEnrollment.get();
+                updateEnrollmentStatusPresentation(active);
+                List<EnrollmentDetail> details = EnrollmentDetailService.getInstance().getEnrollmentDetailsByEnrollment(active.getId());
+
+		for (EnrollmentDetail ed : details) {
+			if (ed.getStatus() != EnrollmentDetailStatus.SELECTED) {
+				continue;
+			}
+
+                        Optional<Offering> offering = OfferingService.getInstance().getOfferingById(ed.getOfferingId());
+                        if (offering.isEmpty()) {
+                                continue;
+                        }
+
+                        Optional<Subject> subject = SubjectService.getInstance().getSubjectById(offering.get().getSubjectId());
+                        Optional<Section> section = SectionService.getInstance().getSectionById(offering.get().getSectionId());
+                        List<Schedule> schedules = ScheduleService.getInstance().getSchedulesByOffering(offering.get().getId());
+
+			StringBuilder schedString = new StringBuilder();
+			StringBuilder roomString = new StringBuilder();
+			StringBuilder facultyString = new StringBuilder();
+
+			for (Schedule sched : schedules) {
+                                if (sched.getStartTime() == null || sched.getEndTime() == null) {
+                                        continue;
+                                }
+
+				schedString.append(sched.getDay().toString()).append(" ")
+				  .append(sched.getStartTime().toString().substring(0, 5)).append("-")
+				  .append(sched.getEndTime().toString().substring(0, 5)).append(" ");
+
+				com.group5.paul_esys.modules.rooms.services.RoomService.getInstance().getRoomById(sched.getRoomId())
+				  .ifPresent(r -> roomString.append(r.getRoom()).append(" "));
+
+				com.group5.paul_esys.modules.faculty.services.FacultyService.getInstance().getFacultyById(sched.getFacultyId())
+				  .ifPresent(f -> facultyString.append(f.getLastName()).append(", ").append(f.getFirstName()).append(" "));
+			}
+
+			if (subject.isPresent() && section.isPresent()) {
+                                String scheduleValue = schedString.length() == 0
+                                  ? safeText(section.get().getSectionCode(), "N/A") + " | TBA"
+                                  : safeText(section.get().getSectionCode(), "N/A") + " | " + schedString.toString().trim();
+                                String roomValue = roomString.length() == 0 ? "TBA" : roomString.toString().trim();
+                                String facultyValue = facultyString.length() == 0 ? "TBA" : facultyString.toString().trim();
+                                float units = ed.getUnits() == null
+                                  ? (subject.get().getUnits() == null ? 0.0f : subject.get().getUnits())
+                                  : ed.getUnits();
+
+				model.addRow(new Object[]{
+                                        safeText(subject.get().getSubjectCode(), "N/A"),
+                                        safeText(subject.get().getSubjectName(), "N/A"),
+                                        facultyValue,
+                                        scheduleValue,
+                                        roomValue,
+                                        formatUnits(units)
+				});
+			}
+		}
+	}
 
         private Enrollment resolveOrCreateEnrollment(Long enrollmentPeriodId, EnrollmentStatus initialStatus) {
                 List<Enrollment> studentEnrollments = EnrollmentService.getInstance().getEnrollmentsByStudent(currentStudent.getStudentId());
@@ -1984,7 +1837,7 @@ public class StudentDashboard extends javax.swing.JFrame {
                 enrollment.setStudentId(currentStudent.getStudentId());
                 enrollment.setEnrollmentPeriodId(enrollmentPeriodId);
                 enrollment.setStatus(initialStatus);
-                enrollment.setMaxUnits(maxEnrollmentUnits);
+                enrollment.setMaxUnits(MAX_ENROLLMENT_UNITS);
                 enrollment.setTotalUnits(0.0f);
                 if (initialStatus == EnrollmentStatus.SUBMITTED) {
                         enrollment.setSubmittedAt(new Date());

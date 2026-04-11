@@ -99,6 +99,16 @@ public class StudentEnrollmentEligibilityService {
         }
       }
 
+      // Unlock the immediate next semester in the same year level when the current semester is completed.
+      addNextSemesterUnlock(
+          allowedSemesterIds,
+          orderedSemesterIds,
+          yearLevelBySemesterId,
+          requiredCountBySemester,
+          completedCountBySemester,
+          currentSemesterIndex
+      );
+
       if (allowedSemesterIds.isEmpty()) {
         allowedSemesterIds.add(orderedSemesterIds.get(currentSemesterIndex));
       }
@@ -271,6 +281,41 @@ public class StudentEnrollmentEligibilityService {
     }
 
     return null;
+  }
+
+  private void addNextSemesterUnlock(
+      LinkedHashSet<Long> allowedSemesterIds,
+      List<Long> orderedSemesterIds,
+      Map<Long, Integer> yearLevelBySemesterId,
+      Map<Long, Long> requiredCountBySemester,
+      Map<Long, Long> completedCountBySemester,
+      Integer currentSemesterIndex
+  ) {
+    if (currentSemesterIndex == null || currentSemesterIndex < 0 || currentSemesterIndex >= orderedSemesterIds.size()) {
+      return;
+    }
+
+    Long currentSemesterId = orderedSemesterIds.get(currentSemesterIndex);
+    long requiredCount = requiredCountBySemester.getOrDefault(currentSemesterId, 0L);
+    long completedCount = completedCountBySemester.getOrDefault(currentSemesterId, 0L);
+    if (completedCount < requiredCount) {
+      return;
+    }
+
+    int nextIndex = currentSemesterIndex + 1;
+    if (nextIndex >= orderedSemesterIds.size()) {
+      return;
+    }
+
+    Long nextSemesterId = orderedSemesterIds.get(nextIndex);
+    Integer currentYearLevel = yearLevelBySemesterId.get(currentSemesterId);
+    Integer nextYearLevel = yearLevelBySemesterId.get(nextSemesterId);
+
+    if (currentYearLevel != null && nextYearLevel != null && !currentYearLevel.equals(nextYearLevel)) {
+      return;
+    }
+
+    allowedSemesterIds.add(nextSemesterId);
   }
 
   private int resolveSemesterRank(String semesterLabel) {

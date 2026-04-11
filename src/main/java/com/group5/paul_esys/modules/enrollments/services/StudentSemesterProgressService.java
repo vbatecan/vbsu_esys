@@ -80,6 +80,8 @@ public class StudentSemesterProgressService {
           upsertProgress(conn, studentId, curriculumId, semesterId, nextStatus);
         }
 
+        StudentAcademicPromotionService.getInstance().promoteIfYearCompleted(conn, studentId);
+
         conn.commit();
         return true;
       } catch (SQLException e) {

@@ -2,6 +2,7 @@ package com.group5.paul_esys.modules.faculty.services;
 
 import com.group5.paul_esys.modules.enums.EnrollmentDetailStatus;
 import com.group5.paul_esys.modules.enums.EnrollmentStatus;
+import com.group5.paul_esys.modules.enums.StudentEnrolledSubjectStatus;
 import com.group5.paul_esys.modules.faculty.model.FacultyClassListAggregate;
 import com.group5.paul_esys.modules.faculty.model.FacultyClassListRow;
 import com.group5.paul_esys.modules.faculty.model.FacultyClassStudentRow;
@@ -132,18 +133,27 @@ public class FacultyClassListService {
 
     String sql = """
       SELECT
+        st.student_id,
+        e.id AS enrollment_id,
+        ed.offering_id,
+        COALESCE(ses.semester_subject_id, o.semester_subject_id) AS semester_subject_id,
         st.last_name,
         st.first_name,
         st.middle_name,
         st.student_status,
         c.course_name,
         cur.name AS curriculum_name,
-        st.year_level
+        st.year_level,
+        COALESCE(ses.status, 'ENROLLED') AS enrolled_subject_status
       FROM enrollments_details ed
       INNER JOIN enrollments e ON e.id = ed.enrollment_id
+      INNER JOIN offerings o ON o.id = ed.offering_id
       INNER JOIN students st ON st.student_id = e.student_id
       LEFT JOIN courses c ON c.id = st.course_id
       LEFT JOIN curriculum cur ON cur.id = st.curriculum_id
+      LEFT JOIN student_enrolled_subjects ses
+        ON ses.student_id = e.student_id
+       AND ses.offering_id = ed.offering_id
       WHERE ed.offering_id = ?
         AND ed.status = ?
         AND e.status IN (?, ?)
@@ -165,8 +175,15 @@ public class FacultyClassListService {
         while (rs.next()) {
           Integer yearLevel = rs.getObject("year_level", Integer.class);
           String yearLevelValue = yearLevel == null ? null : String.valueOf(yearLevel);
+          StudentEnrolledSubjectStatus enrolledSubjectStatus = parseSubjectStatus(
+            rs.getString("enrolled_subject_status")
+          );
 
           students.add(new FacultyClassStudentRow(
+            safeText(rs.getString("student_id"), ""),
+            rsGetLong(rs, "enrollment_id"),
+            rsGetLong(rs, "offering_id"),
+            rsGetLong(rs, "semester_subject_id"),
               buildStudentFullName(
                   rs.getString("last_name"),
                   rs.getString("first_name"),
@@ -175,7 +192,8 @@ public class FacultyClassListService {
               safeText(rs.getString("student_status"), "N/A"),
               safeText(rs.getString("course_name"), "N/A"),
               safeText(rs.getString("curriculum_name"), "N/A"),
-              safeText(yearLevelValue, "N/A")
+            safeText(yearLevelValue, "N/A"),
+            enrolledSubjectStatus
           ));
         }
       }
@@ -236,6 +254,18 @@ public class FacultyClassListService {
 
   private String formatTime(Time time) {
     return time.toLocalTime().format(TIME_FORMATTER);
+  }
+
+  private StudentEnrolledSubjectStatus parseSubjectStatus(String value) {
+    if (value == null || value.isBlank()) {
+      return StudentEnrolledSubjectStatus.ENROLLED;
+    }
+
+    try {
+      return StudentEnrolledSubjectStatus.valueOf(value.trim().toUpperCase());
+    } catch (IllegalArgumentException ex) {
+      return StudentEnrolledSubjectStatus.ENROLLED;
+    }
   }
 
   private int safeInt(Integer value, int fallback) {

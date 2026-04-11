@@ -4,10 +4,20 @@
  */
 package com.group5.paul_esys.screens.faculty.forms;
 
+import com.group5.paul_esys.modules.enums.StudentEnrolledSubjectStatus;
+import com.group5.paul_esys.modules.enrollments.services.StudentEnrolledSubjectService;
 import com.group5.paul_esys.modules.faculty.model.FacultyClassListRow;
 import com.group5.paul_esys.modules.faculty.model.FacultyClassStudentRow;
 import com.group5.paul_esys.modules.faculty.services.FacultyClassListService;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.ArrayList;
 import java.util.List;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
+import javax.swing.JPopupMenu;
+import javax.swing.ListSelectionModel;
+import javax.swing.SwingUtilities;
 import javax.swing.table.DefaultTableModel;
 
 /**
@@ -20,7 +30,9 @@ public class FacultyViewClassForm extends javax.swing.JFrame {
         private static final String DEFAULT_WINDOW_TITLE = "View Class";
 
         private final FacultyClassListService facultyClassListService = FacultyClassListService.getInstance();
+        private final StudentEnrolledSubjectService studentEnrolledSubjectService = StudentEnrolledSubjectService.getInstance();
         private FacultyClassListRow classListRow;
+        private List<FacultyClassStudentRow> classStudents = new ArrayList<>();
 
 	/**
 	 * Creates new form FacultyViewClassForm
@@ -40,8 +52,54 @@ public class FacultyViewClassForm extends javax.swing.JFrame {
         private void initializeFormWindow() {
 		this.setLocationRelativeTo(null);
                 setDefaultCloseOperation(javax.swing.WindowConstants.DISPOSE_ON_CLOSE);
-                tableClassStudents.setRowHeight(28);
+                configureClassStudentsTable();
+                configureCompletionAction();
                 windowBar1.setTitle(DEFAULT_WINDOW_TITLE);
+        }
+
+        private void configureClassStudentsTable() {
+                tableClassStudents.setRowHeight(28);
+                tableClassStudents.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+                tableClassStudents.setModel(new DefaultTableModel(
+                        new Object[][]{},
+                        new String[]{"Full Name", "Student Status", "Course", "Curriculum", "Year Level", "Subject Status"}
+                ) {
+                        private final Class<?>[] columnTypes = new Class<?>[]{
+                                String.class,
+                                String.class,
+                                String.class,
+                                String.class,
+                                String.class,
+                                String.class
+                        };
+
+                        @Override
+                        public Class<?> getColumnClass(int columnIndex) {
+                                return columnTypes[columnIndex];
+                        }
+
+                        @Override
+                        public boolean isCellEditable(int rowIndex, int columnIndex) {
+                                return false;
+                        }
+                });
+        }
+
+        private void configureCompletionAction() {
+                JPopupMenu completionMenu = new JPopupMenu();
+                JMenuItem markCompletedItem = new JMenuItem("Mark as COMPLETED");
+                markCompletedItem.addActionListener(evt -> markSelectedStudentCompleted());
+                completionMenu.add(markCompletedItem);
+
+                tableClassStudents.setComponentPopupMenu(completionMenu);
+                tableClassStudents.addMouseListener(new MouseAdapter() {
+                        @Override
+                        public void mouseClicked(MouseEvent evt) {
+                                if (SwingUtilities.isLeftMouseButton(evt) && evt.getClickCount() == 2) {
+                                        markSelectedStudentCompleted();
+                                }
+                        }
+                });
         }
 
         private void loadClassStudents() {
@@ -58,6 +116,7 @@ public class FacultyViewClassForm extends javax.swing.JFrame {
         }
 
         private void populateClassStudentsTable(List<FacultyClassStudentRow> classStudents) {
+                this.classStudents = new ArrayList<>(classStudents);
                 DefaultTableModel model = (DefaultTableModel) tableClassStudents.getModel();
                 model.setRowCount(0);
 
@@ -67,9 +126,88 @@ public class FacultyViewClassForm extends javax.swing.JFrame {
                                 classStudent.studentStatus(),
                                 classStudent.course(),
                                 classStudent.curriculum(),
-                                classStudent.yearLevel()
+                                classStudent.yearLevel(),
+                                formatEnrolledSubjectStatus(classStudent)
                         });
                 }
+        }
+
+        private String formatEnrolledSubjectStatus(FacultyClassStudentRow classStudent) {
+                if (classStudent.enrolledSubjectStatus() == null) {
+                        return StudentEnrolledSubjectStatus.ENROLLED.name();
+                }
+
+                return classStudent.enrolledSubjectStatus().name();
+        }
+
+        private FacultyClassStudentRow getSelectedClassStudent() {
+                int selectedRow = tableClassStudents.getSelectedRow();
+                if (selectedRow < 0) {
+                        return null;
+                }
+
+                int modelRow = tableClassStudents.convertRowIndexToModel(selectedRow);
+                if (modelRow < 0 || modelRow >= classStudents.size()) {
+                        return null;
+                }
+
+                return classStudents.get(modelRow);
+        }
+
+        private void markSelectedStudentCompleted() {
+                FacultyClassStudentRow selectedStudent = getSelectedClassStudent();
+                if (selectedStudent == null) {
+                        JOptionPane.showMessageDialog(this, "Select a student first.", "No Selection", JOptionPane.WARNING_MESSAGE);
+                        return;
+                }
+
+                if (selectedStudent.enrolledSubjectStatus() == StudentEnrolledSubjectStatus.COMPLETED) {
+                        JOptionPane.showMessageDialog(this, "This student is already marked as COMPLETED.", "No Changes", JOptionPane.INFORMATION_MESSAGE);
+                        return;
+                }
+
+                if (selectedStudent.studentId() == null
+                  || selectedStudent.studentId().isBlank()
+                  || selectedStudent.enrollmentId() == null
+                  || selectedStudent.offeringId() == null
+                  || selectedStudent.semesterSubjectId() == null) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Unable to mark completion due to missing enrollment metadata.",
+                                "Invalid Data",
+                                JOptionPane.ERROR_MESSAGE
+                        );
+                        return;
+                }
+
+                int confirmation = JOptionPane.showConfirmDialog(
+                        this,
+                        "Mark " + selectedStudent.fullName() + " as COMPLETED for this subject?",
+                        "Confirm Completion",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.QUESTION_MESSAGE
+                );
+
+                if (confirmation != JOptionPane.YES_OPTION) {
+                        return;
+                }
+
+                boolean updated = studentEnrolledSubjectService.upsertStatus(
+                        selectedStudent.studentId(),
+                        selectedStudent.enrollmentId(),
+                        selectedStudent.offeringId(),
+                        selectedStudent.semesterSubjectId(),
+                        StudentEnrolledSubjectStatus.COMPLETED,
+                        true
+                );
+
+                if (updated) {
+                        JOptionPane.showMessageDialog(this, "Student marked as COMPLETED.", "Success", JOptionPane.INFORMATION_MESSAGE);
+                        loadClassStudents();
+                        return;
+                }
+
+                JOptionPane.showMessageDialog(this, "Failed to mark student as COMPLETED.", "Error", JOptionPane.ERROR_MESSAGE);
         }
 
         private String buildWindowTitle(FacultyClassListRow row) {
