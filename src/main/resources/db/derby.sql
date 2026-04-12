@@ -37,9 +37,25 @@ CREATE TABLE users
     id         bigint NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     email      varchar(255),
     password   char(60),
-    role       varchar(20) CHECK (role IN ('STUDENT', 'REGISTRAR', 'FACULTY')),
+    role       varchar(20) CHECK (role IN ('STUDENT', 'REGISTRAR', 'FACULTY', 'ADMIN')),
     created_at timestamp default current_timestamp,
     updated_at timestamp default current_timestamp
+);
+
+/**
+* Contains administrator information and links to user accounts.
+* Admins have elevated permissions for managing the system.
+* Stores contact information and employee ID for administrative staff.
+*/
+CREATE TABLE admins
+(
+    id             bigint NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    user_id        bigint,
+    first_name     varchar(128),
+    last_name      varchar(128),
+    contact_number varchar(20),
+    updated_at     timestamp default current_timestamp,
+    created_at     timestamp default current_timestamp
 );
 
 /**
