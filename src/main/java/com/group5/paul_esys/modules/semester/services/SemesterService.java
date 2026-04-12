@@ -116,7 +116,7 @@ public class SemesterService {
         ps.setString(2, semester.getSemester());
 
         if (hasYearLevel) {
-          ps.setInt(3, 1);
+          ps.setInt(3, semester.getYearLevel() == null ? 1 : semester.getYearLevel());
         }
 
         return ps.executeUpdate() > 0;
@@ -128,17 +128,28 @@ public class SemesterService {
   }
 
   public boolean updateSemester(Semester semester) {
-    try (
-      Connection conn = ConnectionService.getConnection();
-      PreparedStatement ps = conn.prepareStatement(
-        "UPDATE semester SET curriculum_id = ?, semester = ? WHERE id = ?"
-      )
-    ) {
+    try (Connection conn = ConnectionService.getConnection()) {
+      boolean hasYearLevel = hasYearLevelColumn(conn);
+      String sql;
+      if (hasYearLevel) {
+        sql = "UPDATE semester SET curriculum_id = ?, semester = ?, year_level = ? WHERE id = ?";
+      } else {
+        sql = "UPDATE semester SET curriculum_id = ?, semester = ? WHERE id = ?";
+      }
+
+      try (PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setLong(1, semester.getCurriculumId());
       ps.setString(2, semester.getSemester());
-      ps.setLong(3, semester.getId());
+
+      if (hasYearLevel) {
+        ps.setInt(3, semester.getYearLevel() == null ? 1 : semester.getYearLevel());
+        ps.setLong(4, semester.getId());
+      } else {
+        ps.setLong(3, semester.getId());
+      }
 
       return ps.executeUpdate() > 0;
+      }
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
       return false;

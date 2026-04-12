@@ -153,20 +153,11 @@ public class SubjectForm extends javax.swing.JDialog {
 	}
 
         private boolean hasValidUnits() {
-                return readUnits() > 0;
+                return readUnits() >= 0;
         }
 
-        private float readUnits() {
-                Object unitsValue = spinnerUnit.getValue();
-                if (unitsValue instanceof Number number) {
-                        return number.floatValue();
-                }
-
-                try {
-                        return Float.parseFloat(unitsValue.toString());
-                } catch (NumberFormatException ex) {
-                        return 0;
-                }
+        private int readUnits() {
+		return Integer.parseInt(spinnerUnit.getValue().toString());
         }
 
         private boolean isValidDepartmentSelection() {
@@ -196,7 +187,7 @@ public class SubjectForm extends javax.swing.JDialog {
                 subject
                         .setSubjectName(txtSubjectName.getText().trim())
                         .setSubjectCode(txtSubjectCode.getText().trim().toUpperCase())
-                        .setUnits(readUnits())
+                        .setUnits(Float.valueOf(readUnits()))
                         .setDescription(textAreaDescription.getText().trim())
                         .setDepartmentId(departmentId);
 

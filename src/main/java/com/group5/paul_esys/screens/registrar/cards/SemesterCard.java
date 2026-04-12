@@ -64,7 +64,10 @@ public class SemesterCard extends javax.swing.JPanel {
                 }
 
                 lblSemesterName.setText(safeText(semester.getSemester(), "Semester"));
-                lblYear.setText("Year: " + safeText(semester.getYearLevel().toString(), "Year Level"));
+                lblYear.setText("Year: " + safeText(
+                        semester.getYearLevel() == null ? null : semester.getYearLevel().toString(),
+                        "Year Level"
+                ));
                 reloadSemesterSubjects();
         }
 

@@ -4,11 +4,17 @@ import com.group5.paul_esys.modules.curriculum.model.Curriculum;
 import com.group5.paul_esys.modules.curriculum.services.CurriculumService;
 import com.group5.paul_esys.modules.semester.model.Semester;
 import com.group5.paul_esys.modules.semester.services.SemesterService;
+import java.awt.Component;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import javax.swing.JOptionPane;
+import javax.swing.JTextField;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DocumentFilter;
 
 /*
  * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
@@ -45,6 +51,7 @@ public class SemesterForm extends javax.swing.JFrame {
     }
 
     private void initializeForm() {
+        loadYearLevels();
         loadCurriculums();
 
         if (editingSemester == null) {
@@ -56,10 +63,65 @@ public class SemesterForm extends javax.swing.JFrame {
         btnSave.setText("Update");
 
         txtSem.setText(editingSemester.getSemester());
+        if (editingSemester.getYearLevel() != null) {
+            cbxYear.setSelectedItem(String.valueOf(editingSemester.getYearLevel()));
+        }
 
         curriculumService
             .getCurriculumById(editingSemester.getCurriculumId())
             .ifPresent(curriculum -> cbxCur.setSelectedItem(buildCurriculumLabel(curriculum)));
+    }
+
+    private void loadYearLevels() {
+        cbxYear.removeAllItems();
+
+        for (int yearLevel = 1; yearLevel <= 6; yearLevel++) {
+            cbxYear.addItem(String.valueOf(yearLevel));
+        }
+
+        cbxYear.setEditable(true);
+        restrictYearLevelEditorToIntegers();
+
+        if (editingSemester != null && editingSemester.getYearLevel() != null) {
+            cbxYear.setSelectedItem(String.valueOf(editingSemester.getYearLevel()));
+        } else if (cbxYear.getItemCount() > 0) {
+            cbxYear.setSelectedIndex(0);
+        }
+    }
+
+    private void restrictYearLevelEditorToIntegers() {
+        Component editorComponent = cbxYear.getEditor().getEditorComponent();
+        if (!(editorComponent instanceof JTextField textField)) {
+            return;
+        }
+
+        AbstractDocument document = (AbstractDocument) textField.getDocument();
+        document.setDocumentFilter(new DocumentFilter() {
+            @Override
+            public void insertString(FilterBypass fb, int offset, String string, AttributeSet attr)
+                throws BadLocationException {
+                if (isIntegerInput(string)) {
+                    super.insertString(fb, offset, string, attr);
+                }
+            }
+
+            @Override
+            public void replace(
+                FilterBypass fb,
+                int offset,
+                int length,
+                String text,
+                AttributeSet attrs
+            ) throws BadLocationException {
+                if (isIntegerInput(text)) {
+                    super.replace(fb, offset, length, text, attrs);
+                }
+            }
+
+            private boolean isIntegerInput(String text) {
+                return text == null || text.isEmpty() || text.chars().allMatch(Character::isDigit);
+            }
+        });
     }
 
     private String buildCurriculumLabel(Curriculum curriculum) {
@@ -103,6 +165,17 @@ public class SemesterForm extends javax.swing.JFrame {
             return false;
         }
 
+        Integer yearLevel = readYearLevel();
+        if (yearLevel == null || yearLevel < 1) {
+            JOptionPane.showMessageDialog(
+                this,
+                "Year level must be a positive integer.",
+                "Validation Error",
+                JOptionPane.WARNING_MESSAGE
+            );
+            return false;
+        }
+
         Object selectedCurriculum = cbxCur.getSelectedItem();
         if (selectedCurriculum == null || !curriculumIdByLabel.containsKey(selectedCurriculum.toString())) {
             JOptionPane.showMessageDialog(
@@ -117,6 +190,24 @@ public class SemesterForm extends javax.swing.JFrame {
         return true;
     }
 
+    private Integer readYearLevel() {
+        Object selectedYearLevel = cbxYear.getEditor().getItem();
+        if (selectedYearLevel == null) {
+            return null;
+        }
+
+        String yearLevelText = selectedYearLevel.toString().trim();
+        if (yearLevelText.isEmpty()) {
+            return null;
+        }
+
+        try {
+            return Integer.parseInt(yearLevelText);
+        } catch (NumberFormatException ex) {
+            return null;
+        }
+    }
+
     private void saveSemester() {
         if (!isValidForm()) {
             return;
@@ -124,11 +215,13 @@ public class SemesterForm extends javax.swing.JFrame {
 
         String selectedCurriculum = cbxCur.getSelectedItem().toString();
         Long curriculumId = curriculumIdByLabel.get(selectedCurriculum);
+        Integer yearLevel = readYearLevel();
 
         Semester semester = editingSemester == null ? new Semester() : editingSemester;
         semester
             .setSemester(txtSem.getText().trim())
             .setCurriculumId(curriculumId);
+        semester.setYearLevel(yearLevel);
 
         boolean success = editingSemester == null
             ? semesterService.createSemester(semester)
