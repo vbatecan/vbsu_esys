@@ -104,7 +104,7 @@ public class RegistrarSubjectManagement extends javax.swing.JPanel {
         private void configureTableModel() {
                 DefaultTableModel model = new DefaultTableModel(
                         new Object[][]{},
-                        new String[]{"Name", "Code", "Units", "Prerequisites", "Description", "Department"}
+                        new String[]{"Name", "Code", "Units", "Pattern", "Estimated Time (min)", "Prerequisites", "Description", "Department"}
                 ) {
                         @Override
                         public boolean isCellEditable(int rowIndex, int columnIndex) {
@@ -294,10 +294,14 @@ public class RegistrarSubjectManagement extends javax.swing.JPanel {
                 String subjectName = safeText(subject.getSubjectName(), "").toLowerCase();
                 String subjectCode = safeText(subject.getSubjectCode(), "").toLowerCase();
                 String description = safeText(subject.getDescription(), "").toLowerCase();
+                String schedulePattern = formatSchedulePattern(subject).toLowerCase();
+                String estimatedTime = String.valueOf(subject.getEstimatedTime() == null ? 90 : subject.getEstimatedTime());
 
                 return subjectName.contains(searchTerm)
                         || subjectCode.contains(searchTerm)
-                        || description.contains(searchTerm);
+                        || description.contains(searchTerm)
+                        || schedulePattern.contains(searchTerm)
+                        || estimatedTime.contains(searchTerm);
         }
 
         private boolean matchesDepartment(Subject subject, Long selectedDepartmentId) {
@@ -316,6 +320,8 @@ public class RegistrarSubjectManagement extends javax.swing.JPanel {
                                         safeText(subject.getSubjectName(), "N/A"),
                                         safeText(subject.getSubjectCode(), "N/A"),
                                         subject.getUnits() == null ? "N/A" : subject.getUnits(),
+                                        formatSchedulePattern(subject),
+                                        subject.getEstimatedTime() == null ? 90 : subject.getEstimatedTime(),
                                         prerequisiteCountBySubjectId.getOrDefault(subject.getId(), 0),
                                         buildDescriptionPreview(subject.getDescription()),
                                         departmentNameById.getOrDefault(subject.getDepartmentId(), "N/A")
@@ -331,6 +337,14 @@ public class RegistrarSubjectManagement extends javax.swing.JPanel {
                 }
 
                 return safeDescription.substring(0, 117) + "...";
+        }
+
+        private String formatSchedulePattern(Subject subject) {
+                if (subject == null || subject.getSchedulePattern() == null) {
+                        return "LECTURE ONLY";
+                }
+
+                return subject.getSchedulePattern().name().replace('_', ' ');
         }
 
         private String safeText(String value, String fallback) {
@@ -524,13 +538,13 @@ public class RegistrarSubjectManagement extends javax.swing.JPanel {
 
                 tableSubjects.setModel(new javax.swing.table.DefaultTableModel(
                         new Object [][] {
-                                {null, null, null, null, null, null},
-                                {null, null, null, null, null, null},
-                                {null, null, null, null, null, null},
-                                {null, null, null, null, null, null}
+                                {null, null, null, null, null, null, null, null},
+                                {null, null, null, null, null, null, null, null},
+                                {null, null, null, null, null, null, null, null},
+                                {null, null, null, null, null, null, null, null}
                         },
                         new String [] {
-                                "Name", "Code", "Units", "Prerequisites", "Description", "Department"
+                                "Name", "Code", "Units", "Pattern", "Estimated Time (min)", "Prerequisites", "Description", "Department"
                         }
                 ));
                 jScrollPane1.setViewportView(tableSubjects);

@@ -1,10 +1,19 @@
 package com.group5.paul_esys.modules.registrar.services;
 
+import com.group5.paul_esys.modules.enums.DayOfWeek;
+import com.group5.paul_esys.modules.registrar.model.ScheduleGenerationOfferingCandidate;
+import com.group5.paul_esys.modules.registrar.model.ScheduleGenerationPlanRow;
+import com.group5.paul_esys.modules.registrar.model.ScheduleGenerationRequest;
+import com.group5.paul_esys.modules.registrar.model.ScheduleGenerationResult;
+import com.group5.paul_esys.modules.registrar.model.ScheduleGenerationRoomCandidate;
+import com.group5.paul_esys.modules.registrar.model.ScheduleGenerationSectionOption;
+import com.group5.paul_esys.modules.registrar.model.ScheduleGenerationTemplateBlock;
 import com.group5.paul_esys.modules.registrar.model.ScheduleLookupOption;
 import com.group5.paul_esys.modules.registrar.model.ScheduleManagementRow;
 import com.group5.paul_esys.modules.registrar.model.ScheduleOfferingOption;
 import com.group5.paul_esys.modules.registrar.model.ScheduleSaveResult;
 import com.group5.paul_esys.modules.registrar.model.ScheduleUpsertRequest;
+import com.group5.paul_esys.modules.subjects.model.SubjectSchedulePattern;
 import com.group5.paul_esys.modules.users.services.ConnectionService;
 
 import java.sql.Connection;
@@ -18,13 +27,31 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 public class RegistrarScheduleManagementService {
+
+  private static final int DEFAULT_ESTIMATED_TIME_MINUTES = 90;
+  private static final int DEFAULT_SLOT_MINUTES = 30;
+  private static final LocalTime DEFAULT_MIN_START_TIME = LocalTime.of(7, 30);
+  private static final LocalTime DEFAULT_MAX_END_TIME = LocalTime.of(18, 0);
+  private static final String DEFAULT_SCHEDULE_PATTERN = SubjectSchedulePattern.LECTURE_ONLY.name();
+  private static final List<String> GENERATION_DAY_ORDER = List.of("MON", "TUE", "WED", "THU", "FRI", "SAT");
+  private static final Set<String> LECTURE_ROOM_TYPES = Set.of("LECTURE", "SEMINAR", "AUDITORIUM", "OTHER");
+  private static final Set<String> LAB_ROOM_TYPES = Set.of("LAB");
+  private static final Set<String> PE_ROOM_TYPES = Set.of("OTHER", "AUDITORIUM");
+  private static final Map<String, String> COMPLEMENTARY_WEEKDAY_MAP = Map.of(
+      "MON", "WED",
+      "WED", "MON",
+      "TUE", "THU",
+      "THU", "TUE"
+  );
 
   private static final RegistrarScheduleManagementService INSTANCE = new RegistrarScheduleManagementService();
   private static final Logger logger = LoggerFactory.getLogger(RegistrarScheduleManagementService.class);
@@ -324,6 +351,864 @@ public class RegistrarScheduleManagementService {
     }
 
     return options;
+  }
+
+  public List<ScheduleGenerationSectionOption> getSectionGenerationOptions() {
+    String sql = """
+        SELECT
+          sec.id AS section_id,
+          sec.section_code,
+          ep.id AS enrollment_period_id,
+          ep.school_year,
+          ep.semester,
+          COALESCE(MAX(o.capacity), sec.capacity) AS effective_capacity,
+          ep.created_at
+        FROM offerings o
+        INNER JOIN sections sec ON sec.id = o.section_id
+        INNER JOIN enrollment_period ep ON ep.id = o.enrollment_period_id
+        GROUP BY
+          sec.id,
+          sec.section_code,
+          ep.id,
+          ep.school_year,
+          ep.semester,
+          sec.capacity,
+          ep.created_at
+        ORDER BY
+          ep.created_at DESC,
+          sec.section_code,
+          sec.id
+        """;
+
+    List<ScheduleGenerationSectionOption> options = new ArrayList<>();
+    try (
+        Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql);
+        ResultSet rs = ps.executeQuery()
+    ) {
+      while (rs.next()) {
+        Long enrollmentPeriodId = rsGetLong(rs, "enrollment_period_id");
+        options.add(new ScheduleGenerationSectionOption(
+            rsGetLong(rs, "section_id"),
+            safeText(rs.getString("section_code"), "N/A"),
+            enrollmentPeriodId,
+            buildEnrollmentPeriodLabel(
+                enrollmentPeriodId,
+                rs.getString("school_year"),
+                rs.getString("semester")
+            ),
+            rs.getObject("effective_capacity", Integer.class)
+        ));
+      }
+    } catch (SQLException e) {
+      logger.error("ERROR: {}", e.getMessage(), e);
+      return List.of();
+    }
+
+    return options;
+  }
+
+  public ScheduleGenerationResult previewSectionScheduleGeneration(ScheduleGenerationRequest request) {
+    return buildSectionScheduleGenerationResult(request, false);
+  }
+
+  public ScheduleGenerationResult generateSectionSchedules(ScheduleGenerationRequest request) {
+    return buildSectionScheduleGenerationResult(request, true);
+  }
+
+  private ScheduleGenerationResult buildSectionScheduleGenerationResult(
+      ScheduleGenerationRequest request,
+      boolean persist
+  ) {
+    String validationError = validateGenerationRequest(request);
+    if (validationError != null) {
+      return new ScheduleGenerationResult(false, 0, 0, 0, 0, List.of(), validationError);
+    }
+
+    LocalTime minStartTime = normalizeMinStartTime(request.minStartTime());
+    LocalTime maxEndTime = normalizeMaxEndTime(request.maxEndTime());
+    int slotMinutes = normalizeSlotMinutes(request.slotMinutes());
+
+    Connection conn = null;
+    try {
+      conn = ConnectionService.getConnection();
+
+      List<ScheduleGenerationOfferingCandidate> candidates = loadOfferingCandidates(
+          conn,
+          request.sectionId(),
+          request.enrollmentPeriodId()
+      );
+
+      if (candidates.isEmpty()) {
+        return new ScheduleGenerationResult(
+            true,
+            0,
+            0,
+            0,
+            0,
+            List.of(),
+            "No offerings found for the selected section and enrollment period."
+        );
+      }
+
+      List<ScheduleGenerationRoomCandidate> roomCandidates = loadRoomCandidates(conn);
+      List<ScheduleGenerationPlanRow> planRows = new ArrayList<>();
+      List<ScheduleGenerationPlanRow> plannedRows = new ArrayList<>();
+
+      for (ScheduleGenerationOfferingCandidate candidate : candidates) {
+        String schedulePattern = normalizeSchedulePattern(candidate.schedulePattern());
+
+        if (hasExistingScheduleForOffering(conn, candidate.offeringId())) {
+          planRows.add(new ScheduleGenerationPlanRow(
+              candidate.offeringId(),
+              candidate.subjectCode(),
+              candidate.subjectName(),
+              schedulePattern,
+              "All Blocks",
+              normalizeEstimatedMinutes(candidate.estimatedMinutes()),
+              null,
+              null,
+              null,
+              null,
+              null,
+              "EXISTING",
+              "Skipped because this offering already has at least one schedule row."
+          ));
+          continue;
+        }
+
+        List<ScheduleGenerationTemplateBlock> templateBlocks = resolveTemplateBlocks(candidate);
+        boolean placementFailed = false;
+
+        for (int blockIndex = 0; blockIndex < templateBlocks.size(); blockIndex++) {
+          ScheduleGenerationTemplateBlock block = templateBlocks.get(blockIndex);
+
+          if (maxEndTime.minusMinutes(block.minutes()).isBefore(minStartTime)) {
+            planRows.add(new ScheduleGenerationPlanRow(
+                candidate.offeringId(),
+                candidate.subjectCode(),
+                candidate.subjectName(),
+                schedulePattern,
+                block.blockLabel(),
+                block.minutes(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                "SKIPPED",
+                "Skipped because block duration exceeds the selected time window."
+            ));
+            placementFailed = true;
+          } else if (!hasCompatibleRoomForBlock(candidate, block, roomCandidates)) {
+            planRows.add(new ScheduleGenerationPlanRow(
+                candidate.offeringId(),
+                candidate.subjectCode(),
+                candidate.subjectName(),
+                schedulePattern,
+                block.blockLabel(),
+                block.minutes(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                "SKIPPED",
+                "Skipped because no available room matches required capacity and room type."
+            ));
+            placementFailed = true;
+          } else {
+            ScheduleGenerationPlanRow placement = findPlacement(
+                conn,
+                candidate,
+                block,
+                roomCandidates,
+                plannedRows,
+                minStartTime,
+                maxEndTime,
+                slotMinutes
+            );
+
+            if (placement == null) {
+              planRows.add(new ScheduleGenerationPlanRow(
+                  candidate.offeringId(),
+                  candidate.subjectCode(),
+                  candidate.subjectName(),
+                  schedulePattern,
+                  block.blockLabel(),
+                  block.minutes(),
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  "SKIPPED",
+                  "Skipped because no conflict-free slot was found within the selected window."
+              ));
+              placementFailed = true;
+            } else {
+              planRows.add(placement);
+              plannedRows.add(placement);
+            }
+          }
+
+          if (placementFailed) {
+            for (int remainingIndex = blockIndex + 1; remainingIndex < templateBlocks.size(); remainingIndex++) {
+              ScheduleGenerationTemplateBlock remainingBlock = templateBlocks.get(remainingIndex);
+              planRows.add(new ScheduleGenerationPlanRow(
+                  candidate.offeringId(),
+                  candidate.subjectCode(),
+                  candidate.subjectName(),
+                  schedulePattern,
+                  remainingBlock.blockLabel(),
+                  remainingBlock.minutes(),
+                  null,
+                  null,
+                  null,
+                  null,
+                  null,
+                  "SKIPPED",
+                  "Skipped because a required block for this pattern could not be placed."
+              ));
+            }
+            break;
+          }
+        }
+      }
+
+      int readyCount = (int) planRows.stream().filter(row -> "READY".equals(row.status())).count();
+      int skippedCount = planRows.size() - readyCount;
+
+      if (!persist) {
+        return new ScheduleGenerationResult(
+            true,
+            planRows.size(),
+            readyCount,
+            0,
+            skippedCount,
+            List.copyOf(planRows),
+            "Preview complete. " + readyCount + " offering(s) ready and " + skippedCount + " skipped."
+        );
+      }
+
+      conn.setAutoCommit(false);
+      String insertSql = "INSERT INTO schedules (offering_id, room_id, faculty_id, day, start_time, end_time) VALUES (?, ?, ?, ?, ?, ?)";
+      int createdCount = 0;
+      List<ScheduleGenerationPlanRow> persistedRows = new ArrayList<>(planRows.size());
+
+      try (PreparedStatement ps = conn.prepareStatement(insertSql)) {
+        for (ScheduleGenerationPlanRow row : planRows) {
+          if (!"READY".equals(row.status())) {
+            persistedRows.add(row);
+            continue;
+          }
+
+          ScheduleUpsertRequest upsertRequest = new ScheduleUpsertRequest(
+              null,
+              row.offeringId(),
+              row.roomId(),
+              null,
+              DayOfWeek.valueOf(row.day()),
+              row.startTime(),
+              row.endTime()
+          );
+
+          ScheduleSaveResult conflictValidation = validateConflicts(conn, upsertRequest, false);
+          if (!conflictValidation.successful()) {
+            persistedRows.add(withPlanStatus(row, "FAILED", conflictValidation.message()));
+            continue;
+          }
+
+          ps.setLong(1, row.offeringId());
+          setNullableLong(ps, 2, row.roomId());
+          ps.setNull(3, Types.BIGINT);
+          ps.setString(4, row.day());
+          ps.setTime(5, Time.valueOf(row.startTime()));
+          ps.setTime(6, Time.valueOf(row.endTime()));
+
+          try {
+            int affected = ps.executeUpdate();
+            if (affected > 0) {
+              createdCount++;
+              persistedRows.add(withPlanStatus(row, "CREATED", "Schedule generated successfully."));
+            } else {
+              persistedRows.add(withPlanStatus(row, "FAILED", "No row was inserted for this offering."));
+            }
+          } catch (SQLException e) {
+            String message = isUniqueConstraintError(e)
+                ? "Skipped because a conflicting schedule now exists for the selected slot."
+                : "Failed to insert generated schedule.";
+            persistedRows.add(withPlanStatus(row, "FAILED", message));
+          }
+        }
+      }
+
+      conn.commit();
+      int persistedSkippedCount = persistedRows.size() - createdCount;
+      return new ScheduleGenerationResult(
+          true,
+          persistedRows.size(),
+          readyCount,
+          createdCount,
+          persistedSkippedCount,
+          List.copyOf(persistedRows),
+          "Generation completed. " + createdCount + " schedule(s) created."
+      );
+    } catch (SQLException e) {
+      if (conn != null) {
+        try {
+          if (!conn.isClosed()) {
+            conn.rollback();
+          }
+        } catch (SQLException rollbackException) {
+          logger.error("ERROR: {}", rollbackException.getMessage(), rollbackException);
+        }
+      }
+
+      logger.error("ERROR: {}", e.getMessage(), e);
+      return new ScheduleGenerationResult(
+          false,
+          0,
+          0,
+          0,
+          0,
+          List.of(),
+          "Failed to generate schedules. Please try again."
+      );
+    } finally {
+      if (conn != null) {
+        try {
+          conn.setAutoCommit(true);
+          conn.close();
+        } catch (SQLException closeException) {
+          logger.error("ERROR: {}", closeException.getMessage(), closeException);
+        }
+      }
+    }
+  }
+
+  private ScheduleGenerationPlanRow findPlacement(
+      Connection conn,
+      ScheduleGenerationOfferingCandidate candidate,
+      ScheduleGenerationTemplateBlock block,
+      List<ScheduleGenerationRoomCandidate> roomCandidates,
+      List<ScheduleGenerationPlanRow> plannedRows,
+      LocalTime minStartTime,
+      LocalTime maxEndTime,
+      int slotMinutes
+  ) throws SQLException {
+    int estimatedMinutes = block.minutes();
+    LocalTime latestStartTime = maxEndTime.minusMinutes(estimatedMinutes);
+
+    for (String dayCode : resolveGenerationDayOrder(candidate, block, plannedRows)) {
+      LocalTime startTime = minStartTime;
+      while (!startTime.isAfter(latestStartTime)) {
+        LocalTime endTime = startTime.plusMinutes(estimatedMinutes);
+
+        for (ScheduleGenerationRoomCandidate room : roomCandidates) {
+          if (!isRoomCompatible(candidate, block, room)) {
+            continue;
+          }
+
+          if (block.requiresDifferentDayFromOffering() && isOfferingDayAlreadyPlanned(plannedRows, candidate.offeringId(), dayCode)) {
+            continue;
+          }
+
+          if (isPlannedSectionConflict(plannedRows, dayCode, startTime, endTime)) {
+            continue;
+          }
+
+          if (isPlannedRoomConflict(plannedRows, room.roomId(), dayCode, startTime, endTime)) {
+            continue;
+          }
+
+          ScheduleUpsertRequest upsertRequest = new ScheduleUpsertRequest(
+              null,
+              candidate.offeringId(),
+              room.roomId(),
+              null,
+              DayOfWeek.valueOf(dayCode),
+              startTime,
+              endTime
+          );
+
+          if (hasSectionConflict(conn, upsertRequest, false)) {
+            continue;
+          }
+
+          if (hasRoomConflict(conn, upsertRequest, false)) {
+            continue;
+          }
+
+          return new ScheduleGenerationPlanRow(
+              candidate.offeringId(),
+              candidate.subjectCode(),
+              candidate.subjectName(),
+              normalizeSchedulePattern(candidate.schedulePattern()),
+              block.blockLabel(),
+              estimatedMinutes,
+              dayCode,
+              startTime,
+              endTime,
+              room.roomId(),
+              room.roomLabel(),
+              "READY",
+              "Ready to generate."
+          );
+        }
+
+        startTime = startTime.plusMinutes(slotMinutes);
+      }
+    }
+
+    return null;
+  }
+
+  private List<ScheduleGenerationOfferingCandidate> loadOfferingCandidates(
+      Connection conn,
+      Long sectionId,
+      Long enrollmentPeriodId
+  ) throws SQLException {
+    String estimatedMinutesExpression = hasSubjectEstimatedTimeColumn(conn)
+        ? "COALESCE(sub.estimated_time, " + DEFAULT_ESTIMATED_TIME_MINUTES + ")"
+        : String.valueOf(DEFAULT_ESTIMATED_TIME_MINUTES);
+
+    String schedulePatternExpression = hasSubjectSchedulePatternColumn(conn)
+        ? "COALESCE(sub.schedule_pattern, '" + DEFAULT_SCHEDULE_PATTERN + "')"
+        : "'" + DEFAULT_SCHEDULE_PATTERN + "'";
+
+    String sql = """
+        SELECT
+          o.id AS offering_id,
+          sub.subject_code,
+          sub.subject_name,
+          %s AS schedule_pattern,
+          %s AS estimated_minutes,
+          COALESCE(o.capacity, sec.capacity) AS required_capacity
+        FROM offerings o
+        INNER JOIN subjects sub ON sub.id = o.subject_id
+        INNER JOIN sections sec ON sec.id = o.section_id
+        WHERE o.section_id = ?
+          AND o.enrollment_period_id = ?
+        ORDER BY sub.subject_code, o.id
+        """.formatted(schedulePatternExpression, estimatedMinutesExpression);
+
+    List<ScheduleGenerationOfferingCandidate> candidates = new ArrayList<>();
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, sectionId);
+      ps.setLong(2, enrollmentPeriodId);
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          candidates.add(new ScheduleGenerationOfferingCandidate(
+              rsGetLong(rs, "offering_id"),
+              safeText(rs.getString("subject_code"), "N/A"),
+              safeText(rs.getString("subject_name"), "N/A"),
+              normalizeSchedulePattern(rs.getString("schedule_pattern")),
+              rs.getObject("estimated_minutes", Integer.class),
+              rs.getObject("required_capacity", Integer.class)
+          ));
+        }
+      }
+    }
+
+    return candidates;
+  }
+
+  private List<ScheduleGenerationRoomCandidate> loadRoomCandidates(Connection conn) throws SQLException {
+    String sql = "SELECT id, building, room, room_type, status, capacity FROM rooms ORDER BY building, room";
+    List<ScheduleGenerationRoomCandidate> rooms = new ArrayList<>();
+
+    try (PreparedStatement ps = conn.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
+      while (rs.next()) {
+        String status = safeText(rs.getString("status"), "AVAILABLE").toUpperCase();
+        if (!"AVAILABLE".equals(status)) {
+          continue;
+        }
+
+        String building = safeText(rs.getString("building"), "N/A");
+        String roomName = safeText(rs.getString("room"), "N/A");
+        String roomLabel = building + " - " + roomName;
+        String roomType = safeText(rs.getString("room_type"), "OTHER").toUpperCase();
+
+        rooms.add(new ScheduleGenerationRoomCandidate(
+            rsGetLong(rs, "id"),
+            roomLabel,
+            roomType,
+            rs.getObject("capacity", Integer.class)
+        ));
+      }
+    }
+
+    return rooms;
+  }
+
+  private boolean hasExistingScheduleForOffering(Connection conn, Long offeringId) throws SQLException {
+    String sql = "SELECT 1 FROM schedules WHERE offering_id = ? FETCH FIRST 1 ROWS ONLY";
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, offeringId);
+      try (ResultSet rs = ps.executeQuery()) {
+        return rs.next();
+      }
+    }
+  }
+
+  private boolean hasCompatibleRoomForBlock(
+      ScheduleGenerationOfferingCandidate candidate,
+      ScheduleGenerationTemplateBlock block,
+      List<ScheduleGenerationRoomCandidate> roomCandidates
+  ) {
+    for (ScheduleGenerationRoomCandidate room : roomCandidates) {
+      if (isRoomCompatible(candidate, block, room)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private boolean isRoomCompatible(
+      ScheduleGenerationOfferingCandidate candidate,
+      ScheduleGenerationTemplateBlock block,
+      ScheduleGenerationRoomCandidate room
+  ) {
+    Set<String> allowedRoomTypes = resolveAllowedRoomTypes(candidate, block);
+    if (!allowedRoomTypes.contains(safeText(room.roomType(), "OTHER").toUpperCase())) {
+      return false;
+    }
+
+    Integer requiredCapacity = candidate.requiredCapacity();
+    Integer roomCapacity = room.capacity();
+    if (requiredCapacity == null || requiredCapacity <= 0 || roomCapacity == null) {
+      return true;
+    }
+
+    return roomCapacity >= requiredCapacity;
+  }
+
+  private Set<String> resolveAllowedRoomTypes(
+      ScheduleGenerationOfferingCandidate candidate,
+      ScheduleGenerationTemplateBlock block
+  ) {
+    if (block.allowedRoomTypes() != null && !block.allowedRoomTypes().isEmpty()) {
+      return block.allowedRoomTypes();
+    }
+
+    SubjectSchedulePattern schedulePattern = SubjectSchedulePattern.fromValue(candidate.schedulePattern());
+    String blockCode = safeText(block.blockCode(), "").toUpperCase();
+
+    if (schedulePattern == SubjectSchedulePattern.LECTURE_LAB && "LAB".equals(blockCode)) {
+      return LAB_ROOM_TYPES;
+    }
+
+    if (schedulePattern == SubjectSchedulePattern.PE_PAIRED) {
+      return PE_ROOM_TYPES;
+    }
+
+    return resolveHeuristicAllowedRoomTypes(candidate.subjectCode(), candidate.subjectName());
+  }
+
+  private Set<String> resolveHeuristicAllowedRoomTypes(String subjectCode, String subjectName) {
+    String descriptor = (safeText(subjectCode, "") + " " + safeText(subjectName, "")).toUpperCase();
+
+    if (
+        descriptor.contains("LAB")
+            || descriptor.contains("PRACTICUM")
+            || descriptor.contains("WORKSHOP")
+    ) {
+      return LAB_ROOM_TYPES;
+    }
+
+    if (descriptor.contains("SEMINAR")) {
+      return LECTURE_ROOM_TYPES;
+    }
+
+    return LECTURE_ROOM_TYPES;
+  }
+
+  private List<ScheduleGenerationTemplateBlock> resolveTemplateBlocks(ScheduleGenerationOfferingCandidate candidate) {
+    SubjectSchedulePattern schedulePattern = SubjectSchedulePattern.fromValue(candidate.schedulePattern());
+    int fallbackMinutes = normalizeEstimatedMinutes(candidate.estimatedMinutes());
+
+    return switch (schedulePattern) {
+      case LECTURE_LAB -> List.of(
+          new ScheduleGenerationTemplateBlock(
+              "LECTURE",
+              "Lecture",
+              120,
+              List.of("MON", "TUE", "WED", "THU", "FRI"),
+              LECTURE_ROOM_TYPES,
+              false
+          ),
+          new ScheduleGenerationTemplateBlock(
+              "LAB",
+              "Laboratory",
+              180,
+              List.of("TUE", "THU", "WED", "MON", "FRI", "SAT"),
+              LAB_ROOM_TYPES,
+              true
+          )
+      );
+      case GE_PAIRED -> List.of(
+          new ScheduleGenerationTemplateBlock(
+              "SESSION_1",
+              "Session 1",
+              90,
+              List.of("MON", "TUE", "WED", "THU", "FRI"),
+              LECTURE_ROOM_TYPES,
+              false
+          ),
+          new ScheduleGenerationTemplateBlock(
+              "SESSION_2",
+              "Session 2",
+              90,
+              List.of("WED", "THU", "MON", "TUE", "FRI"),
+              LECTURE_ROOM_TYPES,
+              true
+          )
+      );
+      case PE_PAIRED -> List.of(
+          new ScheduleGenerationTemplateBlock(
+              "SESSION_1",
+              "Session 1",
+              60,
+              List.of("TUE", "THU", "MON", "WED", "FRI"),
+              PE_ROOM_TYPES,
+              false
+          ),
+          new ScheduleGenerationTemplateBlock(
+              "SESSION_2",
+              "Session 2",
+              60,
+              List.of("THU", "TUE", "WED", "MON", "FRI"),
+              PE_ROOM_TYPES,
+              true
+          )
+      );
+      case NSTP_BLOCK -> List.of(
+          new ScheduleGenerationTemplateBlock(
+              "MAIN",
+              "Main Session",
+              Math.max(180, fallbackMinutes),
+              List.of("SAT"),
+              LECTURE_ROOM_TYPES,
+              false
+          )
+      );
+      case LECTURE_ONLY -> List.of(
+          new ScheduleGenerationTemplateBlock(
+              "MAIN",
+              "Main Session",
+              fallbackMinutes,
+              List.of("MON", "TUE", "WED", "THU", "FRI", "SAT"),
+              LECTURE_ROOM_TYPES,
+              false
+          )
+      );
+    };
+  }
+
+  private List<String> resolveGenerationDayOrder(
+      ScheduleGenerationOfferingCandidate candidate,
+      ScheduleGenerationTemplateBlock block,
+      List<ScheduleGenerationPlanRow> plannedRows
+  ) {
+    SubjectSchedulePattern schedulePattern = SubjectSchedulePattern.fromValue(candidate.schedulePattern());
+    if (schedulePattern == SubjectSchedulePattern.NSTP_BLOCK) {
+      return List.of("SAT");
+    }
+
+    LinkedHashSet<String> dayOrder = new LinkedHashSet<>();
+    String plannedDay = findPrimaryPlannedDayForOffering(plannedRows, candidate.offeringId());
+    String blockCode = safeText(block.blockCode(), "").toUpperCase();
+
+    boolean isFollowupBlock = "LAB".equals(blockCode) || "SESSION_2".equals(blockCode);
+    if (plannedDay != null && isFollowupBlock) {
+      String complementaryDay = COMPLEMENTARY_WEEKDAY_MAP.get(plannedDay);
+      if (complementaryDay != null) {
+        dayOrder.add(complementaryDay);
+      }
+    }
+
+    if (block.preferredDays() != null) {
+      dayOrder.addAll(block.preferredDays());
+    }
+
+    dayOrder.addAll(GENERATION_DAY_ORDER);
+    return List.copyOf(dayOrder);
+  }
+
+  private String findPrimaryPlannedDayForOffering(List<ScheduleGenerationPlanRow> plannedRows, Long offeringId) {
+    for (ScheduleGenerationPlanRow row : plannedRows) {
+      if (offeringId.equals(row.offeringId()) && row.day() != null) {
+        return row.day();
+      }
+    }
+
+    return null;
+  }
+
+  private boolean isOfferingDayAlreadyPlanned(List<ScheduleGenerationPlanRow> plannedRows, Long offeringId, String day) {
+    for (ScheduleGenerationPlanRow row : plannedRows) {
+      if (offeringId.equals(row.offeringId()) && day.equals(row.day())) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private String normalizeSchedulePattern(String schedulePattern) {
+    return SubjectSchedulePattern.fromValue(schedulePattern).name();
+  }
+
+  private boolean isPlannedSectionConflict(
+      List<ScheduleGenerationPlanRow> plannedRows,
+      String day,
+      LocalTime start,
+      LocalTime end
+  ) {
+    for (ScheduleGenerationPlanRow row : plannedRows) {
+      if (row.day() == null || !day.equals(row.day())) {
+        continue;
+      }
+
+      if (row.startTime() == null || row.endTime() == null) {
+        continue;
+      }
+
+      if (isOverlapping(start, end, row.startTime(), row.endTime())) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private boolean isPlannedRoomConflict(
+      List<ScheduleGenerationPlanRow> plannedRows,
+      Long roomId,
+      String day,
+      LocalTime start,
+      LocalTime end
+  ) {
+    if (roomId == null) {
+      return false;
+    }
+
+    for (ScheduleGenerationPlanRow row : plannedRows) {
+      if (row.roomId() == null || !roomId.equals(row.roomId()) || row.day() == null || !day.equals(row.day())) {
+        continue;
+      }
+
+      if (row.startTime() == null || row.endTime() == null) {
+        continue;
+      }
+
+      if (isOverlapping(start, end, row.startTime(), row.endTime())) {
+        return true;
+      }
+    }
+
+    return false;
+  }
+
+  private ScheduleGenerationPlanRow withPlanStatus(ScheduleGenerationPlanRow row, String status, String details) {
+    return new ScheduleGenerationPlanRow(
+        row.offeringId(),
+        row.subjectCode(),
+        row.subjectName(),
+        row.schedulePattern(),
+        row.blockLabel(),
+        row.estimatedMinutes(),
+        row.day(),
+        row.startTime(),
+        row.endTime(),
+        row.roomId(),
+        row.roomLabel(),
+        status,
+        details
+    );
+  }
+
+  private String validateGenerationRequest(ScheduleGenerationRequest request) {
+    if (request == null) {
+      return "Schedule generation request is required.";
+    }
+
+    if (request.sectionId() == null) {
+      return "Section selection is required.";
+    }
+
+    if (request.enrollmentPeriodId() == null) {
+      return "Enrollment period selection is required.";
+    }
+
+    LocalTime minStartTime = normalizeMinStartTime(request.minStartTime());
+    LocalTime maxEndTime = normalizeMaxEndTime(request.maxEndTime());
+    if (!minStartTime.isBefore(maxEndTime)) {
+      return "Minimum start time must be earlier than maximum end time.";
+    }
+
+    return null;
+  }
+
+  private int normalizeEstimatedMinutes(Integer minutes) {
+    if (minutes == null || minutes <= 0) {
+      return DEFAULT_ESTIMATED_TIME_MINUTES;
+    }
+
+    return minutes;
+  }
+
+  private int normalizeSlotMinutes(Integer slotMinutes) {
+    if (slotMinutes == null || slotMinutes <= 0) {
+      return DEFAULT_SLOT_MINUTES;
+    }
+
+    return slotMinutes;
+  }
+
+  private LocalTime normalizeMinStartTime(LocalTime minStartTime) {
+    return minStartTime == null ? DEFAULT_MIN_START_TIME : minStartTime;
+  }
+
+  private LocalTime normalizeMaxEndTime(LocalTime maxEndTime) {
+    return maxEndTime == null ? DEFAULT_MAX_END_TIME : maxEndTime;
+  }
+
+  private boolean hasSubjectEstimatedTimeColumn(Connection conn) {
+    try {
+      try (ResultSet rs = conn.getMetaData().getColumns(null, null, "SUBJECTS", "ESTIMATED_TIME")) {
+        if (rs.next()) {
+          return true;
+        }
+      }
+
+      try (ResultSet rs = conn.getMetaData().getColumns(null, null, "subjects", "estimated_time")) {
+        return rs.next();
+      }
+    } catch (SQLException e) {
+      logger.error("ERROR: {}", e.getMessage(), e);
+      return false;
+    }
+  }
+
+  private boolean hasSubjectSchedulePatternColumn(Connection conn) {
+    try {
+      try (ResultSet rs = conn.getMetaData().getColumns(null, null, "SUBJECTS", "SCHEDULE_PATTERN")) {
+        if (rs.next()) {
+          return true;
+        }
+      }
+
+      try (ResultSet rs = conn.getMetaData().getColumns(null, null, "subjects", "schedule_pattern")) {
+        return rs.next();
+      }
+    } catch (SQLException e) {
+      logger.error("ERROR: {}", e.getMessage(), e);
+      return false;
+    }
   }
 
   public ScheduleSaveResult createSchedule(ScheduleUpsertRequest request) {

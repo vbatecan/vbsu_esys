@@ -90,6 +90,8 @@ CREATE TABLE subjects
     subject_name  varchar(64),
     subject_code  varchar(32),
     units         float,
+    estimated_time int default 90,
+    schedule_pattern varchar(32) default 'LECTURE_ONLY' CHECK (schedule_pattern IN ('LECTURE_ONLY', 'LECTURE_LAB', 'GE_PAIRED', 'PE_PAIRED', 'NSTP_BLOCK')),
     description   clob,
     department_id bigint,
     updated_at    timestamp default current_timestamp,

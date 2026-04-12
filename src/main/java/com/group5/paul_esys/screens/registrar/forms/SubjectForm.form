@@ -72,6 +72,10 @@
                                   <Component id="jLabel4" alignment="0" max="32767" attributes="0"/>
                                   <Component id="jLabel3" alignment="0" max="32767" attributes="0"/>
                                   <Component id="spinnerUnit" alignment="0" max="32767" attributes="0"/>
+                                    <Component id="jLabel6" alignment="0" max="32767" attributes="0"/>
+                                    <Component id="spinnerEstimatedTime" alignment="0" max="32767" attributes="0"/>
+                                    <Component id="jLabel9" alignment="0" max="32767" attributes="0"/>
+                                    <Component id="cbxSchedulePattern" alignment="0" max="32767" attributes="0"/>
                                   <Component id="jLabel7" alignment="0" min="-2" max="-2" attributes="0"/>
                                   <Group type="102" alignment="1" attributes="0">
                                       <EmptySpace min="-2" pref="1" max="-2" attributes="0"/>
@@ -110,6 +114,14 @@
                   <Component id="jLabel5" min="-2" max="-2" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
                   <Component id="spinnerUnit" min="-2" max="-2" attributes="0"/>
+                  <EmptySpace max="-2" attributes="0"/>
+                  <Component id="jLabel6" min="-2" max="-2" attributes="0"/>
+                  <EmptySpace max="-2" attributes="0"/>
+                  <Component id="spinnerEstimatedTime" min="-2" max="-2" attributes="0"/>
+                  <EmptySpace max="-2" attributes="0"/>
+                  <Component id="jLabel9" min="-2" max="-2" attributes="0"/>
+                  <EmptySpace max="-2" attributes="0"/>
+                  <Component id="cbxSchedulePattern" min="-2" max="-2" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
                   <Component id="jLabel7" min="-2" max="-2" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
@@ -185,6 +197,42 @@
                 <PropertyBean type="com.group5.paul_esys.ui.TextFieldRoundBorder"/>
             </Property>
           </Properties>
+        </Component>
+        <Component class="javax.swing.JLabel" name="jLabel6">
+          <Properties>
+            <Property name="text" type="java.lang.String" value="Estimated Time (minutes)"/>
+          </Properties>
+        </Component>
+        <Component class="javax.swing.JSpinner" name="spinnerEstimatedTime">
+          <Properties>
+            <Property name="model" type="javax.swing.SpinnerModel" editor="org.netbeans.modules.form.editors2.SpinnerModelEditor">
+              <SpinnerModel initial="90" maximum="480" minimum="30" numberType="java.lang.Integer" stepSize="30" type="number"/>
+            </Property>
+            <Property name="border" type="javax.swing.border.Border" editor="org.netbeans.modules.form.editors2.BorderEditor">
+                <PropertyBean type="com.group5.paul_esys.ui.TextFieldRoundBorder"/>
+            </Property>
+          </Properties>
+        </Component>
+        <Component class="javax.swing.JLabel" name="jLabel9">
+          <Properties>
+            <Property name="text" type="java.lang.String" value="Schedule Pattern"/>
+          </Properties>
+        </Component>
+        <Component class="javax.swing.JComboBox" name="cbxSchedulePattern">
+          <Properties>
+            <Property name="model" type="javax.swing.ComboBoxModel" editor="org.netbeans.modules.form.editors2.ComboBoxModelEditor">
+              <StringArray count="5">
+                <StringItem index="0" value="LECTURE_ONLY"/>
+                <StringItem index="1" value="LECTURE_LAB"/>
+                <StringItem index="2" value="GE_PAIRED"/>
+                <StringItem index="3" value="PE_PAIRED"/>
+                <StringItem index="4" value="NSTP_BLOCK"/>
+              </StringArray>
+            </Property>
+          </Properties>
+          <AuxValues>
+            <AuxValue name="JavaCodeGenerator_TypeParameters" type="java.lang.String" value="&lt;String&gt;"/>
+          </AuxValues>
         </Component>
         <Component class="javax.swing.JComboBox" name="cbxDepartment">
           <Properties>

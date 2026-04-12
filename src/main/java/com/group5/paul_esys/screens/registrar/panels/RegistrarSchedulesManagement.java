@@ -7,6 +7,7 @@ import com.group5.paul_esys.modules.registrar.model.ScheduleSaveResult;
 import com.group5.paul_esys.modules.registrar.model.ScheduleUpsertRequest;
 import com.group5.paul_esys.modules.registrar.services.RegistrarScheduleManagementService;
 import com.group5.paul_esys.screens.registrar.forms.ScheduleEntryDialog;
+import com.group5.paul_esys.screens.registrar.forms.ScheduleGenerationDialog;
 import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -132,6 +133,8 @@ public class RegistrarSchedulesManagement extends javax.swing.JPanel {
     btnDeleteSchedule.setForeground(Color.WHITE);
     btnRefresh.setBackground(new Color(119, 0, 0));
     btnRefresh.setForeground(Color.WHITE);
+    btnAutoGenerate.setBackground(new Color(119, 0, 0));
+    btnAutoGenerate.setForeground(Color.WHITE);
     btnClearFilter.setBackground(new Color(245, 245, 245));
 
     lblTableSummary.setFont(new java.awt.Font("Poppins", 0, 12));
@@ -531,6 +534,15 @@ public class RegistrarSchedulesManagement extends javax.swing.JPanel {
     }
   }
 
+  private void openScheduleGeneratorDialog() {
+    ScheduleGenerationDialog dialog = new ScheduleGenerationDialog(
+        resolveParentFrame(),
+        scheduleManagementService,
+        this::reloadSchedules
+    );
+    dialog.setVisible(true);
+  }
+
   private void deleteSelectedSchedule() {
     ScheduleManagementRow selected = getSelectedSchedule();
     if (selected == null) {
@@ -674,6 +686,7 @@ public class RegistrarSchedulesManagement extends javax.swing.JPanel {
                 cbxEnrollmentPeriod = new javax.swing.JComboBox<>();
                 btnClearFilter = new javax.swing.JButton();
                 btnRefresh = new javax.swing.JButton();
+                btnAutoGenerate = new javax.swing.JButton();
                 btnNewSchedule = new javax.swing.JButton();
                 btnEditSchedule = new javax.swing.JButton();
                 btnDeleteSchedule = new javax.swing.JButton();
@@ -760,6 +773,9 @@ public class RegistrarSchedulesManagement extends javax.swing.JPanel {
                 btnRefresh.setText("Refresh");
                 btnRefresh.addActionListener(this::btnRefreshActionPerformed);
 
+                btnAutoGenerate.setText("Auto Generate");
+                btnAutoGenerate.addActionListener(this::btnAutoGenerateActionPerformed);
+
                 btnNewSchedule.setBackground(new java.awt.Color(119, 0, 0));
                 btnNewSchedule.setForeground(new java.awt.Color(255, 255, 255));
                 btnNewSchedule.setText("New Schedule");
@@ -794,6 +810,8 @@ public class RegistrarSchedulesManagement extends javax.swing.JPanel {
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(btnRefresh)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(btnAutoGenerate)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(btnNewSchedule)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(btnEditSchedule)
@@ -812,6 +830,7 @@ public class RegistrarSchedulesManagement extends javax.swing.JPanel {
                                 .addComponent(cbxEnrollmentPeriod, javax.swing.GroupLayout.PREFERRED_SIZE, 34, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addComponent(btnClearFilter)
                                 .addComponent(btnRefresh)
+                                .addComponent(btnAutoGenerate)
                                 .addComponent(btnNewSchedule)
                                 .addComponent(btnEditSchedule)
                                 .addComponent(btnDeleteSchedule))
@@ -837,14 +856,14 @@ public class RegistrarSchedulesManagement extends javax.swing.JPanel {
                                 "Subject Code", "Subject Name", "Section", "Day", "Time", "Room", "Faculty", "Enrollment Period", "Conflict"
                         }
                 ) {
-                        Class[] types = new Class [] {
+                        Class<?>[] types = new Class<?> [] {
                                 java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.String.class
                         };
                         boolean[] canEdit = new boolean [] {
                                 false, false, false, false, false, false, false, false, false
                         };
 
-                        public Class getColumnClass(int columnIndex) {
+                        public Class<?> getColumnClass(int columnIndex) {
                                 return types [columnIndex];
                         }
 
@@ -1066,6 +1085,10 @@ public class RegistrarSchedulesManagement extends javax.swing.JPanel {
     openCreateScheduleDialog();
   }//GEN-LAST:event_btnNewScheduleActionPerformed
 
+  private void btnAutoGenerateActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnAutoGenerateActionPerformed
+    openScheduleGeneratorDialog();
+  }//GEN-LAST:event_btnAutoGenerateActionPerformed
+
   private void btnEditScheduleActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnEditScheduleActionPerformed
     openUpdateScheduleDialog();
   }//GEN-LAST:event_btnEditScheduleActionPerformed
@@ -1104,6 +1127,7 @@ public class RegistrarSchedulesManagement extends javax.swing.JPanel {
 
         // Variables declaration - do not modify//GEN-BEGIN:variables
         private javax.swing.JButton btnClearFilter;
+        private javax.swing.JButton btnAutoGenerate;
         private javax.swing.JButton btnDeleteSchedule;
         private javax.swing.JButton btnEditSchedule;
         private javax.swing.JButton btnNewSchedule;

@@ -174,6 +174,8 @@
                       <EmptySpace max="-2" attributes="0"/>
                       <Component id="btnRefresh" min="-2" max="-2" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
+                      <Component id="btnAutoGenerate" min="-2" max="-2" attributes="0"/>
+                      <EmptySpace max="-2" attributes="0"/>
                       <Component id="btnNewSchedule" min="-2" max="-2" attributes="0"/>
                       <EmptySpace max="-2" attributes="0"/>
                       <Component id="btnEditSchedule" min="-2" max="-2" attributes="0"/>
@@ -194,6 +196,7 @@
                       <Component id="cbxEnrollmentPeriod" alignment="3" min="-2" pref="34" max="-2" attributes="0"/>
                       <Component id="btnClearFilter" alignment="3" min="-2" max="-2" attributes="0"/>
                       <Component id="btnRefresh" alignment="3" min="-2" max="-2" attributes="0"/>
+                        <Component id="btnAutoGenerate" alignment="3" min="-2" max="-2" attributes="0"/>
                       <Component id="btnNewSchedule" alignment="3" min="-2" max="-2" attributes="0"/>
                       <Component id="btnEditSchedule" alignment="3" min="-2" max="-2" attributes="0"/>
                       <Component id="btnDeleteSchedule" alignment="3" min="-2" max="-2" attributes="0"/>
@@ -292,6 +295,14 @@
               </Properties>
               <Events>
                 <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnRefreshActionPerformed"/>
+              </Events>
+            </Component>
+            <Component class="javax.swing.JButton" name="btnAutoGenerate">
+              <Properties>
+                <Property name="text" type="java.lang.String" value="Auto Generate"/>
+              </Properties>
+              <Events>
+                <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnAutoGenerateActionPerformed"/>
               </Events>
             </Component>
             <Component class="javax.swing.JButton" name="btnNewSchedule">

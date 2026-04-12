@@ -7,6 +7,7 @@ package com.group5.paul_esys.screens.registrar.forms;
 import com.group5.paul_esys.modules.departments.model.Department;
 import com.group5.paul_esys.modules.departments.services.DepartmentService;
 import com.group5.paul_esys.modules.subjects.model.Subject;
+import com.group5.paul_esys.modules.subjects.model.SubjectSchedulePattern;
 import com.group5.paul_esys.modules.subjects.services.SubjectService;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -52,6 +53,7 @@ public class SubjectForm extends javax.swing.JDialog {
 
                 jLabel4.setText("Subject Code");
                 loadDepartments();
+                loadSchedulePatterns();
 
                 if (editingSubject == null) {
                         return;
@@ -69,11 +71,29 @@ public class SubjectForm extends javax.swing.JDialog {
                         spinnerUnit.setValue(editingSubject.getUnits().intValue());
                 }
 
+                if (editingSubject.getEstimatedTime() != null) {
+                        spinnerEstimatedTime.setValue(editingSubject.getEstimatedTime());
+                }
+
+                cbxSchedulePattern.setSelectedItem(
+                        (editingSubject.getSchedulePattern() == null
+                                ? SubjectSchedulePattern.LECTURE_ONLY
+                                : editingSubject.getSchedulePattern()).name()
+                );
+
 
                 String departmentLabel = departmentLabelById.get(editingSubject.getDepartmentId());
                 if (departmentLabel != null) {
                         cbxDepartment.setSelectedItem(departmentLabel);
                 }
+        }
+
+        private void loadSchedulePatterns() {
+                cbxSchedulePattern.removeAllItems();
+                for (SubjectSchedulePattern pattern : SubjectSchedulePattern.values()) {
+                        cbxSchedulePattern.addItem(pattern.name());
+                }
+                cbxSchedulePattern.setSelectedItem(SubjectSchedulePattern.LECTURE_ONLY.name());
         }
 
         private void loadDepartments() {
@@ -127,6 +147,26 @@ public class SubjectForm extends javax.swing.JDialog {
                         return false;
                 }
 
+                if (!hasValidEstimatedTime()) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Estimated time must be greater than zero.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                if (!hasValidSchedulePattern()) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Please select a schedule pattern.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
                 if (!isValidDepartmentSelection()) {
                         JOptionPane.showMessageDialog(
                                 this,
@@ -152,6 +192,14 @@ public class SubjectForm extends javax.swing.JDialog {
 
         private boolean hasValidUnits() {
                 return ((Number) spinnerUnit.getValue()).intValue() >= 0;
+        }
+
+        private boolean hasValidEstimatedTime() {
+                return ((Number) spinnerEstimatedTime.getValue()).intValue() > 0;
+        }
+
+        private boolean hasValidSchedulePattern() {
+                return cbxSchedulePattern.getSelectedItem() != null;
         }
 
         private boolean isValidDepartmentSelection() {
@@ -182,6 +230,8 @@ public class SubjectForm extends javax.swing.JDialog {
                         .setSubjectName(txtSubjectName.getText().trim())
                         .setSubjectCode(txtSubjectCode.getText().trim().toUpperCase())
                         .setUnits(((Number) spinnerUnit.getValue()).floatValue())
+                        .setEstimatedTime(((Number) spinnerEstimatedTime.getValue()).intValue())
+                        .setSchedulePattern(SubjectSchedulePattern.fromValue(cbxSchedulePattern.getSelectedItem().toString()))
                         .setDescription(textAreaDescription.getText().trim())
                         .setDepartmentId(departmentId);
 
@@ -241,6 +291,10 @@ public class SubjectForm extends javax.swing.JDialog {
                 jLabel4 = new javax.swing.JLabel();
                 jLabel5 = new javax.swing.JLabel();
                 spinnerUnit = new javax.swing.JSpinner();
+                jLabel6 = new javax.swing.JLabel();
+                spinnerEstimatedTime = new javax.swing.JSpinner();
+                jLabel9 = new javax.swing.JLabel();
+                cbxSchedulePattern = new javax.swing.JComboBox<>();
                 cbxDepartment = new javax.swing.JComboBox<>();
                 jLabel7 = new javax.swing.JLabel();
                 jLabel8 = new javax.swing.JLabel();
@@ -276,6 +330,15 @@ public class SubjectForm extends javax.swing.JDialog {
 
                 spinnerUnit.setModel(new javax.swing.SpinnerNumberModel(0, 0, 25, 1));
                 spinnerUnit.setBorder(new com.group5.paul_esys.ui.TextFieldRoundBorder());
+
+                jLabel6.setText("Estimated Time (minutes)");
+
+                spinnerEstimatedTime.setModel(new javax.swing.SpinnerNumberModel(90, 30, 480, 30));
+                spinnerEstimatedTime.setBorder(new com.group5.paul_esys.ui.TextFieldRoundBorder());
+
+                jLabel9.setText("Schedule Pattern");
+
+                cbxSchedulePattern.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "LECTURE_ONLY", "LECTURE_LAB", "GE_PAIRED", "PE_PAIRED", "NSTP_BLOCK" }));
 
                 cbxDepartment.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
 
@@ -316,6 +379,10 @@ public class SubjectForm extends javax.swing.JDialog {
                                                                 .addComponent(jLabel4, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                                                 .addComponent(jLabel3, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                                                 .addComponent(spinnerUnit)
+                                                                .addComponent(jLabel6)
+                                                                .addComponent(spinnerEstimatedTime)
+                                                                .addComponent(jLabel9)
+                                                                .addComponent(cbxSchedulePattern, 0, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                                                 .addComponent(jLabel7)
                                                                 .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                                                                         .addGap(1, 1, 1)
@@ -346,6 +413,14 @@ public class SubjectForm extends javax.swing.JDialog {
                                 .addComponent(jLabel5)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(spinnerUnit, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jLabel6)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(spinnerEstimatedTime, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jLabel9)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(cbxSchedulePattern, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(jLabel7)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
@@ -419,16 +494,20 @@ public class SubjectForm extends javax.swing.JDialog {
         // Variables declaration - do not modify//GEN-BEGIN:variables
         private javax.swing.JButton btnCancel;
         private javax.swing.JButton btnSave;
+        private javax.swing.JComboBox<String> cbxSchedulePattern;
         private javax.swing.JComboBox<String> cbxDepartment;
         private javax.swing.JLabel jLabel1;
         private javax.swing.JLabel jLabel2;
         private javax.swing.JLabel jLabel3;
         private javax.swing.JLabel jLabel4;
         private javax.swing.JLabel jLabel5;
+        private javax.swing.JLabel jLabel6;
         private javax.swing.JLabel jLabel7;
         private javax.swing.JLabel jLabel8;
+        private javax.swing.JLabel jLabel9;
         private javax.swing.JPanel jPanel1;
         private javax.swing.JScrollPane jScrollPane1;
+        private javax.swing.JSpinner spinnerEstimatedTime;
         private javax.swing.JSpinner spinnerUnit;
         private javax.swing.JTextArea textAreaDescription;
         private javax.swing.JTextField txtSubjectCode;
