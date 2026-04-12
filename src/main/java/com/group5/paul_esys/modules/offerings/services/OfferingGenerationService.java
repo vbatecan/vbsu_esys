@@ -20,6 +20,7 @@ import org.slf4j.LoggerFactory;
 public class OfferingGenerationService {
 
   private static final OfferingGenerationService INSTANCE = new OfferingGenerationService();
+  private static final String ALL_OPTION = "ALL";
   private static final Logger logger = LoggerFactory.getLogger(OfferingGenerationService.class);
 
   private OfferingGenerationService() {
@@ -58,11 +59,7 @@ public class OfferingGenerationService {
       boolean includeWaitlistSections
   ) {
     List<OfferingGenerationPlanRow> planRows = new ArrayList<>();
-    if (enrollmentPeriodId == null
-        || curriculumId == null
-        || yearLevel == null
-        || semesterName == null
-        || semesterName.trim().isEmpty()) {
+    if (enrollmentPeriodId == null) {
       return planRows;
     }
 
@@ -72,9 +69,14 @@ public class OfferingGenerationService {
 
       try (PreparedStatement ps = conn.prepareStatement(sql)) {
         ps.setLong(1, enrollmentPeriodId);
-        ps.setLong(2, curriculumId);
-        ps.setInt(3, yearLevel);
-        ps.setString(4, semesterName.trim());
+        String normalizedSemesterName = normalizeFilterValue(semesterName);
+
+        bindOptionalLong(ps, 2, curriculumId);
+        bindOptionalLong(ps, 3, curriculumId);
+        bindOptionalInteger(ps, 4, yearLevel);
+        bindOptionalInteger(ps, 5, yearLevel);
+        bindOptionalString(ps, 6, normalizedSemesterName);
+        bindOptionalString(ps, 7, normalizedSemesterName);
 
         try (ResultSet rs = ps.executeQuery()) {
           while (rs.next()) {
@@ -238,9 +240,9 @@ public class OfferingGenerationService {
           ON o.subject_id = sub.id
          AND o.section_id = sec.id
          AND o.enrollment_period_id = ?
-        WHERE sem.curriculum_id = ?
-          AND sem.year_level = ?
-          AND UPPER(TRIM(sem.semester)) = UPPER(TRIM(?))
+        WHERE (? IS NULL OR sem.curriculum_id = ?)
+          AND (? IS NULL OR sem.year_level = ?)
+          AND (? IS NULL OR UPPER(TRIM(sem.semester)) = UPPER(TRIM(?)))
         """
     );
 
@@ -268,6 +270,46 @@ public class OfferingGenerationService {
     );
 
     return sql.toString();
+  }
+
+  private void bindOptionalLong(PreparedStatement ps, int index, Long value) throws SQLException {
+    if (value == null) {
+      ps.setNull(index, Types.BIGINT);
+      return;
+    }
+
+    ps.setLong(index, value);
+  }
+
+  private void bindOptionalInteger(PreparedStatement ps, int index, Integer value) throws SQLException {
+    if (value == null) {
+      ps.setNull(index, Types.INTEGER);
+      return;
+    }
+
+    ps.setInt(index, value);
+  }
+
+  private void bindOptionalString(PreparedStatement ps, int index, String value) throws SQLException {
+    if (value == null) {
+      ps.setNull(index, Types.VARCHAR);
+      return;
+    }
+
+    ps.setString(index, value);
+  }
+
+  private String normalizeFilterValue(String value) {
+    if (value == null) {
+      return null;
+    }
+
+    String normalized = value.trim();
+    if (normalized.isEmpty() || ALL_OPTION.equalsIgnoreCase(normalized)) {
+      return null;
+    }
+
+    return normalized;
   }
 
   private boolean hasSectionStatusColumn(Connection conn) {

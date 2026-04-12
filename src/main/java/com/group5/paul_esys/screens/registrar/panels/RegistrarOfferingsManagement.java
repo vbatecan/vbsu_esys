@@ -28,6 +28,8 @@ import javax.swing.table.DefaultTableModel;
  */
 public class RegistrarOfferingsManagement extends javax.swing.JPanel {
 
+  private static final String ALL_OPTION = "ALL";
+
   private final EnrollmentPeriodService enrollmentPeriodService = EnrollmentPeriodService.getInstance();
   private final CurriculumService curriculumService = CurriculumService.getInstance();
   private final SemesterService semesterService = SemesterService.getInstance();
@@ -137,15 +139,7 @@ public class RegistrarOfferingsManagement extends javax.swing.JPanel {
               enrollmentPeriodIdByLabel.put(label, period.getId());
             }
 
-            for (Curriculum curriculum : result.curriculums) {
-              if (curriculum.getId() == null) {
-                continue;
-              }
-
-              String label = buildCurriculumLabel(curriculum);
-              cbxCurriculum.addItem(label);
-              curriculumIdByLabel.put(label, curriculum.getId());
-            }
+            populateCurriculumOptions(result.curriculums);
 
             semestersByCurriculumId.clear();
             semestersByCurriculumId.putAll(result.semestersByCurriculumId);
@@ -196,6 +190,30 @@ public class RegistrarOfferingsManagement extends javax.swing.JPanel {
     return name + " (" + extractYear(curriculum.getCurYear()) + ")";
   }
 
+  private void populateCurriculumOptions(List<Curriculum> curriculums) {
+    Object selectedCurriculum = cbxCurriculum.getSelectedItem();
+    String selectedCurriculumLabel = selectedCurriculum == null ? null : selectedCurriculum.toString();
+
+    cbxCurriculum.removeAllItems();
+    cbxCurriculum.addItem(ALL_OPTION);
+
+    for (Curriculum curriculum : curriculums) {
+      if (curriculum.getId() == null) {
+        continue;
+      }
+
+      String label = buildCurriculumLabel(curriculum);
+      cbxCurriculum.addItem(label);
+      curriculumIdByLabel.put(label, curriculum.getId());
+    }
+
+    if (selectedCurriculumLabel != null && containsComboItem(cbxCurriculum, selectedCurriculumLabel)) {
+      cbxCurriculum.setSelectedItem(selectedCurriculumLabel);
+    } else {
+      cbxCurriculum.setSelectedItem(ALL_OPTION);
+    }
+  }
+
   private int extractYear(Date date) {
     if (date instanceof java.sql.Date sqlDate) {
       return sqlDate.toLocalDate().getYear();
@@ -208,16 +226,18 @@ public class RegistrarOfferingsManagement extends javax.swing.JPanel {
     suppressFilterEvents = true;
     try {
       Object selectedYear = cbxYearLevel.getSelectedItem();
+      String selectedYearLabel = selectedYear == null ? null : selectedYear.toString();
 
       cbxYearLevel.removeAllItems();
+      cbxYearLevel.addItem(ALL_OPTION);
       for (int yearLevel = 1; yearLevel <= 6; yearLevel++) {
         cbxYearLevel.addItem(String.valueOf(yearLevel));
       }
 
-      if (selectedYear != null && containsComboItem(cbxYearLevel, selectedYear.toString())) {
-        cbxYearLevel.setSelectedItem(selectedYear.toString());
+      if (selectedYearLabel != null && containsComboItem(cbxYearLevel, selectedYearLabel)) {
+        cbxYearLevel.setSelectedItem(selectedYearLabel);
       } else if (cbxYearLevel.getItemCount() > 0) {
-        cbxYearLevel.setSelectedIndex(0);
+        cbxYearLevel.setSelectedItem(ALL_OPTION);
       }
     } finally {
       suppressFilterEvents = false;
@@ -235,42 +255,62 @@ public class RegistrarOfferingsManagement extends javax.swing.JPanel {
   }
 
   private void refreshSemesterOptions() {
-    Object selectedCurriculum = cbxCurriculum.getSelectedItem();
-    Long curriculumId = selectedCurriculum == null ? null : curriculumIdByLabel.get(selectedCurriculum.toString());
+    Long curriculumId = getSelectedCurriculumId();
     Integer yearLevel = getSelectedYearLevel();
+    Object selectedSemester = cbxSemester.getSelectedItem();
+    String selectedSemesterLabel = selectedSemester == null ? null : selectedSemester.toString();
 
     suppressFilterEvents = true;
     try {
       cbxSemester.removeAllItems();
+      cbxSemester.addItem(ALL_OPTION);
 
-      if (curriculumId != null && yearLevel != null) {
-        List<Semester> semesters = semestersByCurriculumId.getOrDefault(curriculumId, List.of());
-        LinkedHashSet<String> semesterNames = new LinkedHashSet<>();
-
-        for (Semester semester : semesters) {
-          if (semester.getYearLevel() == null || !semester.getYearLevel().equals(yearLevel)) {
-            continue;
-          }
-
-          String semesterName = safeText(semester.getSemester(), "");
-          if (!semesterName.isEmpty()) {
-            semesterNames.add(semesterName);
-          }
-        }
-
-        for (String semesterName : semesterNames) {
-          cbxSemester.addItem(semesterName);
-        }
+      for (String semesterName : collectSemesterNames(curriculumId, yearLevel)) {
+        cbxSemester.addItem(semesterName);
       }
 
-      if (cbxSemester.getItemCount() > 0) {
-        cbxSemester.setSelectedIndex(0);
+      if (selectedSemesterLabel != null && containsComboItem(cbxSemester, selectedSemesterLabel)) {
+        cbxSemester.setSelectedItem(selectedSemesterLabel);
+      } else if (cbxSemester.getItemCount() > 0) {
+        cbxSemester.setSelectedItem(ALL_OPTION);
       }
     } finally {
       suppressFilterEvents = false;
     }
 
     clearPreview();
+  }
+
+  private LinkedHashSet<String> collectSemesterNames(Long curriculumId, Integer yearLevel) {
+    LinkedHashSet<String> semesterNames = new LinkedHashSet<>();
+
+    if (curriculumId != null) {
+      addSemesterNames(semesterNames, semestersByCurriculumId.getOrDefault(curriculumId, List.of()), yearLevel);
+      return semesterNames;
+    }
+
+    for (List<Semester> semesters : semestersByCurriculumId.values()) {
+      addSemesterNames(semesterNames, semesters, yearLevel);
+    }
+
+    return semesterNames;
+  }
+
+  private void addSemesterNames(
+      LinkedHashSet<String> semesterNames,
+      List<Semester> semesters,
+      Integer yearLevel
+  ) {
+    for (Semester semester : semesters) {
+      if (yearLevel != null && semester.getYearLevel() != null && !semester.getYearLevel().equals(yearLevel)) {
+        continue;
+      }
+
+      String semesterName = safeText(semester.getSemester(), "");
+      if (!semesterName.isEmpty()) {
+        semesterNames.add(semesterName);
+      }
+    }
   }
 
   private String safeText(String value, String fallback) {
@@ -280,6 +320,15 @@ public class RegistrarOfferingsManagement extends javax.swing.JPanel {
 
     String normalized = value.trim();
     return normalized.isEmpty() ? fallback : normalized;
+  }
+
+  private boolean isAllSelection(Object selectedItem) {
+    if (selectedItem == null) {
+      return true;
+    }
+
+    String value = selectedItem.toString().trim();
+    return value.isEmpty() || ALL_OPTION.equalsIgnoreCase(value);
   }
 
   private void previewGenerationPlan() {
@@ -292,36 +341,6 @@ public class RegistrarOfferingsManagement extends javax.swing.JPanel {
       JOptionPane.showMessageDialog(
           this,
           "Please select an enrollment period.",
-          "Preview Offerings",
-          JOptionPane.WARNING_MESSAGE
-      );
-      return;
-    }
-
-    if (curriculumId == null) {
-      JOptionPane.showMessageDialog(
-          this,
-          "Please select a curriculum.",
-          "Preview Offerings",
-          JOptionPane.WARNING_MESSAGE
-      );
-      return;
-    }
-
-    if (yearLevel == null) {
-      JOptionPane.showMessageDialog(
-          this,
-          "Please select a year level.",
-          "Preview Offerings",
-          JOptionPane.WARNING_MESSAGE
-      );
-      return;
-    }
-
-    if (semesterName == null || semesterName.isBlank()) {
-      JOptionPane.showMessageDialog(
-          this,
-          "Please select a semester.",
           "Preview Offerings",
           JOptionPane.WARNING_MESSAGE
       );
@@ -381,11 +400,7 @@ public class RegistrarOfferingsManagement extends javax.swing.JPanel {
     Integer yearLevel = getSelectedYearLevel();
     String semesterName = getSelectedSemesterName();
 
-    if (enrollmentPeriodId == null
-        || curriculumId == null
-        || yearLevel == null
-        || semesterName == null
-        || semesterName.isBlank()) {
+    if (enrollmentPeriodId == null) {
       previewGenerationPlan();
       return;
     }
@@ -482,7 +497,7 @@ public class RegistrarOfferingsManagement extends javax.swing.JPanel {
 
   private Long getSelectedCurriculumId() {
     Object selected = cbxCurriculum.getSelectedItem();
-    if (selected == null) {
+    if (isAllSelection(selected)) {
       return null;
     }
 
@@ -491,7 +506,7 @@ public class RegistrarOfferingsManagement extends javax.swing.JPanel {
 
   private Integer getSelectedYearLevel() {
     Object selected = cbxYearLevel.getSelectedItem();
-    if (selected == null) {
+    if (isAllSelection(selected)) {
       return null;
     }
 
@@ -504,7 +519,11 @@ public class RegistrarOfferingsManagement extends javax.swing.JPanel {
 
   private String getSelectedSemesterName() {
     Object selected = cbxSemester.getSelectedItem();
-    return selected == null ? null : selected.toString();
+    if (isAllSelection(selected)) {
+      return null;
+    }
+
+    return selected.toString();
   }
 
   private void populatePreviewTable() {
@@ -616,17 +635,17 @@ public class RegistrarOfferingsManagement extends javax.swing.JPanel {
 
                 jLabel5.setText("Curriculum");
 
-                cbxCurriculum.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "" }));
+                cbxCurriculum.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "ALL" }));
                 cbxCurriculum.addActionListener(this::cbxCurriculumActionPerformed);
 
                 jLabel6.setText("Year Level");
 
-                cbxYearLevel.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "" }));
+                cbxYearLevel.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "ALL" }));
                 cbxYearLevel.addActionListener(this::cbxYearLevelActionPerformed);
 
                 jLabel4.setText("Semester");
 
-                cbxSemester.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "" }));
+                cbxSemester.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "ALL" }));
                 cbxSemester.addActionListener(this::cbxSemesterActionPerformed);
 
                 btnRefresh.setBackground(new java.awt.Color(119, 0, 0));
@@ -662,14 +681,14 @@ public class RegistrarOfferingsManagement extends javax.swing.JPanel {
                                 "Subject Code", "Subject Name", "Section", "Capacity", "Semester Subject ID", "Already Exists"
                         }
                 ) {
-                        Class[] types = new Class [] {
+                  Class<?>[] types = new Class<?> [] {
                                 java.lang.String.class, java.lang.String.class, java.lang.String.class, java.lang.Object.class, java.lang.Object.class, java.lang.String.class
                         };
                         boolean[] canEdit = new boolean [] {
                                 false, false, false, false, false, false
                         };
 
-                        public Class getColumnClass(int columnIndex) {
+                  public Class<?> getColumnClass(int columnIndex) {
                                 return types [columnIndex];
                         }
 
