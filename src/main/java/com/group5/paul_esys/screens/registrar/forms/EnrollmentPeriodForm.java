@@ -7,11 +7,13 @@ package com.group5.paul_esys.screens.registrar.forms;
 import com.group5.paul_esys.modules.enrollment_period.model.EnrollmentPeriod;
 import com.group5.paul_esys.modules.enrollment_period.services.EnrollmentPeriodService;
 import com.group5.paul_esys.modules.enrollment_period.utils.EnrollmentPeriodUtils;
+import java.time.ZoneId;
 import java.util.Date;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import javax.swing.JFormattedTextField;
 import javax.swing.JOptionPane;
+import raven.datetime.DatePicker;
 
 /**
  *
@@ -25,6 +27,8 @@ public class EnrollmentPeriodForm extends javax.swing.JFrame {
         private final EnrollmentPeriodService enrollmentPeriodService = EnrollmentPeriodService.getInstance();
         private final EnrollmentPeriod editingEnrollmentPeriod;
         private final Runnable onSavedCallback;
+	private DatePicker startDatePicker = new DatePicker();
+	private DatePicker endDatePicker = new DatePicker();
 
 	/**
 	 * Creates new form EnrollmentPeriodF
@@ -43,9 +47,14 @@ public class EnrollmentPeriodForm extends javax.swing.JFrame {
                 initializeForm();
         }
 
+	private void configureFormattedTextFields(){
+
+		startDatePicker.setEditor(ftxtStartDate);
+		endDatePicker.setEditor(ftxtEndDate);
+	}
+
         private void initializeForm() {
-                configureDateSpinner(spinnerStartDate);
-                configureDateSpinner(spinnerEndDate);
+		this.configureFormattedTextFields();
 
                 if (editingEnrollmentPeriod == null) {
                         windowBar1.setTitle("Enrollment Period Form");
@@ -65,11 +74,19 @@ public class EnrollmentPeriodForm extends javax.swing.JFrame {
                 textAreaDescription.setText(EnrollmentPeriodUtils.safeText(editingEnrollmentPeriod.getDescription(), ""));
 
                 if (editingEnrollmentPeriod.getStartDate() != null) {
-                        spinnerStartDate.setValue(editingEnrollmentPeriod.getStartDate());
+                        startDatePicker.setSelectedDate(editingEnrollmentPeriod.getStartDate()
+			  .toInstant()
+			.atZone(ZoneId.systemDefault())
+			.toLocalDate()
+			);
                 }
 
                 if (editingEnrollmentPeriod.getEndDate() != null) {
-                        spinnerEndDate.setValue(editingEnrollmentPeriod.getEndDate());
+                        endDatePicker.setSelectedDate(editingEnrollmentPeriod.getEndDate()
+                          .toInstant()
+                        .atZone(ZoneId.systemDefault())
+                        .toLocalDate()
+                        );
                 }
         }
 
@@ -236,14 +253,14 @@ public class EnrollmentPeriodForm extends javax.swing.JFrame {
                 txtSemester = new javax.swing.JTextField();
                 jLabel4 = new javax.swing.JLabel();
                 jLabel5 = new javax.swing.JLabel();
-                spinnerStartDate = new javax.swing.JSpinner();
-                spinnerEndDate = new javax.swing.JSpinner();
                 jLabel6 = new javax.swing.JLabel();
                 jLabel7 = new javax.swing.JLabel();
                 jScrollPane1 = new javax.swing.JScrollPane();
                 textAreaDescription = new javax.swing.JTextArea();
                 btnSave = new javax.swing.JButton();
                 btnCanel = new javax.swing.JButton();
+                ftxtEndDate = new javax.swing.JFormattedTextField();
+                ftxtStartDate = new javax.swing.JFormattedTextField();
 
                 setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -274,12 +291,6 @@ public class EnrollmentPeriodForm extends javax.swing.JFrame {
                 jLabel5.setText("Start Date");
                 jPanel1.add(jLabel5, new org.netbeans.lib.awtextra.AbsoluteConstraints(54, 217, 243, -1));
 
-                spinnerStartDate.setModel(new javax.swing.SpinnerDateModel());
-                jPanel1.add(spinnerStartDate, new org.netbeans.lib.awtextra.AbsoluteConstraints(54, 240, 243, -1));
-
-                spinnerEndDate.setModel(new javax.swing.SpinnerDateModel());
-                jPanel1.add(spinnerEndDate, new org.netbeans.lib.awtextra.AbsoluteConstraints(54, 292, 243, -1));
-
                 jLabel6.setText("End Date");
                 jPanel1.add(jLabel6, new org.netbeans.lib.awtextra.AbsoluteConstraints(54, 269, 243, -1));
 
@@ -308,6 +319,8 @@ public class EnrollmentPeriodForm extends javax.swing.JFrame {
                 btnCanel.setText("Cancel");
                 btnCanel.addActionListener(this::btnCanelActionPerformed);
                 jPanel1.add(btnCanel, new org.netbeans.lib.awtextra.AbsoluteConstraints(91, 441, -1, -1));
+                jPanel1.add(ftxtEndDate, new org.netbeans.lib.awtextra.AbsoluteConstraints(55, 290, 240, -1));
+                jPanel1.add(ftxtStartDate, new org.netbeans.lib.awtextra.AbsoluteConstraints(55, 240, 240, -1));
 
                 javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
                 getContentPane().setLayout(layout);
@@ -370,6 +383,8 @@ public class EnrollmentPeriodForm extends javax.swing.JFrame {
         // Variables declaration - do not modify//GEN-BEGIN:variables
         private javax.swing.JButton btnCanel;
         private javax.swing.JButton btnSave;
+        private javax.swing.JFormattedTextField ftxtEndDate;
+        private javax.swing.JFormattedTextField ftxtStartDate;
         private javax.swing.JLabel jLabel1;
         private javax.swing.JLabel jLabel2;
         private javax.swing.JLabel jLabel3;
@@ -379,8 +394,6 @@ public class EnrollmentPeriodForm extends javax.swing.JFrame {
         private javax.swing.JLabel jLabel7;
         private javax.swing.JPanel jPanel1;
         private javax.swing.JScrollPane jScrollPane1;
-        private javax.swing.JSpinner spinnerEndDate;
-        private javax.swing.JSpinner spinnerStartDate;
         private javax.swing.JTextArea textAreaDescription;
         private javax.swing.JTextField txtSchoolYear;
         private javax.swing.JTextField txtSemester;
