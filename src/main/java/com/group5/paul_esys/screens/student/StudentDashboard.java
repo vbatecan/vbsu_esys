@@ -11,17 +11,25 @@ import com.group5.paul_esys.modules.enrollment_period.model.EnrollmentPeriod;
 import com.group5.paul_esys.modules.enrollment_period.services.EnrollmentPeriodService;
 import com.group5.paul_esys.modules.enrollments.model.Enrollment;
 import com.group5.paul_esys.modules.enrollments.model.EnrollmentDetail;
+import com.group5.paul_esys.modules.enrollments.model.StudentEnrolledSubject;
+import com.group5.paul_esys.modules.enrollments.model.StudentSemesterProgress;
 import com.group5.paul_esys.modules.enrollments.services.EnrollmentDetailService;
 import com.group5.paul_esys.modules.enrollments.services.EnrollmentService;
-import com.group5.paul_esys.modules.enrollments.services.StudentEnrollmentEligibilityService;
+import com.group5.paul_esys.modules.enrollments.services.StudentSemesterProgressService;
 import com.group5.paul_esys.modules.enrollments.services.StudentEnrolledSubjectService;
+import com.group5.paul_esys.modules.enrollments.services.StudentEnrollmentEligibilityService;
 import com.group5.paul_esys.modules.enums.EnrollmentDetailStatus;
 import com.group5.paul_esys.modules.enums.EnrollmentStatus;
+import com.group5.paul_esys.modules.enums.SemesterProgressStatus;
 import com.group5.paul_esys.modules.enums.StudentEnrolledSubjectStatus;
 import com.group5.paul_esys.modules.offerings.model.Offering;
 import com.group5.paul_esys.modules.offerings.services.OfferingService;
 import com.group5.paul_esys.modules.rooms.model.Room;
 import com.group5.paul_esys.modules.rooms.services.RoomService;
+import com.group5.paul_esys.modules.semester.model.Semester;
+import com.group5.paul_esys.modules.semester.services.SemesterService;
+import com.group5.paul_esys.modules.semester_subjects.model.SemesterSubject;
+import com.group5.paul_esys.modules.semester_subjects.services.SemesterSubjectService;
 import com.group5.paul_esys.modules.schedules.model.Schedule;
 import com.group5.paul_esys.modules.schedules.services.ScheduleService;
 import com.group5.paul_esys.modules.sections.model.Section;
@@ -31,8 +39,8 @@ import com.group5.paul_esys.modules.subjects.model.Subject;
 import com.group5.paul_esys.modules.subjects.services.SubjectService;
 import com.group5.paul_esys.modules.users.services.UserSession;
 import com.group5.paul_esys.screens.sign_in.SignIn;
-
 import java.awt.*;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
@@ -44,6 +52,7 @@ import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.time.format.DateTimeFormatter;
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import javax.swing.table.TableColumn;
@@ -61,16 +70,76 @@ public class StudentDashboard extends javax.swing.JFrame {
         private static final int CATALOG_COL_OFFERING_ID = 7;
         private static final int CATALOG_COL_SUBJECT_ID = 8;
         private static final float MAX_ENROLLMENT_UNITS = 24.0f;
+        private static final DateTimeFormatter PROGRESS_TIMESTAMP_FORMATTER = DateTimeFormatter.ofPattern("MMM d, yyyy h:mm a");
 
 	private Student currentStudent;
         private final DefaultListModel<String> selectedSubjectsModel = new DefaultListModel<>();
+        private final StudentEnrolledSubjectService studentEnrolledSubjectService = StudentEnrolledSubjectService.getInstance();
+        private final StudentSemesterProgressService semesterProgressService = StudentSemesterProgressService.getInstance();
+        private final SemesterService semesterService = SemesterService.getInstance();
+        private final SemesterSubjectService semesterSubjectService = SemesterSubjectService.getInstance();
+        private final DefaultTableModel semesterProgressModel = new DefaultTableModel(
+                new Object[][]{},
+                new String[]{"Semester", "Year Level", "Status", "Started At", "Completed At"}
+        ) {
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                        return false;
+                }
+
+                @Override
+                public Class<?> getColumnClass(int columnIndex) {
+                        return String.class;
+                }
+        };
+        private final DefaultTableModel completedSubjectsModel = new DefaultTableModel(
+                new Object[][]{},
+                new String[]{"Code", "Subject", "Units", "Semester", "Completed At"}
+        ) {
+                @Override
+                public boolean isCellEditable(int row, int column) {
+                        return false;
+                }
+
+                @Override
+                public Class<?> getColumnClass(int columnIndex) {
+                        return String.class;
+                }
+        };
         private boolean hasActiveEnrollmentPeriod;
                                 private int activeBackgroundTasks;
+
+        private JTable tableSemesterProgress;
+        private JTable tableCompletedSubjects;
+        private JPanel panelSemesterProgressHeader;
+        private JLabel lblSemesterProgressTitle;
+        private JLabel lblSemesterProgressSubtitle;
+        private JScrollPane semesterProgressScrollPane;
+        private JPanel panelCompletedSubjectsHeader;
+        private JLabel lblCompletedSubjectsTitle;
+        private JLabel lblCompletedSubjectsSubtitle;
+        private JScrollPane completedSubjectsScrollPane;
+        private JLabel lblSemesterProgressSummary;
+        private JLabel lblCompletedSubjectsSummary;
+        private JPanel panelSemesterProgress;
+        private JPanel panelCompletedSubjects;
 
                                 private record SubjectCatalogSnapshot(
                                         boolean activeEnrollmentPeriod,
                                         String announcementText,
                                         String catalogLabel,
+                                        List<Object[]> rows
+                                ) {
+                                }
+
+                                private record SemesterProgressSnapshot(
+                                        String summaryText,
+                                        List<Object[]> rows
+                                ) {
+                                }
+
+                                private record CompletedSubjectsSnapshot(
+                                        String summaryText,
                                         List<Object[]> rows
                                 ) {
                                 }
@@ -125,6 +194,8 @@ public class StudentDashboard extends javax.swing.JFrame {
                 initStudentData(currentStudent);
                 loadSubjectCatalogAsync(txtSearch.getText());
                 loadMySchedule();
+                loadSemesterProgress();
+                loadCompletedSubjects();
         }
 
         private void beginBackgroundTask() {
@@ -270,6 +341,409 @@ public class StudentDashboard extends javax.swing.JFrame {
         private void configureSelectedSubjectsPanel() {
                 jList1.setModel(selectedSubjectsModel);
                 refreshSelectedSubjectsPreview();
+        }
+
+        private void configureSemesterProgressTab() {
+                if (panelSemesterProgress == null) {
+                        panelSemesterProgress = new JPanel(new BorderLayout(0, 12));
+                        panelSemesterProgress.setBackground(Color.WHITE);
+                        panelSemesterProgress.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+                }
+
+                if (tableSemesterProgress != null) {
+                        tableSemesterProgress.setModel(semesterProgressModel);
+                        tableSemesterProgress.setRowHeight(26);
+                        tableSemesterProgress.setFillsViewportHeight(true);
+                        tableSemesterProgress.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+                        tableSemesterProgress.setAutoCreateRowSorter(false);
+                }
+
+                if (panelSemesterProgressHeader != null) {
+                        panelSemesterProgressHeader.setOpaque(false);
+                }
+
+                if (lblSemesterProgressTitle != null) {
+                        lblSemesterProgressTitle.setText("Semester Progress");
+                }
+
+                if (lblSemesterProgressSubtitle != null) {
+                        lblSemesterProgressSubtitle.setText("Track derived semester status from enrollment and completion records.");
+                }
+
+                if (semesterProgressScrollPane != null) {
+                        semesterProgressScrollPane.setBorder(BorderFactory.createLineBorder(new Color(225, 225, 225)));
+                }
+
+                if (panelSemesterProgress.getComponentCount() > 0) {
+                        if (tabbedPane.indexOfComponent(panelSemesterProgress) == -1) {
+                                tabbedPane.addTab("Semester Progress", panelSemesterProgress);
+                        }
+                        return;
+                }
+
+                JLabel lblTitle = new JLabel("Semester Progress");
+                lblTitle.setFont(new Font("Poppins", Font.BOLD, 22));
+
+                JLabel lblSubtitle = new JLabel("Track derived semester status from enrollment and completion records.");
+                lblSubtitle.setFont(new Font("Poppins", Font.PLAIN, 12));
+                lblSubtitle.setForeground(new Color(120, 120, 120));
+
+                JPanel headerPanel = new JPanel(new BorderLayout(0, 4));
+                headerPanel.setOpaque(false);
+                headerPanel.add(lblTitle, BorderLayout.NORTH);
+                headerPanel.add(lblSubtitle, BorderLayout.CENTER);
+
+                lblSemesterProgressSummary = new JLabel("Loading semester progress...");
+                lblSemesterProgressSummary.setFont(new Font("Poppins", Font.PLAIN, 13));
+                lblSemesterProgressSummary.setForeground(new Color(95, 95, 95));
+
+                JPanel summaryPanel = new JPanel(new BorderLayout());
+                summaryPanel.setOpaque(false);
+                summaryPanel.add(lblSemesterProgressSummary, BorderLayout.WEST);
+
+                tableSemesterProgress = new JTable();
+                tableSemesterProgress.setModel(semesterProgressModel);
+                tableSemesterProgress.setRowHeight(26);
+                tableSemesterProgress.setFillsViewportHeight(true);
+                tableSemesterProgress.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+                tableSemesterProgress.setAutoCreateRowSorter(false);
+
+                JScrollPane semesterProgressScrollPane = new JScrollPane(tableSemesterProgress);
+                semesterProgressScrollPane.setBorder(BorderFactory.createLineBorder(new Color(225, 225, 225)));
+
+                JPanel topPanel = new JPanel(new BorderLayout(0, 8));
+                topPanel.setOpaque(false);
+                topPanel.add(headerPanel, BorderLayout.NORTH);
+                topPanel.add(summaryPanel, BorderLayout.CENTER);
+
+                panelSemesterProgress.add(topPanel, BorderLayout.NORTH);
+                panelSemesterProgress.add(semesterProgressScrollPane, BorderLayout.CENTER);
+
+                if (tabbedPane.indexOfComponent(panelSemesterProgress) == -1) {
+                        tabbedPane.addTab("Semester Progress", panelSemesterProgress);
+                }
+        }
+
+        private void configureCompletedSubjectsTab() {
+                if (panelCompletedSubjects == null) {
+                        panelCompletedSubjects = new JPanel(new BorderLayout(0, 12));
+                        panelCompletedSubjects.setBackground(Color.WHITE);
+                        panelCompletedSubjects.setBorder(BorderFactory.createEmptyBorder(16, 16, 16, 16));
+                }
+
+                if (tableCompletedSubjects != null) {
+                        tableCompletedSubjects.setModel(completedSubjectsModel);
+                        tableCompletedSubjects.setRowHeight(26);
+                        tableCompletedSubjects.setFillsViewportHeight(true);
+                        tableCompletedSubjects.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+                        tableCompletedSubjects.setAutoCreateRowSorter(false);
+                }
+
+                if (panelCompletedSubjectsHeader != null) {
+                        panelCompletedSubjectsHeader.setOpaque(false);
+                }
+
+                if (lblCompletedSubjectsTitle != null) {
+                        lblCompletedSubjectsTitle.setText("Completed Subjects");
+                }
+
+                if (lblCompletedSubjectsSubtitle != null) {
+                        lblCompletedSubjectsSubtitle.setText("Subjects marked completed from the student's enrollment history.");
+                }
+
+                if (completedSubjectsScrollPane != null) {
+                        completedSubjectsScrollPane.setBorder(BorderFactory.createLineBorder(new Color(225, 225, 225)));
+                }
+
+                if (panelCompletedSubjects.getComponentCount() > 0) {
+                        if (tabbedPane.indexOfComponent(panelCompletedSubjects) == -1) {
+                                tabbedPane.addTab("Completed Subjects", panelCompletedSubjects);
+                        }
+                        return;
+                }
+
+                JLabel lblTitle = new JLabel("Completed Subjects");
+                lblTitle.setFont(new Font("Poppins", Font.BOLD, 22));
+
+                JLabel lblSubtitle = new JLabel("Subjects marked completed from the student's enrollment history.");
+                lblSubtitle.setFont(new Font("Poppins", Font.PLAIN, 12));
+                lblSubtitle.setForeground(new Color(120, 120, 120));
+
+                JPanel headerPanel = new JPanel(new BorderLayout(0, 4));
+                headerPanel.setOpaque(false);
+                headerPanel.add(lblTitle, BorderLayout.NORTH);
+                headerPanel.add(lblSubtitle, BorderLayout.CENTER);
+
+                lblCompletedSubjectsSummary = new JLabel("Loading completed subjects...");
+                lblCompletedSubjectsSummary.setFont(new Font("Poppins", Font.PLAIN, 13));
+                lblCompletedSubjectsSummary.setForeground(new Color(95, 95, 95));
+
+                JPanel summaryPanel = new JPanel(new BorderLayout());
+                summaryPanel.setOpaque(false);
+                summaryPanel.add(lblCompletedSubjectsSummary, BorderLayout.WEST);
+
+                tableCompletedSubjects = new JTable();
+                tableCompletedSubjects.setModel(completedSubjectsModel);
+                tableCompletedSubjects.setRowHeight(26);
+                tableCompletedSubjects.setFillsViewportHeight(true);
+                tableCompletedSubjects.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+                tableCompletedSubjects.setAutoCreateRowSorter(false);
+
+                JScrollPane completedSubjectsScrollPane = new JScrollPane(tableCompletedSubjects);
+                completedSubjectsScrollPane.setBorder(BorderFactory.createLineBorder(new Color(225, 225, 225)));
+
+                JPanel topPanel = new JPanel(new BorderLayout(0, 8));
+                topPanel.setOpaque(false);
+                topPanel.add(headerPanel, BorderLayout.NORTH);
+                topPanel.add(summaryPanel, BorderLayout.CENTER);
+
+                panelCompletedSubjects.add(topPanel, BorderLayout.NORTH);
+                panelCompletedSubjects.add(completedSubjectsScrollPane, BorderLayout.CENTER);
+
+                if (tabbedPane.indexOfComponent(panelCompletedSubjects) == -1) {
+                        tabbedPane.addTab("Completed Subjects", panelCompletedSubjects);
+                }
+        }
+
+        private void loadSemesterProgress() {
+                executeDatabaseTask(
+                        this::fetchSemesterProgressSnapshot,
+                        this::applySemesterProgressSnapshot,
+                        "Failed to load semester progress."
+                );
+        }
+
+        private void loadCompletedSubjects() {
+                executeDatabaseTask(
+                        this::fetchCompletedSubjectsSnapshot,
+                        this::applyCompletedSubjectsSnapshot,
+                        "Failed to load completed subjects."
+                );
+        }
+
+        private SemesterProgressSnapshot fetchSemesterProgressSnapshot() {
+                List<Object[]> rows = new ArrayList<>();
+                if (currentStudent == null || currentStudent.getStudentId() == null || currentStudent.getStudentId().isBlank()) {
+                        return new SemesterProgressSnapshot("No student profile is available.", rows);
+                }
+
+                List<StudentSemesterProgress> progressRecords = semesterProgressService.getProgressByStudent(currentStudent.getStudentId());
+                if (progressRecords.isEmpty()) {
+                        return new SemesterProgressSnapshot("No semester progress has been recorded yet.", rows);
+                }
+
+                Map<Long, Semester> semesterById = new HashMap<>();
+                if (currentStudent.getCurriculumId() != null) {
+                        for (Semester semester : semesterService.getSemestersByCurriculum(currentStudent.getCurriculumId())) {
+                                if (semester.getId() != null) {
+                                        semesterById.put(semester.getId(), semester);
+                                }
+                        }
+                }
+
+                int completedCount = 0;
+                int inProgressCount = 0;
+                int notStartedCount = 0;
+
+                for (StudentSemesterProgress progress : progressRecords) {
+                        Semester semester = null;
+                        if (progress.getSemesterId() != null) {
+                                semester = semesterById.get(progress.getSemesterId());
+                                if (semester == null) {
+                                        semester = semesterService.getSemesterById(progress.getSemesterId()).orElse(null);
+                                }
+                        }
+
+                        String semesterLabel = buildSemesterLabel(semester, progress.getSemesterId());
+                        String yearLevelLabel = semester == null || semester.getYearLevel() == null
+                                ? "N/A"
+                                : String.valueOf(semester.getYearLevel());
+                        String statusLabel = progress.getStatus() == null
+                                ? SemesterProgressStatus.NOT_STARTED.name().replace('_', ' ')
+                                : progress.getStatus().name().replace('_', ' ');
+
+                        if (progress.getStatus() == SemesterProgressStatus.COMPLETED) {
+                                completedCount++;
+                        } else if (progress.getStatus() == SemesterProgressStatus.IN_PROGRESS) {
+                                inProgressCount++;
+                        } else {
+                                notStartedCount++;
+                        }
+
+                        rows.add(new Object[]{
+                                semesterLabel,
+                                yearLevelLabel,
+                                statusLabel,
+                                formatTimestamp(progress.getStartedAt()),
+                                formatTimestamp(progress.getCompletedAt())
+                        });
+                }
+
+                String summary = "Completed: " + completedCount
+                        + " | In Progress: " + inProgressCount
+                        + " | Not Started: " + notStartedCount;
+                return new SemesterProgressSnapshot(summary, rows);
+        }
+
+        private void applySemesterProgressSnapshot(SemesterProgressSnapshot snapshot) {
+                semesterProgressModel.setRowCount(0);
+                for (Object[] row : snapshot.rows()) {
+                        semesterProgressModel.addRow(row);
+                }
+
+                if (lblSemesterProgressSummary != null) {
+                        lblSemesterProgressSummary.setText(snapshot.summaryText());
+                }
+        }
+
+        private CompletedSubjectsSnapshot fetchCompletedSubjectsSnapshot() {
+                List<Object[]> rows = new ArrayList<>();
+                if (currentStudent == null || currentStudent.getStudentId() == null || currentStudent.getStudentId().isBlank()) {
+                        return new CompletedSubjectsSnapshot("No student profile is available.", rows);
+                }
+
+                List<StudentEnrolledSubject> completedSubjects = studentEnrolledSubjectService.getByStudent(currentStudent.getStudentId())
+                        .stream()
+                        .filter(subject -> subject.getStatus() == StudentEnrolledSubjectStatus.COMPLETED)
+                        .toList();
+
+                if (completedSubjects.isEmpty()) {
+                        return new CompletedSubjectsSnapshot("No completed subjects have been recorded yet.", rows);
+                }
+
+                Map<Long, Semester> semesterById = new HashMap<>();
+                if (currentStudent.getCurriculumId() != null) {
+                        for (Semester semester : semesterService.getSemestersByCurriculum(currentStudent.getCurriculumId())) {
+                                if (semester.getId() != null) {
+                                        semesterById.put(semester.getId(), semester);
+                                }
+                        }
+                }
+
+                Map<Long, SemesterSubject> semesterSubjectCache = new HashMap<>();
+                Map<Long, Subject> subjectCache = new HashMap<>();
+
+                for (StudentEnrolledSubject completedSubject : completedSubjects) {
+                        SemesterSubject semesterSubject = null;
+                        if (completedSubject.getSemesterSubjectId() != null) {
+                                semesterSubject = semesterSubjectCache.computeIfAbsent(
+                                        completedSubject.getSemesterSubjectId(),
+                                        id -> semesterSubjectService.getSemesterSubjectById(id).orElse(null)
+                                );
+                        }
+
+                        Semester semester = null;
+                        if (semesterSubject != null && semesterSubject.getSemesterId() != null) {
+                                semester = semesterById.get(semesterSubject.getSemesterId());
+                                if (semester == null) {
+                                        semester = semesterService.getSemesterById(semesterSubject.getSemesterId()).orElse(null);
+                                }
+                        }
+
+                        Subject subject = null;
+                        if (semesterSubject != null && semesterSubject.getSubjectId() != null) {
+                                subject = subjectCache.computeIfAbsent(
+                                        semesterSubject.getSubjectId(),
+                                        id -> SubjectService.getInstance().getSubjectById(id).orElse(null)
+                                );
+                        }
+
+                        rows.add(buildCompletedSubjectRow(completedSubject, semesterSubject, semester, subject));
+                }
+
+                String summary = "Completed subjects: " + rows.size();
+                return new CompletedSubjectsSnapshot(summary, rows);
+        }
+
+        private void applyCompletedSubjectsSnapshot(CompletedSubjectsSnapshot snapshot) {
+                completedSubjectsModel.setRowCount(0);
+                for (Object[] row : snapshot.rows()) {
+                        completedSubjectsModel.addRow(row);
+                }
+
+                if (lblCompletedSubjectsSummary != null) {
+                        lblCompletedSubjectsSummary.setText(snapshot.summaryText());
+                }
+        }
+
+        private Object[] buildCompletedSubjectRow(
+                StudentEnrolledSubject completedSubject,
+                SemesterSubject semesterSubject,
+                Semester semester,
+                Subject subject
+        ) {
+                String subjectCode = subject == null ? "N/A" : safeText(subject.getSubjectCode(), "N/A");
+                String subjectName = subject == null ? "N/A" : safeText(subject.getSubjectName(), "N/A");
+                String units = subject == null ? formatUnits(0.0f) : formatUnits(subject.getUnits() == null ? 0.0f : subject.getUnits());
+                Long semesterId = semesterSubject == null ? null : semesterSubject.getSemesterId();
+                String semesterLabel = buildSemesterLabel(semester, semesterId);
+                Timestamp completedAt = completedSubject.getUpdatedAt() != null ? completedSubject.getUpdatedAt() : completedSubject.getCreatedAt();
+
+                return new Object[]{
+                        subjectCode,
+                        subjectName,
+                        units,
+                        semesterLabel,
+                        formatTimestamp(completedAt)
+                };
+        }
+
+        private String buildSemesterLabel(Semester semester, Long semesterId) {
+                if (semester == null) {
+                        return semesterId == null ? "N/A" : "Semester ID " + semesterId;
+                }
+
+                String semesterName = safeText(semester.getSemester(), "N/A");
+                String yearLevel = semester.getYearLevel() == null ? "N/A" : String.valueOf(semester.getYearLevel());
+                return semesterName + " | Year " + yearLevel;
+        }
+
+        private String formatTimestamp(Timestamp timestamp) {
+                if (timestamp == null) {
+                        return "N/A";
+                }
+
+                return PROGRESS_TIMESTAMP_FORMATTER.format(timestamp.toLocalDateTime());
+        }
+
+        private void updateSemesterLabel(Enrollment enrollment) {
+                if (enrollment == null || enrollment.getEnrollmentPeriodId() == null) {
+                        txtSemester.setText(resolveCurrentOrLatestSemesterLabel());
+                        return;
+                }
+
+                EnrollmentPeriodService.getInstance()
+                        .getEnrollmentPeriodById(enrollment.getEnrollmentPeriodId())
+                        .ifPresentOrElse(
+                                period -> txtSemester.setText(buildEnrollmentPeriodLabel(period)),
+                                () -> txtSemester.setText(resolveCurrentOrLatestSemesterLabel())
+                        );
+        }
+
+        private String resolveLatestSemesterLabel(String studentId) {
+                if (studentId == null || studentId.isBlank()) {
+                        return resolveCurrentOrLatestSemesterLabel();
+                }
+
+                List<Enrollment> enrollments = EnrollmentService.getInstance().getEnrollmentsByStudent(studentId);
+                if (enrollments != null && !enrollments.isEmpty()) {
+                        Enrollment latest = enrollments.get(0);
+                        if (latest != null && latest.getEnrollmentPeriodId() != null) {
+                                Optional<EnrollmentPeriod> period = EnrollmentPeriodService.getInstance().getEnrollmentPeriodById(latest.getEnrollmentPeriodId());
+                                if (period.isPresent()) {
+                                        return buildEnrollmentPeriodLabel(period.get());
+                                }
+                        }
+                }
+
+                return resolveCurrentOrLatestSemesterLabel();
+        }
+
+        private String resolveCurrentOrLatestSemesterLabel() {
+                return EnrollmentPeriodService.getInstance()
+                        .getCurrentOrLatestEnrollmentPeriod()
+                        .map(this::buildEnrollmentPeriodLabel)
+                        .orElse("N/A");
         }
 
         private void hideTableColumn(JTable table, int columnIndex) {
@@ -557,6 +1031,7 @@ public class StudentDashboard extends javax.swing.JFrame {
 		txtBirthDate.setText(student.getBirthdate() != null ? student.getBirthdate().toString() : "");
 		txtStudentStatus.setText(student.getStudentStatus().toString());
 		txtYearLevel.setText(student.getYearLevel() != null ? student.getYearLevel().toString() : "");
+                txtSemester.setText(resolveLatestSemesterLabel(student.getStudentId()));
                 txtCourse.setText("N/A");
 
 		Optional<Course> course = CourseService.getInstance().getCourseById(student.getCourseId());
@@ -565,6 +1040,7 @@ public class StudentDashboard extends javax.swing.JFrame {
 		List<Enrollment> enrollments = EnrollmentService.getInstance().getEnrollmentsByStudent(student.getStudentId());
 		if (enrollments != null && !enrollments.isEmpty()) {
                         Enrollment latest = enrollments.get(0);
+                        updateSemesterLabel(latest);
                         txtEnrollmentStatus.setText(safeText(latest.getStatus() == null ? null : latest.getStatus().name(), "NOT ENROLLED"));
                         txtTotalUnits.setText(formatUnits(latest.getTotalUnits() == null ? 0.0f : latest.getTotalUnits()));
 
@@ -712,6 +1188,8 @@ public class StudentDashboard extends javax.swing.JFrame {
                 jLabel29 = new javax.swing.JLabel();
                 txtSections = new javax.swing.JTextField();
                 jLabel30 = new javax.swing.JLabel();
+                txtSemester = new javax.swing.JTextField();
+                jLabel31 = new javax.swing.JLabel();
                 panelEnrollmentProgress = new javax.swing.JPanel();
                 pBarRegistration = new javax.swing.JProgressBar();
                 jLabel5 = new javax.swing.JLabel();
@@ -862,6 +1340,13 @@ public class StudentDashboard extends javax.swing.JFrame {
                 jLabel30.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
                 jLabel30.setText("Current Section");
 
+                txtSemester.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
+                txtSemester.setText("1st Semester");
+                txtSemester.setBorder(new com.group5.paul_esys.ui.TextFieldRoundBorder());
+
+                jLabel31.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
+                jLabel31.setText("Semester");
+
                 javax.swing.GroupLayout panelAcademicOverviewLayout = new javax.swing.GroupLayout(panelAcademicOverview);
                 panelAcademicOverview.setLayout(panelAcademicOverviewLayout);
                 panelAcademicOverviewLayout.setHorizontalGroup(
@@ -902,38 +1387,49 @@ public class StudentDashboard extends javax.swing.JFrame {
                                                                         .addComponent(jLabel19, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                                                                         .addComponent(txtEmailAddress))))
                                                 .addGap(35, 35, 35))
-                                        .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                                .addGroup(panelAcademicOverviewLayout.createSequentialGroup()
-                                                        .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                                                                .addComponent(jLabel25, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 205, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                                .addComponent(txtCourse)
-                                                                .addComponent(jLabel23, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
-                                                                .addComponent(txtBirthDate, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 501, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                        .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
-                                                                .addComponent(jLabel26, javax.swing.GroupLayout.PREFERRED_SIZE, 198, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panelAcademicOverviewLayout.createSequentialGroup()
-                                                                        .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                                                                                .addComponent(txtYearLevel, javax.swing.GroupLayout.Alignment.LEADING)
-                                                                                .addComponent(jLabel24, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.DEFAULT_SIZE, 501, Short.MAX_VALUE)
-                                                                                .addComponent(txtStudentStatus, javax.swing.GroupLayout.Alignment.LEADING))
-                                                                        .addContainerGap())))
-                                                .addGroup(javax.swing.GroupLayout.Alignment.LEADING, panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
+                                        .addGroup(panelAcademicOverviewLayout.createSequentialGroup()
+                                                .addGap(0, 0, Short.MAX_VALUE)
+                                                .addComponent(jLabel25, javax.swing.GroupLayout.PREFERRED_SIZE, 205, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addGap(809, 809, 809))
+                                        .addGroup(panelAcademicOverviewLayout.createSequentialGroup()
+                                                .addComponent(txtCourse, javax.swing.GroupLayout.PREFERRED_SIZE, 290, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                                .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                        .addComponent(jLabel26, javax.swing.GroupLayout.PREFERRED_SIZE, 198, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                        .addComponent(txtYearLevel, javax.swing.GroupLayout.PREFERRED_SIZE, 334, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                        .addComponent(jLabel31, javax.swing.GroupLayout.PREFERRED_SIZE, 198, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                        .addGroup(panelAcademicOverviewLayout.createSequentialGroup()
+                                                                .addComponent(txtSemester)
+                                                                .addGap(36, 36, 36))))
+                                        .addGroup(panelAcademicOverviewLayout.createSequentialGroup()
+                                                .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                                         .addGroup(panelAcademicOverviewLayout.createSequentialGroup()
                                                                 .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
-                                                                        .addGroup(panelAcademicOverviewLayout.createSequentialGroup()
-                                                                                .addComponent(jLabel30, javax.swing.GroupLayout.PREFERRED_SIZE, 296, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                                                .addGap(203, 203, 203))
-                                                                        .addComponent(txtSections))
+                                                                        .addComponent(jLabel23, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                                                        .addComponent(txtBirthDate, javax.swing.GroupLayout.Alignment.LEADING, javax.swing.GroupLayout.PREFERRED_SIZE, 501, javax.swing.GroupLayout.PREFERRED_SIZE))
                                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                                .addComponent(txtEnrollmentStatus, javax.swing.GroupLayout.PREFERRED_SIZE, 502, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                                        .addGroup(javax.swing.GroupLayout.Alignment.LEADING, panelAcademicOverviewLayout.createSequentialGroup()
-                                                                .addComponent(txtTotalSubjects, javax.swing.GroupLayout.PREFERRED_SIZE, 500, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                                .addGap(9, 9, 9)
-                                                                .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
-                                                                        .addComponent(jLabel29, javax.swing.GroupLayout.PREFERRED_SIZE, 185, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                                        .addComponent(txtTotalUnits)
-                                                                        .addComponent(jLabel28, javax.swing.GroupLayout.DEFAULT_SIZE, 499, Short.MAX_VALUE)))))))
+                                                                .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                                        .addComponent(jLabel24, javax.swing.GroupLayout.PREFERRED_SIZE, 471, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                        .addComponent(txtStudentStatus)))
+                                                        .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                                                .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, panelAcademicOverviewLayout.createSequentialGroup()
+                                                                        .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING, false)
+                                                                                .addGroup(panelAcademicOverviewLayout.createSequentialGroup()
+                                                                                        .addComponent(jLabel30, javax.swing.GroupLayout.PREFERRED_SIZE, 296, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                                        .addGap(203, 203, 203))
+                                                                                .addComponent(txtSections))
+                                                                        .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                                        .addComponent(txtEnrollmentStatus, javax.swing.GroupLayout.PREFERRED_SIZE, 502, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                                                .addGroup(panelAcademicOverviewLayout.createSequentialGroup()
+                                                                        .addComponent(txtTotalSubjects, javax.swing.GroupLayout.PREFERRED_SIZE, 500, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                        .addGap(9, 9, 9)
+                                                                        .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
+                                                                                .addComponent(jLabel29, javax.swing.GroupLayout.PREFERRED_SIZE, 185, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                                                .addComponent(jLabel28, javax.swing.GroupLayout.DEFAULT_SIZE, 499, Short.MAX_VALUE)
+                                                                                .addComponent(txtTotalUnits)))))
+                                                .addGap(36, 36, 36))))
                 );
                 panelAcademicOverviewLayout.setVerticalGroup(
                         panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
@@ -965,46 +1461,48 @@ public class StudentDashboard extends javax.swing.JFrame {
                                                 .addComponent(txtFirstName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                 .addComponent(txtMiddleName, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
+                                .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING, false)
                                         .addGroup(panelAcademicOverviewLayout.createSequentialGroup()
                                                 .addComponent(jLabel23)
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                                 .addComponent(txtBirthDate, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.TRAILING)
-                                                        .addGroup(panelAcademicOverviewLayout.createSequentialGroup()
-                                                                .addComponent(jLabel25)
-                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                                .addComponent(txtCourse, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                                        .addGroup(panelAcademicOverviewLayout.createSequentialGroup()
-                                                                .addComponent(jLabel26)
-                                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                                .addComponent(txtYearLevel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addComponent(jLabel9)
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addComponent(jLabel8)
+                                                .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                                        .addComponent(jLabel25)
+                                                        .addComponent(jLabel26))
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                                 .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                        .addComponent(jLabel27)
-                                                        .addComponent(jLabel28))
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                        .addComponent(txtTotalSubjects, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                        .addComponent(txtTotalUnits, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                        .addComponent(jLabel30)
-                                                        .addComponent(jLabel29))
-                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
-                                                        .addComponent(txtSections, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                                        .addComponent(txtEnrollmentStatus, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                                        .addComponent(txtCourse, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                        .addComponent(txtYearLevel, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
                                         .addGroup(panelAcademicOverviewLayout.createSequentialGroup()
                                                 .addComponent(jLabel24)
                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
-                                                .addComponent(txtStudentStatus, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
-                                .addContainerGap(8, Short.MAX_VALUE))
+                                                .addComponent(txtStudentStatus, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
+                                                .addComponent(jLabel31)
+                                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                                .addComponent(txtSemester, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jLabel9)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addComponent(jLabel8)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(jLabel27)
+                                        .addComponent(jLabel28))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(txtTotalSubjects, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(txtTotalUnits, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(jLabel30)
+                                        .addComponent(jLabel29))
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
+                                .addGroup(panelAcademicOverviewLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
+                                        .addComponent(txtSections, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                        .addComponent(txtEnrollmentStatus, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE))
+                                .addContainerGap(41, Short.MAX_VALUE))
                 );
 
                 panelEnrollmentProgress.setBorder(new com.group5.paul_esys.ui.RoundShadowBorder());
@@ -1116,10 +1614,11 @@ public class StudentDashboard extends javax.swing.JFrame {
                                 "Subject Name", "Code", "Units", "Description"
                         }
                 ) {
-                        Class<?>[] types = new Class<?> [] {
+                        Class<?>[] types = new Class<?>[] {
                                 java.lang.String.class, java.lang.String.class, java.lang.Integer.class, java.lang.String.class
                         };
 
+                        @Override
                         public Class<?> getColumnClass(int columnIndex) {
                                 return types [columnIndex];
                         }
@@ -1377,6 +1876,9 @@ public class StudentDashboard extends javax.swing.JFrame {
                 );
 
                 tabbedPane.addTab("My Schedule", panelMySchedule);
+
+                configureSemesterProgressTab();
+                configureCompletedSubjectsTab();
 
                 getContentPane().add(tabbedPane);
 
@@ -1871,7 +2373,6 @@ public class StudentDashboard extends javax.swing.JFrame {
                 }
 
                 Enrollment enrollment = new Enrollment();
-                enrollment.setStudentId(currentStudent.getStudentId());
                 enrollment.setEnrollmentPeriodId(enrollmentPeriodId);
                 enrollment.setStatus(initialStatus);
                 enrollment.setMaxUnits(MAX_ENROLLMENT_UNITS);
@@ -1976,6 +2477,7 @@ public class StudentDashboard extends javax.swing.JFrame {
         private javax.swing.JLabel jLabel29;
         private javax.swing.JLabel jLabel3;
         private javax.swing.JLabel jLabel30;
+        private javax.swing.JLabel jLabel31;
         private javax.swing.JLabel jLabel4;
         private javax.swing.JLabel jLabel5;
         private javax.swing.JLabel jLabel6;
@@ -2011,6 +2513,7 @@ public class StudentDashboard extends javax.swing.JFrame {
         private javax.swing.JTextField txtMiddleName;
         private javax.swing.JTextField txtSearch;
         private javax.swing.JTextField txtSections;
+        private javax.swing.JTextField txtSemester;
         private javax.swing.JTextField txtStudentID;
         private javax.swing.JTextField txtStudentStatus;
         private javax.swing.JTextField txtTotalSubjects;

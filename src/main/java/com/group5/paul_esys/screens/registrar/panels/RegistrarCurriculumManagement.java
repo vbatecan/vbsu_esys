@@ -19,7 +19,10 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.SwingWorker;
 
 /**
@@ -33,6 +36,8 @@ public class RegistrarCurriculumManagement extends javax.swing.JPanel {
 
         private final Map<Long, String> courseNameById = new LinkedHashMap<>();
         private final Map<Integer, CurriculumCard> curriculumCardsByTabIndex = new LinkedHashMap<>();
+        private final JPopupMenu curriculumActionsMenu = new JPopupMenu();
+        private final JMenuItem menuDeleteCurriculum = new JMenuItem("Delete Curriculum");
         private boolean isRefreshingTabs;
 
 	/**
@@ -44,15 +49,117 @@ public class RegistrarCurriculumManagement extends javax.swing.JPanel {
 	}
 
         private void initializeCurriculumManagement() {
+                configureCurriculumActionsMenu();
+
                 tabbedPaneCurriculums.addChangeListener(evt -> loadSemestersForSelectedCurriculumIfNeeded());
                 tabbedPaneCurriculums.addMouseListener(new MouseAdapter() {
                         @Override
                         public void mouseClicked(MouseEvent e) {
                                 loadSemestersForSelectedCurriculumIfNeeded();
                         }
+
+                        @Override
+                        public void mousePressed(MouseEvent e) {
+                                showCurriculumActionsMenuIfNeeded(e);
+                        }
+
+                        @Override
+                        public void mouseReleased(MouseEvent e) {
+                                showCurriculumActionsMenuIfNeeded(e);
+                        }
                 });
 
                 reloadCurriculumTabs();
+        }
+
+        private void configureCurriculumActionsMenu() {
+                menuDeleteCurriculum.addActionListener(evt -> deleteSelectedCurriculum());
+                curriculumActionsMenu.add(menuDeleteCurriculum);
+        }
+
+        private void showCurriculumActionsMenuIfNeeded(MouseEvent e) {
+                if (!e.isPopupTrigger()) {
+                        return;
+                }
+
+                int tabIndex = tabbedPaneCurriculums.indexAtLocation(e.getX(), e.getY());
+                if (tabIndex >= 0) {
+                        tabbedPaneCurriculums.setSelectedIndex(tabIndex);
+                }
+
+                CurriculumCard selectedCard = getSelectedCurriculumCard();
+                boolean canDelete = selectedCard != null
+                        && selectedCard.getCurriculum() != null
+                        && selectedCard.getCurriculum().getId() != null;
+                menuDeleteCurriculum.setEnabled(canDelete);
+
+                curriculumActionsMenu.show(tabbedPaneCurriculums, e.getX(), e.getY());
+        }
+
+        private void deleteSelectedCurriculum() {
+                CurriculumCard selectedCard = getSelectedCurriculumCard();
+                if (selectedCard == null || selectedCard.getCurriculum() == null || selectedCard.getCurriculum().getId() == null) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Please select a curriculum to delete.",
+                                "Delete Curriculum",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return;
+                }
+
+                Curriculum selectedCurriculum = selectedCard.getCurriculum();
+                String curriculumLabel = safeText(selectedCurriculum.getName(), "Curriculum " + selectedCurriculum.getId());
+
+                int option = JOptionPane.showConfirmDialog(
+                        this,
+                        "Delete " + curriculumLabel + "?",
+                        "Confirm Delete",
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE
+                );
+
+                if (option != JOptionPane.YES_OPTION) {
+                        return;
+                }
+
+                new SwingWorker<Boolean, Void>() {
+                        @Override
+                        protected Boolean doInBackground() throws Exception {
+                                return curriculumService.deleteCurriculum(selectedCurriculum.getId());
+                        }
+
+                        @Override
+                        protected void done() {
+                                try {
+                                        boolean deleted = get();
+                                        if (!deleted) {
+                                                JOptionPane.showMessageDialog(
+                                                        RegistrarCurriculumManagement.this,
+                                                        "Failed to delete curriculum.",
+                                                        "Delete Curriculum",
+                                                        JOptionPane.ERROR_MESSAGE
+                                                );
+                                                return;
+                                        }
+
+                                        reloadCurriculumTabs();
+                                        JOptionPane.showMessageDialog(
+                                                RegistrarCurriculumManagement.this,
+                                                "Curriculum deleted successfully.",
+                                                "Delete Curriculum",
+                                                JOptionPane.INFORMATION_MESSAGE
+                                        );
+                                } catch (Exception ex) {
+                                        JOptionPane.showMessageDialog(
+                                                RegistrarCurriculumManagement.this,
+                                                "Error deleting curriculum: " + ex.getMessage(),
+                                                "Delete Curriculum",
+                                                JOptionPane.ERROR_MESSAGE
+                                        );
+                                }
+                        }
+                }.execute();
         }
 
         private void reloadCurriculumTabs() {
@@ -84,7 +191,8 @@ public class RegistrarCurriculumManagement extends javax.swing.JPanel {
                                         for (Curriculum curriculum : curriculums) {
                                                 CurriculumCard curriculumCard = new CurriculumCard(
                                                         curriculum,
-                                                        courseNameById.get(curriculum.getCourse())
+                                                        courseNameById.get(curriculum.getCourse()),
+                                                        RegistrarCurriculumManagement.this::reloadCurriculumTabs
                                                 );
 
                                                 tabbedPaneCurriculums.addTab(buildCurriculumTabTitle(curriculum), curriculumCard);

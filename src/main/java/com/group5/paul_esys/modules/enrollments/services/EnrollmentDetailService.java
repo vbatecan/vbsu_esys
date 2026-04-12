@@ -12,6 +12,7 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -136,6 +137,15 @@ public class EnrollmentDetailService {
   }
 
   public boolean createEnrollmentDetail(EnrollmentDetail detail) {
+    if (!isOfferingEligibleForEnrollment(detail.getEnrollmentId(), detail.getOfferingId())) {
+      logger.warn(
+          "Rejected enrollment detail create: enrollmentId={}, offeringId={} is not eligible for current rules",
+          detail.getEnrollmentId(),
+          detail.getOfferingId()
+      );
+      return false;
+    }
+
     try (Connection conn = ConnectionService.getConnection();
         PreparedStatement ps = conn.prepareStatement(
             "INSERT INTO enrollments_details (enrollment_id, offering_id, units, status) VALUES (?, ?, ?, ?)"
@@ -157,6 +167,15 @@ public class EnrollmentDetailService {
   }
 
   public boolean updateEnrollmentDetail(EnrollmentDetail detail) {
+    if (!isOfferingEligibleForEnrollment(detail.getEnrollmentId(), detail.getOfferingId())) {
+      logger.warn(
+          "Rejected enrollment detail update: enrollmentId={}, offeringId={} is not eligible for current rules",
+          detail.getEnrollmentId(),
+          detail.getOfferingId()
+      );
+      return false;
+    }
+
     try (Connection conn = ConnectionService.getConnection();
       PreparedStatement ps = conn.prepareStatement(
         "UPDATE enrollments_details SET enrollment_id = ?, offering_id = ?, units = ?, status = ? WHERE id = ?"
@@ -235,5 +254,53 @@ public class EnrollmentDetailService {
     }
 
     return Optional.empty();
+  }
+
+  private boolean isOfferingEligibleForEnrollment(Long enrollmentId, Long offeringId) {
+    if (enrollmentId == null || offeringId == null) {
+      return false;
+    }
+
+    String sql =
+        "SELECT e.student_id, ep.semester AS enrollment_semester, st.year_level, o.semester_subject_id "
+            + "FROM enrollments e "
+            + "JOIN enrollment_period ep ON ep.id = e.enrollment_period_id "
+            + "LEFT JOIN students st ON st.student_id = e.student_id "
+            + "JOIN offerings o ON o.id = ? "
+            + "WHERE e.id = ?";
+
+    try (
+        Connection conn = ConnectionService.getConnection();
+        PreparedStatement ps = conn.prepareStatement(sql)
+    ) {
+      ps.setLong(1, offeringId);
+      ps.setLong(2, enrollmentId);
+
+      try (ResultSet rs = ps.executeQuery()) {
+        if (!rs.next()) {
+          return false;
+        }
+
+        String studentId = rs.getString("student_id");
+        String enrollmentSemester = rs.getString("enrollment_semester");
+
+        long rawYearLevel = rs.getLong("year_level");
+        Long enrollmentYearLevel = rs.wasNull() ? null : rawYearLevel;
+
+        long rawSemesterSubjectId = rs.getLong("semester_subject_id");
+        if (rs.wasNull() || studentId == null || studentId.isBlank()) {
+          return false;
+        }
+
+        Long semesterSubjectId = rawSemesterSubjectId;
+        Set<Long> eligibleSemesterSubjectIds = StudentEnrollmentEligibilityService.getInstance()
+            .getEligibleSemesterSubjectIds(studentId, enrollmentSemester, enrollmentYearLevel);
+
+        return eligibleSemesterSubjectIds.contains(semesterSubjectId);
+      }
+    } catch (SQLException e) {
+      logger.error("ERROR: " + e.getMessage(), e);
+      return false;
+    }
   }
 }

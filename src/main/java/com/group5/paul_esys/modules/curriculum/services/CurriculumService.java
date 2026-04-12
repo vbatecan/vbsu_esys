@@ -162,18 +162,155 @@ public class CurriculumService {
   }
 
   public boolean deleteCurriculum(Long id) {
-    try (
-      Connection conn = ConnectionService.getConnection();
-      PreparedStatement ps = conn.prepareStatement(
-        "DELETE FROM curriculum WHERE id = ?"
-      )
-    ) {
-      ps.setLong(1, id);
+    if (id == null) {
+      return false;
+    }
 
-      return ps.executeUpdate() > 0;
+    Connection conn = null;
+    try {
+      conn = ConnectionService.getConnection();
+      conn.setAutoCommit(false);
+
+      unlinkStudentsFromCurriculum(conn, id);
+      deleteSemesterProgressByCurriculum(conn, id);
+      deleteStudentEnrolledSubjectsByCurriculum(conn, id);
+      deleteEnrollmentDetailsByCurriculum(conn, id);
+      deleteSchedulesByCurriculum(conn, id);
+      deleteOfferingsByCurriculum(conn, id);
+      deleteSemesterSubjectsByCurriculum(conn, id);
+      deleteSemestersByCurriculum(conn, id);
+
+      boolean deleted = deleteCurriculumRow(conn, id);
+      if (!deleted) {
+        conn.rollback();
+        return false;
+      }
+
+      conn.commit();
+      return true;
     } catch (SQLException e) {
+      rollbackQuietly(conn);
       logger.error("ERROR: " + e.getMessage(), e);
       return false;
+    } finally {
+      if (conn != null) {
+        try {
+          conn.setAutoCommit(true);
+          conn.close();
+        } catch (SQLException e) {
+          logger.error("ERROR: " + e.getMessage(), e);
+        }
+      }
+    }
+  }
+
+  private void unlinkStudentsFromCurriculum(Connection conn, Long curriculumId) throws SQLException {
+    String sql = "UPDATE students SET curriculum_id = NULL, updated_at = CURRENT_TIMESTAMP WHERE curriculum_id = ?";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, curriculumId);
+      ps.executeUpdate();
+    }
+  }
+
+  private void deleteSemesterProgressByCurriculum(Connection conn, Long curriculumId) throws SQLException {
+    String sql = "DELETE FROM student_semester_progress WHERE curriculum_id = ? "
+      + "OR semester_id IN (SELECT id FROM semester WHERE curriculum_id = ?)";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, curriculumId);
+      ps.setLong(2, curriculumId);
+      ps.executeUpdate();
+    }
+  }
+
+  private void deleteStudentEnrolledSubjectsByCurriculum(Connection conn, Long curriculumId) throws SQLException {
+    String sql = "DELETE FROM student_enrolled_subjects WHERE semester_subject_id IN ("
+      + "SELECT ss.id FROM semester_subjects ss "
+      + "INNER JOIN semester sem ON sem.id = ss.semester_id "
+      + "WHERE sem.curriculum_id = ?)";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, curriculumId);
+      ps.executeUpdate();
+    }
+  }
+
+  private void deleteEnrollmentDetailsByCurriculum(Connection conn, Long curriculumId) throws SQLException {
+    String sql = "DELETE FROM enrollments_details WHERE offering_id IN ("
+      + "SELECT o.id FROM offerings o "
+      + "INNER JOIN semester_subjects ss ON ss.id = o.semester_subject_id "
+      + "INNER JOIN semester sem ON sem.id = ss.semester_id "
+      + "WHERE sem.curriculum_id = ?)";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, curriculumId);
+      ps.executeUpdate();
+    }
+  }
+
+  private void deleteSchedulesByCurriculum(Connection conn, Long curriculumId) throws SQLException {
+    String sql = "DELETE FROM schedules WHERE offering_id IN ("
+      + "SELECT o.id FROM offerings o "
+      + "INNER JOIN semester_subjects ss ON ss.id = o.semester_subject_id "
+      + "INNER JOIN semester sem ON sem.id = ss.semester_id "
+      + "WHERE sem.curriculum_id = ?)";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, curriculumId);
+      ps.executeUpdate();
+    }
+  }
+
+  private void deleteOfferingsByCurriculum(Connection conn, Long curriculumId) throws SQLException {
+    String sql = "DELETE FROM offerings WHERE semester_subject_id IN ("
+      + "SELECT ss.id FROM semester_subjects ss "
+      + "INNER JOIN semester sem ON sem.id = ss.semester_id "
+      + "WHERE sem.curriculum_id = ?)";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, curriculumId);
+      ps.executeUpdate();
+    }
+  }
+
+  private void deleteSemesterSubjectsByCurriculum(Connection conn, Long curriculumId) throws SQLException {
+    String sql = "DELETE FROM semester_subjects WHERE semester_id IN ("
+      + "SELECT id FROM semester WHERE curriculum_id = ?)";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, curriculumId);
+      ps.executeUpdate();
+    }
+  }
+
+  private void deleteSemestersByCurriculum(Connection conn, Long curriculumId) throws SQLException {
+    String sql = "DELETE FROM semester WHERE curriculum_id = ?";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, curriculumId);
+      ps.executeUpdate();
+    }
+  }
+
+  private boolean deleteCurriculumRow(Connection conn, Long curriculumId) throws SQLException {
+    String sql = "DELETE FROM curriculum WHERE id = ?";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, curriculumId);
+      return ps.executeUpdate() > 0;
+    }
+  }
+
+  private void rollbackQuietly(Connection conn) {
+    if (conn == null) {
+      return;
+    }
+
+    try {
+      conn.rollback();
+    } catch (SQLException e) {
+      logger.error("ERROR: " + e.getMessage(), e);
     }
   }
 

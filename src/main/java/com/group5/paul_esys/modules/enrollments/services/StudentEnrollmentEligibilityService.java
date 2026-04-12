@@ -11,6 +11,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Locale;
@@ -53,16 +54,19 @@ public class StudentEnrollmentEligibilityService {
       Map<Long, Long> requiredCountBySemester = new HashMap<>();
       Map<Long, Long> completedCountBySemester = new HashMap<>();
       Map<Long, Long> activityCountBySemester = new HashMap<>();
+      Map<Long, Long> activeLoadCountBySemester = new HashMap<>();
 
       for (Long semesterId : orderedSemesterIds) {
         long requiredCount = countRequiredSubjects(conn, semesterId);
         long completedCount = countCompletedSubjects(conn, studentId, semesterId);
         long activityCount = countTrackedSubjectActivity(conn, studentId, semesterId)
             + countSelectedEnrollmentActivity(conn, studentId, semesterId);
+        long activeLoadCount = countCompletedOrEnrolledLoadSubjects(conn, studentId, semesterId);
 
         requiredCountBySemester.put(semesterId, requiredCount);
         completedCountBySemester.put(semesterId, completedCount);
         activityCountBySemester.put(semesterId, activityCount);
+        activeLoadCountBySemester.put(semesterId, activeLoadCount);
       }
 
       Integer currentSemesterIndex = findCurrentSemesterIndex(
@@ -104,7 +108,7 @@ public class StudentEnrollmentEligibilityService {
           allowedSemesterIds,
           orderedSemesterIds,
           yearLevelBySemesterId,
-          requiredCountBySemester,
+          activeLoadCountBySemester,
           completedCountBySemester,
           currentSemesterIndex
       );
@@ -113,7 +117,8 @@ public class StudentEnrollmentEligibilityService {
         allowedSemesterIds.add(orderedSemesterIds.get(currentSemesterIndex));
       }
 
-      return getSemesterSubjectIds(conn, allowedSemesterIds);
+      Set<Long> semesterSubjectIds = getSemesterSubjectIds(conn, allowedSemesterIds);
+      return filterSemesterSubjectsByPrerequisites(conn, studentId, semesterSubjectIds);
     } catch (SQLException e) {
       logger.error("ERROR: " + e.getMessage(), e);
       return Collections.emptySet();
@@ -287,7 +292,7 @@ public class StudentEnrollmentEligibilityService {
       LinkedHashSet<Long> allowedSemesterIds,
       List<Long> orderedSemesterIds,
       Map<Long, Integer> yearLevelBySemesterId,
-      Map<Long, Long> requiredCountBySemester,
+      Map<Long, Long> activeLoadCountBySemester,
       Map<Long, Long> completedCountBySemester,
       Integer currentSemesterIndex
   ) {
@@ -296,9 +301,13 @@ public class StudentEnrollmentEligibilityService {
     }
 
     Long currentSemesterId = orderedSemesterIds.get(currentSemesterIndex);
-    long requiredCount = requiredCountBySemester.getOrDefault(currentSemesterId, 0L);
+    long activeLoadCount = activeLoadCountBySemester.getOrDefault(currentSemesterId, 0L);
+    if (activeLoadCount <= 0) {
+      return;
+    }
+
     long completedCount = completedCountBySemester.getOrDefault(currentSemesterId, 0L);
-    if (completedCount < requiredCount) {
+    if (completedCount < activeLoadCount) {
       return;
     }
 
@@ -390,6 +399,143 @@ public class StudentEnrollmentEligibilityService {
     return semesterSubjectIds;
   }
 
+  private Set<Long> filterSemesterSubjectsByPrerequisites(
+      Connection conn,
+      String studentId,
+      Set<Long> semesterSubjectIds
+  ) throws SQLException {
+    if (semesterSubjectIds == null || semesterSubjectIds.isEmpty()) {
+      return Collections.emptySet();
+    }
+
+    if (!hasPrerequisitesTable(conn)) {
+      return semesterSubjectIds;
+    }
+
+    Map<Long, Long> subjectIdBySemesterSubjectId = getSubjectIdBySemesterSubjectId(conn, semesterSubjectIds);
+    if (subjectIdBySemesterSubjectId.isEmpty()) {
+      return Collections.emptySet();
+    }
+
+    Set<Long> subjectIds = new HashSet<>(subjectIdBySemesterSubjectId.values());
+    Map<Long, Set<Long>> prerequisiteIdsBySubjectId = getPrerequisiteIdsBySubjectId(conn, subjectIds);
+    if (prerequisiteIdsBySubjectId.isEmpty()) {
+      return semesterSubjectIds;
+    }
+
+    Set<Long> completedSubjectIds = getCompletedSubjectIds(conn, studentId);
+    LinkedHashSet<Long> filteredSemesterSubjectIds = new LinkedHashSet<>();
+
+    for (Long semesterSubjectId : semesterSubjectIds) {
+      Long subjectId = subjectIdBySemesterSubjectId.get(semesterSubjectId);
+      if (subjectId == null) {
+        continue;
+      }
+
+      Set<Long> prerequisiteIds = prerequisiteIdsBySubjectId.get(subjectId);
+      if (prerequisiteIds == null || prerequisiteIds.isEmpty() || completedSubjectIds.containsAll(prerequisiteIds)) {
+        filteredSemesterSubjectIds.add(semesterSubjectId);
+      }
+    }
+
+    return filteredSemesterSubjectIds;
+  }
+
+  private boolean hasPrerequisitesTable(Connection conn) {
+    try {
+      DatabaseMetaData metadata = conn.getMetaData();
+      try (ResultSet rs = metadata.getTables(null, null, "PREREQUISITES", null)) {
+        if (rs.next()) {
+          return true;
+        }
+      }
+
+      try (ResultSet rs = metadata.getTables(null, null, "prerequisites", null)) {
+        return rs.next();
+      }
+    } catch (SQLException e) {
+      logger.error("ERROR: " + e.getMessage(), e);
+      return false;
+    }
+  }
+
+  private Map<Long, Long> getSubjectIdBySemesterSubjectId(Connection conn, Set<Long> semesterSubjectIds)
+      throws SQLException {
+    if (semesterSubjectIds.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
+    String placeholders = String.join(",", Collections.nCopies(semesterSubjectIds.size(), "?"));
+    String sql = "SELECT id, subject_id FROM semester_subjects WHERE id IN (" + placeholders + ")";
+
+    Map<Long, Long> subjectIdBySemesterSubjectId = new HashMap<>();
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      int parameterIndex = 1;
+      for (Long semesterSubjectId : semesterSubjectIds) {
+        ps.setLong(parameterIndex++, semesterSubjectId);
+      }
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          subjectIdBySemesterSubjectId.put(rs.getLong("id"), rs.getLong("subject_id"));
+        }
+      }
+    }
+
+    return subjectIdBySemesterSubjectId;
+  }
+
+  private Map<Long, Set<Long>> getPrerequisiteIdsBySubjectId(Connection conn, Set<Long> subjectIds) throws SQLException {
+    if (subjectIds == null || subjectIds.isEmpty()) {
+      return Collections.emptyMap();
+    }
+
+    String placeholders = String.join(",", Collections.nCopies(subjectIds.size(), "?"));
+    String sql = "SELECT subject_id, pre_subject_id FROM prerequisites WHERE subject_id IN (" + placeholders + ")";
+
+    Map<Long, Set<Long>> prerequisiteIdsBySubjectId = new HashMap<>();
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      int parameterIndex = 1;
+      for (Long subjectId : subjectIds) {
+        ps.setLong(parameterIndex++, subjectId);
+      }
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          Long subjectId = rs.getLong("subject_id");
+          Long prerequisiteSubjectId = rs.getLong("pre_subject_id");
+
+          prerequisiteIdsBySubjectId
+              .computeIfAbsent(subjectId, key -> new HashSet<>())
+              .add(prerequisiteSubjectId);
+        }
+      }
+    }
+
+    return prerequisiteIdsBySubjectId;
+  }
+
+  private Set<Long> getCompletedSubjectIds(Connection conn, String studentId) throws SQLException {
+    String sql =
+        "SELECT DISTINCT ss.subject_id AS subject_id "
+            + "FROM student_enrolled_subjects ses "
+            + "JOIN semester_subjects ss ON ss.id = ses.semester_subject_id "
+            + "WHERE ses.student_id = ? AND ses.status = 'COMPLETED'";
+
+    Set<Long> completedSubjectIds = new HashSet<>();
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setString(1, studentId);
+
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          completedSubjectIds.add(rs.getLong("subject_id"));
+        }
+      }
+    }
+
+    return completedSubjectIds;
+  }
+
   private long countRequiredSubjects(Connection conn, Long semesterId) throws SQLException {
     String sql = "SELECT COUNT(*) AS total FROM semester_subjects WHERE semester_id = ?";
 
@@ -411,6 +557,28 @@ public class StudentEnrollmentEligibilityService {
             + "FROM student_enrolled_subjects ses "
             + "JOIN semester_subjects ss ON ss.id = ses.semester_subject_id "
             + "WHERE ses.student_id = ? AND ss.semester_id = ? AND ses.status = 'COMPLETED'";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setString(1, studentId);
+      ps.setLong(2, semesterId);
+      try (ResultSet rs = ps.executeQuery()) {
+        if (rs.next()) {
+          return rs.getLong("total");
+        }
+      }
+    }
+
+    return 0;
+  }
+
+  private long countCompletedOrEnrolledLoadSubjects(Connection conn, String studentId, Long semesterId) throws SQLException {
+    String sql =
+        "SELECT COUNT(DISTINCT ses.semester_subject_id) AS total "
+            + "FROM student_enrolled_subjects ses "
+            + "JOIN semester_subjects ss ON ss.id = ses.semester_subject_id "
+            + "WHERE ses.student_id = ? "
+            + "AND ss.semester_id = ? "
+            + "AND ses.status IN ('ENROLLED', 'COMPLETED')";
 
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setString(1, studentId);

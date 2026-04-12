@@ -198,15 +198,126 @@ public class SemesterService {
   }
 
   public boolean deleteSemester(Long id) {
-    try (
-      Connection conn = ConnectionService.getConnection();
-      PreparedStatement ps = conn.prepareStatement("DELETE FROM semester WHERE id = ?")
-    ) {
-      ps.setLong(1, id);
-      return ps.executeUpdate() > 0;
+    if (id == null) {
+      return false;
+    }
+
+    Connection conn = null;
+    try {
+      conn = ConnectionService.getConnection();
+      conn.setAutoCommit(false);
+
+      deleteStudentEnrolledSubjectsBySemester(conn, id);
+      deleteEnrollmentDetailsBySemester(conn, id);
+      deleteSchedulesBySemester(conn, id);
+      deleteOfferingsBySemester(conn, id);
+      deleteSemesterProgressBySemester(conn, id);
+      deleteSemesterSubjectsBySemester(conn, id);
+
+      boolean deleted = deleteSemesterRow(conn, id);
+      if (!deleted) {
+        conn.rollback();
+        return false;
+      }
+
+      conn.commit();
+      return true;
     } catch (SQLException e) {
+      rollbackQuietly(conn);
       logger.error("ERROR: " + e.getMessage(), e);
       return false;
+    } finally {
+      if (conn != null) {
+        try {
+          conn.setAutoCommit(true);
+          conn.close();
+        } catch (SQLException e) {
+          logger.error("ERROR: " + e.getMessage(), e);
+        }
+      }
+    }
+  }
+
+  private void deleteStudentEnrolledSubjectsBySemester(Connection conn, Long semesterId) throws SQLException {
+    String sql = "DELETE FROM student_enrolled_subjects WHERE semester_subject_id IN ("
+      + "SELECT id FROM semester_subjects WHERE semester_id = ?)";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, semesterId);
+      ps.executeUpdate();
+    }
+  }
+
+  private void deleteEnrollmentDetailsBySemester(Connection conn, Long semesterId) throws SQLException {
+    String sql = "DELETE FROM enrollments_details WHERE offering_id IN ("
+      + "SELECT o.id FROM offerings o "
+      + "INNER JOIN semester_subjects ss ON ss.id = o.semester_subject_id "
+      + "WHERE ss.semester_id = ?)";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, semesterId);
+      ps.executeUpdate();
+    }
+  }
+
+  private void deleteSchedulesBySemester(Connection conn, Long semesterId) throws SQLException {
+    String sql = "DELETE FROM schedules WHERE offering_id IN ("
+      + "SELECT o.id FROM offerings o "
+      + "INNER JOIN semester_subjects ss ON ss.id = o.semester_subject_id "
+      + "WHERE ss.semester_id = ?)";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, semesterId);
+      ps.executeUpdate();
+    }
+  }
+
+  private void deleteOfferingsBySemester(Connection conn, Long semesterId) throws SQLException {
+    String sql = "DELETE FROM offerings WHERE semester_subject_id IN ("
+      + "SELECT id FROM semester_subjects WHERE semester_id = ?)";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, semesterId);
+      ps.executeUpdate();
+    }
+  }
+
+  private void deleteSemesterProgressBySemester(Connection conn, Long semesterId) throws SQLException {
+    String sql = "DELETE FROM student_semester_progress WHERE semester_id = ?";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, semesterId);
+      ps.executeUpdate();
+    }
+  }
+
+  private void deleteSemesterSubjectsBySemester(Connection conn, Long semesterId) throws SQLException {
+    String sql = "DELETE FROM semester_subjects WHERE semester_id = ?";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, semesterId);
+      ps.executeUpdate();
+    }
+  }
+
+  private boolean deleteSemesterRow(Connection conn, Long semesterId) throws SQLException {
+    String sql = "DELETE FROM semester WHERE id = ?";
+
+    try (PreparedStatement ps = conn.prepareStatement(sql)) {
+      ps.setLong(1, semesterId);
+      return ps.executeUpdate() > 0;
+    }
+  }
+
+  private void rollbackQuietly(Connection conn) {
+    if (conn == null) {
+      return;
+    }
+
+    try {
+      conn.rollback();
+    } catch (SQLException e) {
+      logger.error("ERROR: " + e.getMessage(), e);
     }
   }
 }

@@ -9,6 +9,8 @@ import com.group5.paul_esys.modules.semester.model.Semester;
 import com.group5.paul_esys.modules.semester.services.SemesterService;
 import com.group5.paul_esys.modules.subjects.model.Subject;
 import com.group5.paul_esys.modules.subjects.services.SubjectService;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.LinkedHashMap;
@@ -16,7 +18,10 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 import javax.swing.JLabel;
+import javax.swing.JMenuItem;
+import javax.swing.JOptionPane;
 import javax.swing.JPanel;
+import javax.swing.JPopupMenu;
 import javax.swing.SwingWorker;
 
 /**
@@ -30,23 +35,35 @@ public class CurriculumCard extends javax.swing.JPanel {
 
         private final Curriculum curriculum;
         private final String courseName;
+        private final Runnable onCurriculumChangedCallback;
+        private final Map<Integer, Semester> semestersByTabIndex = new LinkedHashMap<>();
+        private final JPopupMenu semesterActionsMenu = new JPopupMenu();
+        private final JMenuItem menuDeleteSemester = new JMenuItem("Delete Semester");
+        private final JMenuItem menuDeleteYearLevel = new JMenuItem("Delete Year Level");
         private boolean semestersLoaded;
 
 	/**
 	 * Creates new form CurriculumCard
 	 */
 	public CurriculumCard() {
-                this(null, null);
+                this(null, null, null);
         }
 
         public CurriculumCard(Curriculum curriculum, String courseName) {
+                this(curriculum, courseName, null);
+        }
+
+        public CurriculumCard(Curriculum curriculum, String courseName, Runnable onCurriculumChangedCallback) {
                 this.curriculum = curriculum;
                 this.courseName = courseName;
+		this.onCurriculumChangedCallback = onCurriculumChangedCallback;
 		initComponents();
                 initializeCard();
 	}
 
         private void initializeCard() {
+                configureSemesterActionsMenu();
+
                 if (curriculum == null) {
                         txtCurriculumName.setText("");
                         txtCurYear.setText("");
@@ -63,6 +80,10 @@ public class CurriculumCard extends javax.swing.JPanel {
                 cbxCourse.addItem(safeText(courseName, "N/A"));
 
                 showSemestersPlaceholder("Semesters load when this curriculum tab is selected.");
+        }
+
+        public Curriculum getCurriculum() {
+                return curriculum;
         }
 
         public boolean isSemestersLoaded() {
@@ -115,6 +136,7 @@ public class CurriculumCard extends javax.swing.JPanel {
 
         private void populateSemesterTabs(List<Semester> semesters, Map<Long, Subject> subjectMap) {
                 tabbedPaneSemesters.removeAll();
+                semestersByTabIndex.clear();
 
                 if (semesters.isEmpty()) {
                         showSemestersPlaceholder("No semesters found for this curriculum.");
@@ -125,6 +147,7 @@ public class CurriculumCard extends javax.swing.JPanel {
                 for (Semester semester : semesters) {
                         SemesterCard semesterCard = new SemesterCard(semester, subjectMap, null);
                         tabbedPaneSemesters.addTab(buildSemesterTabTitle(semester), semesterCard);
+                        semestersByTabIndex.put(tabbedPaneSemesters.getTabCount() - 1, semester);
                 }
 
                 semestersLoaded = true;
@@ -147,12 +170,132 @@ public class CurriculumCard extends javax.swing.JPanel {
 
         private void showSemestersPlaceholder(String message) {
                 tabbedPaneSemesters.removeAll();
+                semestersByTabIndex.clear();
                 JPanel panel = new JPanel(new java.awt.GridBagLayout());
                 panel.setBackground(java.awt.Color.WHITE);
                 JLabel label = new JLabel(message);
                 label.setForeground(new java.awt.Color(120, 120, 120));
                 panel.add(label);
                 tabbedPaneSemesters.addTab("Semesters", panel);
+        }
+
+        private void configureSemesterActionsMenu() {
+                menuDeleteSemester.addActionListener(evt -> deleteSelectedSemester("semester"));
+                menuDeleteYearLevel.addActionListener(evt -> deleteSelectedSemester("curriculum year level entry"));
+                semesterActionsMenu.add(menuDeleteSemester);
+                semesterActionsMenu.add(menuDeleteYearLevel);
+
+                tabbedPaneSemesters.addMouseListener(new MouseAdapter() {
+                        @Override
+                        public void mousePressed(MouseEvent e) {
+                                showSemesterActionsMenuIfNeeded(e);
+                        }
+
+                        @Override
+                        public void mouseReleased(MouseEvent e) {
+                                showSemesterActionsMenuIfNeeded(e);
+                        }
+                });
+        }
+
+        private void showSemesterActionsMenuIfNeeded(MouseEvent e) {
+                if (!e.isPopupTrigger()) {
+                        return;
+                }
+
+                int tabIndex = tabbedPaneSemesters.indexAtLocation(e.getX(), e.getY());
+                if (tabIndex >= 0) {
+                        tabbedPaneSemesters.setSelectedIndex(tabIndex);
+                }
+
+                Semester selectedSemester = getSelectedSemester();
+                boolean canDelete = selectedSemester != null && selectedSemester.getId() != null;
+                menuDeleteSemester.setEnabled(canDelete);
+                menuDeleteYearLevel.setEnabled(canDelete);
+
+                semesterActionsMenu.show(tabbedPaneSemesters, e.getX(), e.getY());
+        }
+
+        private Semester getSelectedSemester() {
+                int selectedTab = tabbedPaneSemesters.getSelectedIndex();
+                if (selectedTab < 0) {
+                        return null;
+                }
+
+                return semestersByTabIndex.get(selectedTab);
+        }
+
+        private void deleteSelectedSemester(String targetLabel) {
+                Semester selectedSemester = getSelectedSemester();
+                if (selectedSemester == null || selectedSemester.getId() == null) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Please select a semester to delete.",
+                                "Delete " + targetLabel,
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return;
+                }
+
+                String semesterName = safeText(selectedSemester.getSemester(), "Semester");
+                String yearLevel = selectedSemester.getYearLevel() == null
+                        ? "N/A"
+                        : String.valueOf(selectedSemester.getYearLevel());
+
+                int option = JOptionPane.showConfirmDialog(
+                        this,
+                        "Delete " + semesterName + " (Year " + yearLevel + ")?",
+                        "Confirm Delete " + targetLabel,
+                        JOptionPane.YES_NO_OPTION,
+                        JOptionPane.WARNING_MESSAGE
+                );
+
+                if (option != JOptionPane.YES_OPTION) {
+                        return;
+                }
+
+                new SwingWorker<Boolean, Void>() {
+                        @Override
+                        protected Boolean doInBackground() throws Exception {
+                                return semesterService.deleteSemester(selectedSemester.getId());
+                        }
+
+                        @Override
+                        protected void done() {
+                                try {
+                                        boolean deleted = get();
+                                        if (!deleted) {
+                                                JOptionPane.showMessageDialog(
+                                                        CurriculumCard.this,
+                                                        "Failed to delete " + targetLabel + ".",
+                                                        "Delete " + targetLabel,
+                                                        JOptionPane.ERROR_MESSAGE
+                                                );
+                                                return;
+                                        }
+
+                                        if (onCurriculumChangedCallback != null) {
+                                                onCurriculumChangedCallback.run();
+                                        } else {
+                                                reloadSemesters();
+                                        }
+
+                                        JOptionPane.showMessageDialog(
+                                                CurriculumCard.this,
+                                                "Deleted " + targetLabel + " successfully.",
+                                                "Delete " + targetLabel,
+                                                JOptionPane.INFORMATION_MESSAGE
+                                        );
+                                } catch (Exception ex) {
+                                        JOptionPane.showMessageDialog(
+                                                CurriculumCard.this,
+                                                "Error deleting " + targetLabel + ": " + ex.getMessage(),
+                                                "Delete " + targetLabel,
+                                                JOptionPane.ERROR_MESSAGE
+                                        );
+                                }
+                        }
+                }.execute();
         }
 
         private String safeText(String value, String fallback) {
