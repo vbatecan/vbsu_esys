@@ -168,6 +168,10 @@ def main(argv: list[str] | None = None) -> int:
         print(f"Prerequisites created: {summary.curriculum.prerequisites_created}")
         print(f"Users created: {summary.students.users_created}")
         print(f"Students created: {summary.students.students_created}")
+        print(
+            "Student semester progress created: "
+            f"{summary.semester_progress.rows_created}"
+        )
         print(f"Faculty created: {summary.staff.faculty_created}")
         print(f"Registrar created: {summary.staff.registrar_created}")
         print(f"Registrar email: {summary.staff.registrar_email}")

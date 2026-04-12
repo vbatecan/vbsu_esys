@@ -13,6 +13,10 @@ from seeder.core.database import DatabaseManager
 from real_seeder.curriculum_seeder import CurriculumSeedSummary, RealCurriculumSeeder
 from real_seeder.room_seeder import RealRoomSeeder, RoomSeedSummary
 from real_seeder.staff_seeder import RealStaffSeeder, StaffSeedSummary
+from real_seeder.student_semester_progress_seeder import (
+    RealStudentSemesterProgressSeeder,
+    StudentSemesterProgressSeedSummary,
+)
 from real_seeder.students_seeder import RealStudentsSeeder, StudentsSeedSummary
 
 
@@ -23,6 +27,7 @@ class BundleSeedSummary:
     cleared_tables: tuple[str, ...]
     curriculum: CurriculumSeedSummary
     students: StudentsSeedSummary
+    semester_progress: StudentSemesterProgressSeedSummary
     staff: StaffSeedSummary
     rooms: RoomSeedSummary
 
@@ -37,6 +42,7 @@ class BsitNiten2023BundleSeeder:
         "prerequisites",
         "semester",
         "semester_subjects",
+        "student_semester_progress",
         "students",
         "subjects",
         "users",
@@ -125,6 +131,8 @@ class BsitNiten2023BundleSeeder:
             curriculum_name=curriculum_name,
         )
 
+        semester_progress_summary = RealStudentSemesterProgressSeeder(self.db_manager).seed()
+
         staff_summary = RealStaffSeeder(
             self.db_manager,
             bcrypt_rounds=self.bcrypt_rounds,
@@ -136,6 +144,7 @@ class BsitNiten2023BundleSeeder:
             cleared_tables=cleared_tables,
             curriculum=curriculum_summary,
             students=students_summary,
+            semester_progress=semester_progress_summary,
             staff=staff_summary,
             rooms=rooms_summary,
         )

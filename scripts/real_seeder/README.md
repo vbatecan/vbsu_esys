@@ -40,6 +40,7 @@ Then it seeds:
 - Course: BSIT (`Bachelor of Science in Information Technology`)
 - Curriculum: `NITEN2023`
 - Students from `docs/students.csv`
+- Student semester progress baseline (`NOT_STARTED` at first-year first-semester)
 - Faculty: Faker-generated, assigned to `College of Engineering`
 - Registrar account: `registrar@vbsu.edu.ph` with password `12345678`
 - Admin account: `admin@vbsu.edu.ph` with password `12345678`
