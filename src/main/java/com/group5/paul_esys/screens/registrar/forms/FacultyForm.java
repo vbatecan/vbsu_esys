@@ -149,21 +149,38 @@ public class FacultyForm extends javax.swing.JFrame {
                         .toLocalDate();
         }
 
-        private boolean isValidForm() {
-                if (txtFirstName.getText() == null || txtFirstName.getText().trim().isEmpty()) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "First name is required.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
-                        return false;
+        private void validateNameField(String value, String fieldName) throws IllegalArgumentException {
+                if (value == null || value.trim().isEmpty()) {
+                        throw new IllegalArgumentException(fieldName + " is required.");
                 }
+                if (!value.matches("^[a-zA-Z\\s]+$")) {
+                        throw new IllegalArgumentException(fieldName + " must not contain special characters or numbers.");
+                }
+        }
 
-                if (txtLastName.getText() == null || txtLastName.getText().trim().isEmpty()) {
+        private void validateDateFields(LocalDate birthDate) throws IllegalArgumentException {
+                LocalDate now = LocalDate.now();
+                if (birthDate.isAfter(now)) {
+                        throw new IllegalArgumentException("Future dates are not allowed for birthdate.");
+                }
+                if (birthDate.getYear() > 2000) {
+                        throw new IllegalArgumentException("Birthdate must be year 2000 or earlier.");
+                }
+        }
+
+        private boolean isValidForm() {
+                try {
+                        validateNameField(txtFirstName.getText(), "First name");
+                        validateNameField(txtLastName.getText(), "Last name");
+
+                        String middleName = txtLastName1.getText();
+                        if (middleName != null && !middleName.trim().isEmpty()) {
+                                validateNameField(middleName, "Middle name");
+                        }
+                } catch (IllegalArgumentException e) {
                         JOptionPane.showMessageDialog(
                                 this,
-                                "Last name is required.",
+                                e.getMessage(),
                                 "Validation Error",
                                 JOptionPane.WARNING_MESSAGE
                         );
@@ -202,10 +219,23 @@ public class FacultyForm extends javax.swing.JFrame {
                         return false;
                 }
 
-                if (datePicker1.getSelectedDate() == null) {
+                LocalDate birthDate = datePicker1.getSelectedDate();
+                if (birthDate == null) {
                         JOptionPane.showMessageDialog(
                                 this,
                                 "Birth date is required.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                try {
+                        validateDateFields(birthDate);
+                } catch (IllegalArgumentException e) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                e.getMessage(),
                                 "Validation Error",
                                 JOptionPane.WARNING_MESSAGE
                         );

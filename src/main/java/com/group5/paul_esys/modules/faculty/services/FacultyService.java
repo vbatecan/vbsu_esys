@@ -94,7 +94,42 @@ public class FacultyService {
     return faculty;
   }
 
+  private void validateFacultyData(Faculty faculty) {
+    if (faculty.getFirstName() == null || faculty.getFirstName().trim().isEmpty()) {
+      throw new IllegalArgumentException("First name is required.");
+    }
+    if (!faculty.getFirstName().matches("^[a-zA-Z\\s]+$")) {
+      throw new IllegalArgumentException("First name must not contain special characters or numbers.");
+    }
+
+    if (faculty.getLastName() == null || faculty.getLastName().trim().isEmpty()) {
+      throw new IllegalArgumentException("Last name is required.");
+    }
+    if (!faculty.getLastName().matches("^[a-zA-Z\\s]+$")) {
+      throw new IllegalArgumentException("Last name must not contain special characters or numbers.");
+    }
+
+    if (faculty.getMiddleName() != null && !faculty.getMiddleName().trim().isEmpty()) {
+      if (!faculty.getMiddleName().matches("^[a-zA-Z\\s]+$")) {
+        throw new IllegalArgumentException("Middle name must not contain special characters or numbers.");
+      }
+    }
+
+    if (faculty.getBirthdate() != null) {
+      java.time.LocalDate birthDate = new java.sql.Date(faculty.getBirthdate().getTime()).toLocalDate();
+      java.time.LocalDate now = java.time.LocalDate.now();
+
+      if (birthDate.isAfter(now)) {
+        throw new IllegalArgumentException("Future dates are not allowed for birthdate.");
+      }
+      if (birthDate.getYear() > 2000) {
+        throw new IllegalArgumentException("Birthdate must be year 2000 or earlier.");
+      }
+    }
+  }
+
   public boolean createFaculty(Faculty faculty) {
+    validateFacultyData(faculty);
     try (Connection conn = ConnectionService.getConnection();
         PreparedStatement ps = conn.prepareStatement(
             "INSERT INTO faculty (user_id, first_name, last_name, middle_name, contact_number, birthdate, department_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
@@ -127,6 +162,7 @@ public class FacultyService {
   }
 
   public Optional<Faculty> registerFaculty(String email, String plainPassword, Faculty faculty) {
+    validateFacultyData(faculty);
     String userSql = "INSERT INTO users (email, password, role) VALUES (?, ?, ?)";
     String facultySql = "INSERT INTO faculty (user_id, first_name, last_name, middle_name, contact_number, birthdate, department_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
 
@@ -225,6 +261,7 @@ public class FacultyService {
     if (faculty == null || faculty.getId() == null) {
       return false;
     }
+    validateFacultyData(faculty);
 
     String facultySql =
       "UPDATE faculty SET user_id = ?, first_name = ?, last_name = ?, middle_name = ?, contact_number = ?, birthdate = ?, department_id = ? WHERE id = ?";
