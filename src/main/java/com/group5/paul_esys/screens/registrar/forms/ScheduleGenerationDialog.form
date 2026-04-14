@@ -24,8 +24,8 @@
   <Layout>
     <DimensionLayout dim="0">
       <Group type="103" groupAlignment="0" attributes="0">
-          <Component id="windowBar1" min="-2" pref="751" max="-2" attributes="0"/>
-          <Component id="jPanel1" min="-2" pref="751" max="-2" attributes="0"/>
+          <Component id="jPanel1" pref="1280" max="32767" attributes="0"/>
+          <Component id="windowBar1" alignment="0" max="32767" attributes="0"/>
       </Group>
     </DimensionLayout>
     <DimensionLayout dim="1">
@@ -63,14 +63,15 @@
               <Group type="102" alignment="0" attributes="0">
                   <EmptySpace min="-2" pref="14" max="-2" attributes="0"/>
                   <Group type="103" groupAlignment="0" attributes="0">
+                      <Group type="102" attributes="0">
+                          <Component id="ftxtStartTime" min="-2" pref="617" max="-2" attributes="0"/>
+                          <EmptySpace max="-2" attributes="0"/>
+                          <Component id="ftxtEndTime" max="32767" attributes="0"/>
+                      </Group>
                       <Component id="jLabel1" alignment="0" max="32767" attributes="0"/>
-                      <Component id="jLabel2" alignment="0" pref="723" max="32767" attributes="0"/>
+                      <Component id="jLabel2" alignment="0" max="32767" attributes="0"/>
                       <Component id="jLabel3" alignment="0" max="32767" attributes="0"/>
                       <Component id="cbxSectionPeriod" alignment="0" max="32767" attributes="0"/>
-                      <Component id="jLabel4" alignment="0" max="32767" attributes="0"/>
-                      <Component id="txtMinStartTime" alignment="0" max="32767" attributes="0"/>
-                      <Component id="jLabel5" alignment="0" max="32767" attributes="0"/>
-                      <Component id="txtMaxEndTime" alignment="0" max="32767" attributes="0"/>
                       <Component id="jScrollPane1" alignment="0" max="32767" attributes="0"/>
                       <Component id="lblSummary" alignment="0" max="32767" attributes="0"/>
                       <Group type="102" alignment="1" attributes="0">
@@ -80,6 +81,11 @@
                           <Component id="btnGenerate" min="-2" pref="100" max="-2" attributes="0"/>
                           <EmptySpace max="-2" attributes="0"/>
                           <Component id="btnClose" min="-2" pref="100" max="-2" attributes="0"/>
+                      </Group>
+                      <Group type="102" alignment="1" attributes="0">
+                          <Component id="jLabel4" min="-2" pref="617" max="-2" attributes="0"/>
+                          <EmptySpace max="-2" attributes="0"/>
+                          <Component id="jLabel5" pref="629" max="32767" attributes="0"/>
                       </Group>
                   </Group>
                   <EmptySpace min="-2" pref="14" max="-2" attributes="0"/>
@@ -98,15 +104,17 @@
                   <EmptySpace max="-2" attributes="0"/>
                   <Component id="cbxSectionPeriod" min="-2" max="-2" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
-                  <Component id="jLabel4" min="-2" max="-2" attributes="0"/>
+                  <Group type="103" groupAlignment="3" attributes="0">
+                      <Component id="jLabel4" alignment="3" min="-2" max="-2" attributes="0"/>
+                      <Component id="jLabel5" alignment="3" min="-2" max="-2" attributes="0"/>
+                  </Group>
                   <EmptySpace max="-2" attributes="0"/>
-                  <Component id="txtMinStartTime" min="-2" max="-2" attributes="0"/>
+                  <Group type="103" groupAlignment="3" attributes="0">
+                      <Component id="ftxtStartTime" alignment="3" min="-2" max="-2" attributes="0"/>
+                      <Component id="ftxtEndTime" alignment="3" min="-2" max="-2" attributes="0"/>
+                  </Group>
                   <EmptySpace max="-2" attributes="0"/>
-                  <Component id="jLabel5" min="-2" max="-2" attributes="0"/>
-                  <EmptySpace max="-2" attributes="0"/>
-                  <Component id="txtMaxEndTime" min="-2" max="-2" attributes="0"/>
-                  <EmptySpace type="unrelated" max="-2" attributes="0"/>
-                  <Component id="jScrollPane1" min="-2" pref="300" max="-2" attributes="0"/>
+                  <Component id="jScrollPane1" min="-2" pref="364" max="-2" attributes="0"/>
                   <EmptySpace max="-2" attributes="0"/>
                   <Component id="lblSummary" min="-2" max="-2" attributes="0"/>
                   <EmptySpace type="separate" max="-2" attributes="0"/>
@@ -168,30 +176,12 @@
             <Property name="text" type="java.lang.String" value="Minimum Start Time (HH:mm)"/>
           </Properties>
         </Component>
-        <Component class="javax.swing.JFormattedTextField" name="txtMinStartTime">
-          <Properties>
-            <Property name="text" type="java.lang.String" value="07:30"/>
-            <Property name="toolTipText" type="java.lang.String" value="Use HH:mm format (example: 07:30)"/>
-            <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
-              <Font name="Poppins" size="12" style="0"/>
-            </Property>
-          </Properties>
-        </Component>
         <Component class="javax.swing.JLabel" name="jLabel5">
           <Properties>
             <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
               <Font name="Poppins" size="12" style="0"/>
             </Property>
             <Property name="text" type="java.lang.String" value="Maximum End Time (HH:mm)"/>
-          </Properties>
-        </Component>
-        <Component class="javax.swing.JFormattedTextField" name="txtMaxEndTime">
-          <Properties>
-            <Property name="text" type="java.lang.String" value="18:00"/>
-            <Property name="toolTipText" type="java.lang.String" value="Use HH:mm format (example: 18:00)"/>
-            <Property name="font" type="java.awt.Font" editor="org.netbeans.beaninfo.editors.FontEditor">
-              <Font name="Poppins" size="12" style="0"/>
-            </Property>
           </Properties>
         </Component>
         <Container class="javax.swing.JScrollPane" name="jScrollPane1">
@@ -217,8 +207,8 @@
                     <Column editable="false" title="Details" type="java.lang.Object"/>
                   </Table>
                 </Property>
-                <Property name="rowHeight" type="int" value="24"/>
                 <Property name="fillsViewportHeight" type="boolean" value="true"/>
+                <Property name="rowHeight" type="int" value="24"/>
               </Properties>
             </Component>
           </SubComponents>
@@ -276,6 +266,10 @@
           <Events>
             <EventHandler event="actionPerformed" listener="java.awt.event.ActionListener" parameters="java.awt.event.ActionEvent" handler="btnCloseActionPerformed"/>
           </Events>
+        </Component>
+        <Component class="javax.swing.JFormattedTextField" name="ftxtStartTime">
+        </Component>
+        <Component class="javax.swing.JFormattedTextField" name="ftxtEndTime">
         </Component>
       </SubComponents>
     </Container>

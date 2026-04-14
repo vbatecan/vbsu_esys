@@ -368,6 +368,23 @@ CREATE TABLE departments
     created_at      timestamp default current_timestamp
 );
 
+/**
+    * Tracks requests from faculty to drop a student from an offering.
+    * Allows faculty to submit drop requests with reasons, which can be approved or rejected by the registrar.
+    * Ensures that students cannot be dropped from offerings without proper authorization and documentation.
+**/
+CREATE TABLE faculty_student_drop_requests (
+    id bigint NOT NULL GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    faculty_id bigint NOT NULL,
+    student_id varchar(32) NOT NULL,
+    offering_id bigint NOT NULL,
+    reason clob,
+    status varchar(20) CHECK (status IN ('PENDING', 'APPROVED', 'REJECTED')) DEFAULT 'PENDING',
+    created_at timestamp default current_timestamp,
+    updated_at timestamp default current_timestamp,
+    UNIQUE (student_id, offering_id)
+);
+
 CREATE UNIQUE INDEX student_enrolled_subjects_index_0 ON student_enrolled_subjects (student_id, offering_id);
 CREATE UNIQUE INDEX prerequisites_unique_pair_index_0 ON prerequisites (pre_subject_id, subject_id);
 
