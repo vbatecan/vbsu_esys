@@ -1,7 +1,7 @@
 package com.group5.paul_esys.screens.admin;
 
-import com.group5.paul_esys.screens.admin.panels.AdminDashboardPanel;
 import com.group5.paul_esys.screens.admin.panels.AdminCurriculumManagement;
+import com.group5.paul_esys.screens.admin.panels.AdminDashboardPanel;
 import com.group5.paul_esys.screens.admin.panels.AdminDepartmentManagement;
 import com.group5.paul_esys.screens.admin.panels.AdminRoomsManagementPanel;
 import com.group5.paul_esys.screens.admin.panels.AdminSubjectManagement;
@@ -16,6 +16,7 @@ public final class AdminDashboard extends javax.swing.JFrame {
 	 * Creates new form AdminDashboard
 	 */
 	public AdminDashboard() {
+		this.setUndecorated(true);
 		initComponents();
 		this.setLocationRelativeTo(null);
 		this.initializeFrame();
@@ -39,6 +40,7 @@ public final class AdminDashboard extends javax.swing.JFrame {
 
                 rootPanel = new javax.swing.JPanel();
                 tabbedPaneAdmin = new javax.swing.JTabbedPane();
+                windowBar1 = new com.group5.paul_esys.components.WindowBar();
 
                 setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -52,12 +54,15 @@ public final class AdminDashboard extends javax.swing.JFrame {
                 rootPanelLayout.setHorizontalGroup(
                         rootPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addComponent(tabbedPaneAdmin, javax.swing.GroupLayout.DEFAULT_SIZE, 1280, Short.MAX_VALUE)
+                        .addComponent(windowBar1, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE)
                 );
                 rootPanelLayout.setVerticalGroup(
                         rootPanelLayout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                         .addGroup(rootPanelLayout.createSequentialGroup()
-                                .addComponent(tabbedPaneAdmin, javax.swing.GroupLayout.PREFERRED_SIZE, 749, javax.swing.GroupLayout.PREFERRED_SIZE)
-                                .addGap(0, 0, Short.MAX_VALUE))
+                                .addComponent(windowBar1, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addGap(0, 0, 0)
+                                .addComponent(tabbedPaneAdmin, javax.swing.GroupLayout.PREFERRED_SIZE, 707, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addContainerGap(javax.swing.GroupLayout.DEFAULT_SIZE, Short.MAX_VALUE))
                 );
 
                 javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
@@ -84,5 +89,6 @@ public final class AdminDashboard extends javax.swing.JFrame {
         // Variables declaration - do not modify//GEN-BEGIN:variables
         private javax.swing.JPanel rootPanel;
         private javax.swing.JTabbedPane tabbedPaneAdmin;
+        private com.group5.paul_esys.components.WindowBar windowBar1;
         // End of variables declaration//GEN-END:variables
 }

@@ -6,6 +6,9 @@ package com.group5.paul_esys.screens.admin.forms;
 
 import com.group5.paul_esys.modules.admin.model.Admin;
 import com.group5.paul_esys.modules.admin.services.AdminService;
+import com.group5.paul_esys.utils.FormValidationUtil;
+import java.util.Optional;
+import java.util.regex.Pattern;
 import javax.swing.JOptionPane;
 
 /**
@@ -15,6 +18,16 @@ import javax.swing.JOptionPane;
 public class AdminForm extends javax.swing.JFrame {
 	
 	private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(AdminForm.class.getName());
+        private static final int MIN_NAME_LENGTH = 2;
+        private static final int MAX_NAME_LENGTH = 50;
+        private static final int MIN_CONTACT_LENGTH = 7;
+        private static final int MAX_CONTACT_LENGTH = 20;
+        private static final int MAX_EMAIL_LENGTH = 254;
+        private static final int MIN_PASSWORD_LENGTH = 8;
+        private static final int MAX_PASSWORD_LENGTH = 128;
+        private static final Pattern NAME_PATTERN = Pattern.compile("^[A-Za-z .'-]+$");
+        private static final Pattern CONTACT_NUMBER_PATTERN = Pattern.compile("^[0-9+\\-\\s()]+$");
+
         private final AdminService adminService = AdminService.getInstance();
         private final Admin editingAdmin;
         private final Runnable onSavedCallback;
@@ -226,69 +239,72 @@ public class AdminForm extends javax.swing.JFrame {
         }//GEN-LAST:event_btnSaveActionPerformed
 
         private void saveAdmin() {
-                String firstName = normalizeRequiredText(txtFirstName.getText(), "First name");
-                if (firstName == null) {
+                String firstName = FormValidationUtil.normalizeOptionalText(txtFirstName.getText());
+                if (showValidationError(
+                        FormValidationUtil.validateRequiredText(
+                                "First name",
+                                firstName,
+                                MIN_NAME_LENGTH,
+                                MAX_NAME_LENGTH,
+                                NAME_PATTERN,
+                                "letters, spaces, apostrophes, hyphens, and periods"
+                        )
+                )) {
                         return;
                 }
 
-                String lastName = normalizeRequiredText(txtLastName.getText(), "Last name");
-                if (lastName == null) {
+                String lastName = FormValidationUtil.normalizeOptionalText(txtLastName.getText());
+                if (showValidationError(
+                        FormValidationUtil.validateRequiredText(
+                                "Last name",
+                                lastName,
+                                MIN_NAME_LENGTH,
+                                MAX_NAME_LENGTH,
+                                NAME_PATTERN,
+                                "letters, spaces, apostrophes, hyphens, and periods"
+                        )
+                )) {
                         return;
                 }
 
-                String email = normalizeRequiredText(txtEmail.getText(), "Email");
-                if (email == null) {
+                String email = FormValidationUtil.normalizeOptionalText(txtEmail.getText());
+                if (showValidationError(FormValidationUtil.validateRequiredEmail("Email", email, MAX_EMAIL_LENGTH))) {
                         return;
                 }
 
-                if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Email format is invalid.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                String contactNumber = FormValidationUtil.normalizeOptionalText(txtContactNumber.getText());
+                if (showValidationError(
+                        FormValidationUtil.validateOptionalText(
+                                "Contact number",
+                                contactNumber,
+                                MIN_CONTACT_LENGTH,
+                                MAX_CONTACT_LENGTH,
+                                CONTACT_NUMBER_PATTERN,
+                                "numbers, spaces, plus sign, parentheses, and hyphen"
+                        )
+                )) {
                         return;
                 }
 
-                String contactNumber = normalizeOptionalText(txtContactNumber.getText());
-                if (contactNumber != null && !contactNumber.matches("^[0-9+\\-\\s()]{7,20}$")) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Contact number format is invalid.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                String password = FormValidationUtil.normalizeOptionalText(txtPassword.getText());
+                String confirmPassword = FormValidationUtil.normalizeOptionalText(txtConfirmPassword.getText());
+
+                if (showValidationError(
+                        FormValidationUtil.validatePassword(
+                                "Password",
+                                password,
+                                editingAdmin == null,
+                                MIN_PASSWORD_LENGTH,
+                                MAX_PASSWORD_LENGTH
+                        )
+                )) {
                         return;
                 }
 
-                String password = txtPassword.getText().trim();
-                String confirmPassword = txtConfirmPassword.getText().trim();
-
-                if (editingAdmin == null && password.isEmpty()) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Password is required for new admin accounts.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
-                        return;
-                }
-
-                if (!password.equals(confirmPassword)) {
+                if (!equalsNullable(password, confirmPassword)) {
                         JOptionPane.showMessageDialog(
                                 this,
                                 "Password and confirm password do not match.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
-                        return;
-                }
-
-                if (!password.isEmpty() && password.length() < 8) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Password must be at least 8 characters.",
                                 "Validation Error",
                                 JOptionPane.WARNING_MESSAGE
                         );
@@ -323,7 +339,7 @@ public class AdminForm extends javax.swing.JFrame {
                                 .setLastName(lastName)
                                 .setContactNumber(contactNumber);
 
-                        boolean updated = adminService.updateAdminWithEmail(editingAdmin, email, password);
+                        boolean updated = adminService.updateAdminWithEmail(editingAdmin, email, password == null ? "" : password);
                         if (!updated) {
                                 JOptionPane.showMessageDialog(
                                         this,
@@ -349,28 +365,26 @@ public class AdminForm extends javax.swing.JFrame {
                 dispose();
         }
 
-        private String normalizeOptionalText(String value) {
-                if (value == null) {
-                        return null;
-                }
-
-                String trimmed = value.trim();
-                return trimmed.isEmpty() ? null : trimmed;
-        }
-
-        private String normalizeRequiredText(String value, String fieldLabel) {
-                String normalized = normalizeOptionalText(value);
-                if (normalized != null) {
-                        return normalized;
+        private boolean showValidationError(Optional<String> validationError) {
+                if (validationError.isEmpty()) {
+                        return false;
                 }
 
                 JOptionPane.showMessageDialog(
                         this,
-                        fieldLabel + " is required.",
+                        validationError.get(),
                         "Validation Error",
                         JOptionPane.WARNING_MESSAGE
                 );
-                return null;
+                return true;
+        }
+
+        private boolean equalsNullable(String left, String right) {
+                if (left == null) {
+                        return right == null;
+                }
+
+                return left.equals(right);
         }
 
 	/**
