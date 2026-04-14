@@ -41,7 +41,9 @@ import com.group5.paul_esys.screens.shared.panels.SettingsPanel;
 import com.group5.paul_esys.screens.sign_in.SignIn;
 import com.group5.paul_esys.utils.ThemeManager;
 import java.awt.*;
+import java.awt.print.PrinterException;
 import java.sql.Timestamp;
+import java.text.MessageFormat;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Date;
@@ -2104,9 +2106,19 @@ public class StudentDashboard extends javax.swing.JFrame {
 
 		jButton4.setFont(new java.awt.Font("Trebuchet MS", 0, 12)); // NOI18N
 		jButton4.setText("Print Schedule");
+		jButton4.addActionListener(new java.awt.event.ActionListener() {
+			public void actionPerformed(java.awt.event.ActionEvent evt) {
+				jButton4ActionPerformed(evt);
+			}
+		});
 
 		jButton5.setFont(new java.awt.Font("Trebuchet MS", 0, 12)); // NOI18N
 		jButton5.setText("Export PDF");
+		jButton5.addActionListener(new java.awt.event.ActionListener() {
+			public void actionPerformed(java.awt.event.ActionEvent evt) {
+				jButton5ActionPerformed(evt);
+			}
+		});
 
 		javax.swing.GroupLayout panelMyScheduleLayout = new javax.swing.GroupLayout(panelMySchedule);
 		panelMySchedule.setLayout(panelMyScheduleLayout);
@@ -2238,6 +2250,27 @@ public class StudentDashboard extends javax.swing.JFrame {
 	private void btnSearchSubjectActionPerformed(java.awt.event.ActionEvent evt) {// GEN-FIRST:event_btnSearchSubjectActionPerformed
 		loadSubjectCatalogAsync(txtSearch.getText());
 	}// GEN-LAST:event_btnSearchSubjectActionPerformed
+
+	private void jButton4ActionPerformed(java.awt.event.ActionEvent evt) {
+		printSchedule();
+	}
+
+	private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {
+		printSchedule(); // In standard Swing, Print to PDF is often handled by the print dialog "Print to PDF" printer
+	}
+
+	private void printSchedule() {
+		try {
+			MessageFormat header = new MessageFormat("Class Schedule - " + currentStudent.getFirstName() + " " + currentStudent.getLastName());
+			MessageFormat footer = new MessageFormat("VBSU Enrollment System - Page {0}");
+			boolean complete = tableSchedules.print(JTable.PrintMode.FIT_WIDTH, header, footer);
+			if (complete) {
+				JOptionPane.showMessageDialog(this, "Printing complete", "Print Schedule", JOptionPane.INFORMATION_MESSAGE);
+			}
+		} catch (PrinterException pe) {
+			JOptionPane.showMessageDialog(this, "Printing failed: " + pe.getMessage(), "Print Error", JOptionPane.ERROR_MESSAGE);
+		}
+	}
 
 	private void btnSubmitScheduleActionPerformed(java.awt.event.ActionEvent evt) {// GEN-FIRST:event_btnSubmitScheduleActionPerformed
 		persistSelectedSchedule(EnrollmentStatus.SUBMITTED);
