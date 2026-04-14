@@ -9,6 +9,7 @@ import com.group5.paul_esys.modules.courses.services.CourseService;
 import com.group5.paul_esys.modules.students.model.Student;
 import com.group5.paul_esys.modules.students.model.StudentStatus;
 import com.group5.paul_esys.modules.students.services.StudentService;
+import com.group5.paul_esys.utils.FormValidationUtil;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -16,6 +17,8 @@ import java.time.format.DateTimeParseException;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Pattern;
 import javax.swing.JOptionPane;
 
 /**
@@ -26,6 +29,10 @@ public class UpdateStudentForm extends javax.swing.JDialog {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(UpdateStudentForm.class.getName());
         private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+                private static final int MIN_NAME_LENGTH = 2;
+                private static final int MAX_NAME_LENGTH = 50;
+                private static final Pattern NAME_PATTERN = Pattern.compile("^[A-Za-z .'-]+$");
+
         private final StudentService studentService = StudentService.getInstance();
         private final CourseService courseService = CourseService.getInstance();
         private final Map<String, Long> courseIdByName = new LinkedHashMap<>();
@@ -158,24 +165,47 @@ public class UpdateStudentForm extends javax.swing.JDialog {
                 String middleName = jTextField2.getText() == null ? "" : jTextField2.getText().trim();
                 String lastName = jTextField3.getText() == null ? "" : jTextField3.getText().trim();
 
-                if (firstName.isEmpty() || lastName.isEmpty()) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "First name and last name are required.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                if (showValidationError(
+                        FormValidationUtil.validateRequiredText(
+                                "First name",
+                                firstName,
+                                MIN_NAME_LENGTH,
+                                MAX_NAME_LENGTH,
+                                NAME_PATTERN,
+                                "letters, spaces, apostrophes, hyphens, and periods"
+                        )
+                )) {
+                        return;
+                }
+
+                if (showValidationError(
+                        FormValidationUtil.validateOptionalText(
+                                "Middle name",
+                                middleName,
+                                1,
+                                MAX_NAME_LENGTH,
+                                NAME_PATTERN,
+                                "letters, spaces, apostrophes, hyphens, and periods"
+                        )
+                )) {
+                        return;
+                }
+
+                if (showValidationError(
+                        FormValidationUtil.validateRequiredText(
+                                "Last name",
+                                lastName,
+                                MIN_NAME_LENGTH,
+                                MAX_NAME_LENGTH,
+                                NAME_PATTERN,
+                                "letters, spaces, apostrophes, hyphens, and periods"
+                        )
+                )) {
                         return;
                 }
 
                 Object selectedCourse = jComboBox3.getSelectedItem();
-                if (selectedCourse == null || !courseIdByName.containsKey(selectedCourse.toString())) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Please select a course/program.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                if (showValidationError(FormValidationUtil.validateMappedSelection("Course/Program", selectedCourse, courseIdByName))) {
                         return;
                 }
 
@@ -194,6 +224,16 @@ public class UpdateStudentForm extends javax.swing.JDialog {
                         JOptionPane.showMessageDialog(
                                 this,
                                 "Birth date is invalid.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return;
+                }
+
+                if (birthDate.isAfter(LocalDate.now()) || birthDate.getYear() < 1900) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Birth date is out of allowed range.",
                                 "Validation Error",
                                 JOptionPane.WARNING_MESSAGE
                         );
@@ -234,12 +274,25 @@ public class UpdateStudentForm extends javax.swing.JDialog {
                 dispose();
     }
 
+        private boolean showValidationError(Optional<String> validationError) {
+                if (validationError.isEmpty()) {
+                        return false;
+                }
+
+                JOptionPane.showMessageDialog(
+                        this,
+                        validationError.get(),
+                        "Validation Error",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return true;
+        }
+
     /**
      * This method is called from within the constructor to initialize the form.
      * WARNING: Do NOT modify this code. The content of this method is always
      * regenerated by the Form Editor.
      */
-    @SuppressWarnings("unchecked")
         // <editor-fold defaultstate="collapsed" desc="Generated Code">//GEN-BEGIN:initComponents
         private void initComponents() {
 

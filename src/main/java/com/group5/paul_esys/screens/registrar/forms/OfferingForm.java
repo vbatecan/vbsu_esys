@@ -13,10 +13,12 @@ import com.group5.paul_esys.modules.sections.model.Section;
 import com.group5.paul_esys.modules.sections.services.SectionService;
 import com.group5.paul_esys.modules.subjects.model.Subject;
 import com.group5.paul_esys.modules.subjects.services.SubjectService;
+import com.group5.paul_esys.utils.FormValidationUtil;
 import java.awt.Frame;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import javax.swing.JOptionPane;
 
 /**
@@ -200,30 +202,22 @@ public class OfferingForm extends javax.swing.JDialog {
     private static final Integer INVALID_CAPACITY = Integer.MIN_VALUE;
 
     private boolean isValidForm(Long enrollmentPeriodId, Long subjectId, Long sectionId) {
-        if (enrollmentPeriodId == null) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Please select an enrollment period.",
-                    "Validation Error",
-                    JOptionPane.WARNING_MESSAGE
-            );
+        if (showValidationError(FormValidationUtil.validateRequiredSelection("Enrollment period", cbxEnrollmentPeriod.getSelectedItem()))) {
             return false;
         }
 
-        if (subjectId == null) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Please select a subject.",
-                    "Validation Error",
-                    JOptionPane.WARNING_MESSAGE
-            );
+        if (showValidationError(FormValidationUtil.validateRequiredSelection("Subject", cbxSubject.getSelectedItem()))) {
             return false;
         }
 
-        if (sectionId == null) {
+        if (showValidationError(FormValidationUtil.validateRequiredSelection("Section", cbxSection.getSelectedItem()))) {
+            return false;
+        }
+
+        if (enrollmentPeriodId == null || subjectId == null || sectionId == null) {
             JOptionPane.showMessageDialog(
                     this,
-                    "Please select a section.",
+                    "Please select valid enrollment period, subject, and section values.",
                     "Validation Error",
                     JOptionPane.WARNING_MESSAGE
             );
@@ -234,17 +228,24 @@ public class OfferingForm extends javax.swing.JDialog {
     }
 
     private Integer parseCapacity() {
-        String raw = txtCapacity.getText();
-        if (raw == null || raw.trim().isEmpty()) {
+        String raw = FormValidationUtil.normalizeOptionalText(txtCapacity.getText());
+        if (raw == null) {
             return null;
         }
 
+        Optional<String> rangeValidation = FormValidationUtil.validateIntegerTextRange(
+            "Capacity",
+            raw,
+            1,
+            (int) FormValidationUtil.LARGE_NUMBER_LIMIT,
+            true
+        );
+        if (showValidationError(rangeValidation)) {
+            return INVALID_CAPACITY;
+        }
+
         try {
-            int parsed = Integer.parseInt(raw.trim());
-            if (parsed <= 0) {
-                throw new NumberFormatException("Capacity must be positive");
-            }
-            return parsed;
+            return Integer.parseInt(raw);
         } catch (NumberFormatException e) {
             JOptionPane.showMessageDialog(
                     this,
@@ -254,6 +255,20 @@ public class OfferingForm extends javax.swing.JDialog {
             );
             return INVALID_CAPACITY;
         }
+    }
+
+    private boolean showValidationError(Optional<String> validationError) {
+        if (validationError.isEmpty()) {
+            return false;
+        }
+
+        JOptionPane.showMessageDialog(
+                this,
+                validationError.get(),
+                "Validation Error",
+                JOptionPane.WARNING_MESSAGE
+        );
+        return true;
     }
 
     private Long getSelectedEnrollmentPeriodId() {

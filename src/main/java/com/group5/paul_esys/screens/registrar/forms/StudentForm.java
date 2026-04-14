@@ -15,12 +15,15 @@ import com.group5.paul_esys.modules.departments.services.DepartmentService;
 import com.group5.paul_esys.modules.students.model.Student;
 import com.group5.paul_esys.modules.students.model.StudentStatus;
 import com.group5.paul_esys.modules.students.services.StudentService;
+import com.group5.paul_esys.utils.FormValidationUtil;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Pattern;
 import javax.swing.JOptionPane;
 import raven.datetime.DatePicker;
 
@@ -29,6 +32,11 @@ import raven.datetime.DatePicker;
  * @author janea
  */
 public class StudentForm extends javax.swing.JFrame {
+
+  private static final int MIN_NAME_LENGTH = 2;
+  private static final int MAX_NAME_LENGTH = 50;
+  private static final int MAX_EMAIL_LENGTH = 254;
+  private static final Pattern NAME_PATTERN = Pattern.compile("^[A-Za-z .'-]+$");
 
   private final StudentService studentService = StudentService.getInstance();
   private final DepartmentService departmentService = DepartmentService.getInstance();
@@ -99,7 +107,6 @@ public class StudentForm extends javax.swing.JFrame {
   }
 
   private void inferGeneratedStudentId() {
-    LocalDate selectedDate = birthDatePicker.getSelectedDate();
     txtStudentID.setText(studentService.generateStudentId());
   }
 
@@ -225,45 +232,58 @@ public class StudentForm extends javax.swing.JFrame {
     String lastName = txtLastName.getText() == null ? "" : txtLastName.getText().trim();
     String email = txtEmail.getText() == null ? "" : txtEmail.getText().trim();
 
-    if (firstName.isEmpty() || lastName.isEmpty()) {
-      JOptionPane.showMessageDialog(
-        this,
-        "First name and last name are required.",
-        "Validation Error",
-        JOptionPane.WARNING_MESSAGE
-      );
+    if (showValidationError(
+      FormValidationUtil.validateRequiredText(
+        "First name",
+        firstName,
+        MIN_NAME_LENGTH,
+        MAX_NAME_LENGTH,
+        NAME_PATTERN,
+        "letters, spaces, apostrophes, hyphens, and periods"
+      )
+    )) {
       return;
     }
 
-    if (!email.endsWith("@vbsu.edu.ph")) {
-      JOptionPane.showMessageDialog(
-        this,
-        "Only official VBSU email addresses are allowed.",
-        "Validation Error",
-        JOptionPane.WARNING_MESSAGE
-      );
+    if (showValidationError(
+      FormValidationUtil.validateOptionalText(
+        "Middle name",
+        middleName,
+        1,
+        MAX_NAME_LENGTH,
+        NAME_PATTERN,
+        "letters, spaces, apostrophes, hyphens, and periods"
+      )
+    )) {
+      return;
+    }
+
+    if (showValidationError(
+      FormValidationUtil.validateRequiredText(
+        "Last name",
+        lastName,
+        MIN_NAME_LENGTH,
+        MAX_NAME_LENGTH,
+        NAME_PATTERN,
+        "letters, spaces, apostrophes, hyphens, and periods"
+      )
+    )) {
+      return;
+    }
+
+    if (showValidationError(
+      FormValidationUtil.validateRequiredDomainEmail("Email", email, MAX_EMAIL_LENGTH, "vbsu.edu.ph")
+    )) {
       return;
     }
 
     Object selectedCourse = cbxCourse.getSelectedItem();
-    if (selectedCourse == null || !courseIdByName.containsKey(selectedCourse.toString())) {
-      JOptionPane.showMessageDialog(
-        this,
-        "Please select a program/course.",
-        "Validation Error",
-        JOptionPane.WARNING_MESSAGE
-      );
+    if (showValidationError(FormValidationUtil.validateMappedSelection("Program/Course", selectedCourse, courseIdByName))) {
       return;
     }
 
     Object selectedCurriculum = cbxCurriculum.getSelectedItem();
-    if (selectedCurriculum == null || !curriculumIdByName.containsKey(selectedCurriculum.toString())) {
-      JOptionPane.showMessageDialog(
-        this,
-        "Please select a curriculum.",
-        "Validation Error",
-        JOptionPane.WARNING_MESSAGE
-      );
+    if (showValidationError(FormValidationUtil.validateMappedSelection("Curriculum", selectedCurriculum, curriculumIdByName))) {
       return;
     }
 
@@ -278,14 +298,18 @@ public class StudentForm extends javax.swing.JFrame {
       return;
     }
 
-    String studentId = txtStudentID.getText() == null ? "" : txtStudentID.getText().trim();
-    if (!studentId.matches("\\d{11}")) {
+    if (selectedBirthDate.isAfter(LocalDate.now()) || selectedBirthDate.getYear() < 1900) {
       JOptionPane.showMessageDialog(
         this,
-        "Student ID must be an 11-digit number.",
+        "Birth date is out of allowed range.",
         "Validation Error",
         JOptionPane.WARNING_MESSAGE
       );
+      return;
+    }
+
+    String studentId = txtStudentID.getText() == null ? "" : txtStudentID.getText().trim();
+    if (showValidationError(FormValidationUtil.validateDigits("Student ID", studentId, 11))) {
       return;
     }
 
@@ -353,6 +377,20 @@ public class StudentForm extends javax.swing.JFrame {
     }
 
     dispose();
+  }
+
+  private boolean showValidationError(Optional<String> validationError) {
+    if (validationError.isEmpty()) {
+      return false;
+    }
+
+    JOptionPane.showMessageDialog(
+      this,
+      validationError.get(),
+      "Validation Error",
+      JOptionPane.WARNING_MESSAGE
+    );
+    return true;
   }
 
   /**

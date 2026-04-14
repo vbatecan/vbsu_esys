@@ -2,10 +2,12 @@ package com.group5.paul_esys.screens.registrar.forms;
 
 import com.group5.paul_esys.modules.rooms.model.Room;
 import com.group5.paul_esys.modules.rooms.services.RoomService;
+import com.group5.paul_esys.utils.FormValidationUtil;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.regex.Pattern;
 
-import javax.swing.ComboBoxModel;
 import javax.swing.JOptionPane;
 
 /*
@@ -20,6 +22,10 @@ import javax.swing.JOptionPane;
 public class RoomForm extends javax.swing.JFrame {
 
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(RoomForm.class.getName());
+    private static final int MIN_ROOM_LENGTH = 2;
+    private static final int MAX_ROOM_LENGTH = 50;
+    private static final Pattern ROOM_PATTERN = Pattern.compile("^[A-Za-z0-9 .#()\\-/]+$");
+
     private final RoomService roomService = RoomService.getInstance();
     private final Runnable onSavedCallback;
     private final Room editingRoom;
@@ -62,31 +68,39 @@ public class RoomForm extends javax.swing.JFrame {
     }
 
     private boolean isValidForm() {
-        if (cbxBuilding.getSelectedItem() == null || cbxBuilding.getSelectedItem().toString().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Building is required.",
-                    "Validation Error",
-                    JOptionPane.WARNING_MESSAGE);
+        if (showValidationError(FormValidationUtil.validateRequiredSelection("Building", cbxBuilding.getSelectedItem()))) {
             return false;
         }
 
-        if (txtRoom.getText() == null || txtRoom.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Room name is required.",
-                    "Validation Error",
-                    JOptionPane.WARNING_MESSAGE);
+        if (showValidationError(
+            FormValidationUtil.validateRequiredText(
+                "Room name",
+                txtRoom.getText(),
+                MIN_ROOM_LENGTH,
+                MAX_ROOM_LENGTH,
+                ROOM_PATTERN,
+                "letters, numbers, spaces, and . # ( ) - /"
+            )
+        )) {
             return false;
         }
 
-        int capacity = (Integer) spinnerCapacity.getValue();
-        if (capacity <= 0) {
-            JOptionPane.showMessageDialog(
-                    this,
-                    "Capacity must be greater than 0.",
-                    "Validation Error",
-                    JOptionPane.WARNING_MESSAGE);
+        if (showValidationError(
+            FormValidationUtil.validateNumberRange(
+                "Capacity",
+                (Number) spinnerCapacity.getValue(),
+                1,
+                FormValidationUtil.LARGE_NUMBER_LIMIT
+            )
+        )) {
+            return false;
+        }
+
+        if (showValidationError(FormValidationUtil.validateRequiredSelection("Room type", cbxRoomType.getSelectedItem()))) {
+            return false;
+        }
+
+        if (showValidationError(FormValidationUtil.validateRequiredSelection("Room status", cbxRoomStatus.getSelectedItem()))) {
             return false;
         }
 
@@ -103,7 +117,7 @@ public class RoomForm extends javax.swing.JFrame {
                 .setBuilding(cbxBuilding.getSelectedItem() == null ? null : cbxBuilding.getSelectedItem().toString())
                 .setRoomType(cbxRoomType.getSelectedItem() == null ? null : cbxRoomType.getSelectedItem().toString())
                 .setStatus(cbxRoomStatus.getSelectedItem() == null ? null : cbxRoomStatus.getSelectedItem().toString())
-                .setRoom(txtRoom.getText().trim())
+            .setRoom(FormValidationUtil.normalizeOptionalText(txtRoom.getText()))
                 .setCapacity((Integer) spinnerCapacity.getValue());
 
         boolean success = editingRoom == null
@@ -132,6 +146,20 @@ public class RoomForm extends javax.swing.JFrame {
         }
 
         dispose();
+    }
+
+    private boolean showValidationError(Optional<String> validationError) {
+        if (validationError.isEmpty()) {
+            return false;
+        }
+
+        JOptionPane.showMessageDialog(
+                this,
+                validationError.get(),
+                "Validation Error",
+                JOptionPane.WARNING_MESSAGE
+        );
+        return true;
     }
 
     /**

@@ -7,6 +7,7 @@ package com.group5.paul_esys.screens.registrar.forms;
 import com.group5.paul_esys.modules.enrollment_period.model.EnrollmentPeriod;
 import com.group5.paul_esys.modules.enrollment_period.services.EnrollmentPeriodService;
 import com.group5.paul_esys.modules.enrollment_period.utils.EnrollmentPeriodUtils;
+import com.group5.paul_esys.utils.FormValidationUtil;
 import java.time.LocalDate;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -25,6 +26,11 @@ public class EnrollmentPeriodForm extends javax.swing.JFrame {
 	
 	private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(EnrollmentPeriodForm.class.getName());
         private static final Pattern SCHOOL_YEAR_PATTERN = Pattern.compile("^(\\d{4})\\s*-\\s*(\\d{4})$");
+        private static final int SCHOOL_YEAR_TEXT_LENGTH = 9;
+        private static final int MIN_SEMESTER_LENGTH = 2;
+        private static final int MAX_SEMESTER_LENGTH = 30;
+        private static final int MAX_DESCRIPTION_LENGTH = 500;
+        private static final Pattern SEMESTER_PATTERN = Pattern.compile("^[A-Za-z0-9 .,'()\\-/&]+$");
 
         private final EnrollmentPeriodService enrollmentPeriodService = EnrollmentPeriodService.getInstance();
         private final EnrollmentPeriod editingEnrollmentPeriod;
@@ -154,13 +160,16 @@ public class EnrollmentPeriodForm extends javax.swing.JFrame {
 
         private boolean isValidForm() {
                 String schoolYear = normalizeSchoolYear(txtSchoolYear.getText());
-                if (schoolYear.isEmpty()) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "School year is required.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                if (showValidationError(
+                        FormValidationUtil.validateRequiredText(
+                                "School year",
+                                schoolYear,
+                                SCHOOL_YEAR_TEXT_LENGTH,
+                                SCHOOL_YEAR_TEXT_LENGTH,
+                                Pattern.compile("^[0-9\\-]+$"),
+                                "numbers and hyphen in YYYY-YYYY format"
+                        )
+                )) {
                         return false;
                 }
 
@@ -188,13 +197,29 @@ public class EnrollmentPeriodForm extends javax.swing.JFrame {
                 }
 
                 String semester = normalizeSemester(txtSemester.getText());
-                if (semester.isEmpty()) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Semester is required.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                if (showValidationError(
+                        FormValidationUtil.validateRequiredText(
+                                "Semester",
+                                semester,
+                                MIN_SEMESTER_LENGTH,
+                                MAX_SEMESTER_LENGTH,
+                                SEMESTER_PATTERN,
+                                "letters, numbers, spaces, and . , ' ( ) - / &"
+                        )
+                )) {
+                        return false;
+                }
+
+                if (showValidationError(
+                        FormValidationUtil.validateOptionalText(
+                                "Description",
+                                textAreaDescription.getText(),
+                                1,
+                                MAX_DESCRIPTION_LENGTH,
+                                null,
+                                ""
+                        )
+                )) {
                         return false;
                 }
 
@@ -221,6 +246,20 @@ public class EnrollmentPeriodForm extends javax.swing.JFrame {
                         return false;
                 }
 
+                return true;
+        }
+
+        private boolean showValidationError(Optional<String> validationError) {
+                if (validationError.isEmpty()) {
+                        return false;
+                }
+
+                JOptionPane.showMessageDialog(
+                        this,
+                        validationError.get(),
+                        "Validation Error",
+                        JOptionPane.WARNING_MESSAGE
+                );
                 return true;
         }
 

@@ -8,10 +8,13 @@ import com.group5.paul_esys.modules.departments.model.Department;
 import com.group5.paul_esys.modules.departments.services.DepartmentService;
 import com.group5.paul_esys.modules.faculty.model.Faculty;
 import com.group5.paul_esys.modules.faculty.services.FacultyService;
+import com.group5.paul_esys.utils.FormValidationUtil;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Pattern;
 import javax.swing.JOptionPane;
 
 /**
@@ -21,7 +24,15 @@ import javax.swing.JOptionPane;
 public class FacultyForm extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(FacultyForm.class.getName());
-                private static final DateTimeFormatter PASSWORD_DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
+        private static final DateTimeFormatter PASSWORD_DATE_FORMATTER = DateTimeFormatter.ISO_LOCAL_DATE;
+        private static final int MIN_NAME_LENGTH = 2;
+        private static final int MAX_NAME_LENGTH = 50;
+        private static final int MAX_EMAIL_LENGTH = 254;
+        private static final int MIN_CONTACT_LENGTH = 7;
+        private static final int MAX_CONTACT_LENGTH = 20;
+        private static final Pattern NAME_PATTERN = Pattern.compile("^[A-Za-z .'-]+$");
+        private static final Pattern CONTACT_NUMBER_PATTERN = Pattern.compile("^[0-9+\\-\\s()]+$");
+
         private final FacultyService facultyService = FacultyService.getInstance();
         private final DepartmentService departmentService = DepartmentService.getInstance();
 
@@ -149,73 +160,61 @@ public class FacultyForm extends javax.swing.JFrame {
                         .toLocalDate();
         }
 
-        private void validateNameField(String value, String fieldName) throws IllegalArgumentException {
-                if (value == null || value.trim().isEmpty()) {
-                        throw new IllegalArgumentException(fieldName + " is required.");
-                }
-                if (!value.matches("^[a-zA-Z\\s]+$")) {
-                        throw new IllegalArgumentException(fieldName + " must not contain special characters or numbers.");
-                }
-        }
-
-        private void validateDateFields(LocalDate birthDate) throws IllegalArgumentException {
-                LocalDate now = LocalDate.now();
-                if (birthDate.isAfter(now)) {
-                        throw new IllegalArgumentException("Future dates are not allowed for birthdate.");
-                }
-                if (birthDate.getYear() > 2000) {
-                        throw new IllegalArgumentException("Birthdate must be year 2000 or earlier.");
-                }
-        }
-
         private boolean isValidForm() {
-                try {
-                        validateNameField(txtFirstName.getText(), "First name");
-                        validateNameField(txtLastName.getText(), "Last name");
-
-                        String middleName = txtLastName1.getText();
-                        if (middleName != null && !middleName.trim().isEmpty()) {
-                                validateNameField(middleName, "Middle name");
-                        }
-                } catch (IllegalArgumentException e) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                e.getMessage(),
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                if (showValidationError(
+                        FormValidationUtil.validateRequiredText(
+                                "First name",
+                                txtFirstName.getText(),
+                                MIN_NAME_LENGTH,
+                                MAX_NAME_LENGTH,
+                                NAME_PATTERN,
+                                "letters, spaces, apostrophes, hyphens, and periods"
+                        )
+                )) {
                         return false;
                 }
 
-                if (txtEmail.getText() == null || txtEmail.getText().trim().isEmpty()) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Email is required.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                if (showValidationError(
+                        FormValidationUtil.validateRequiredText(
+                                "Last name",
+                                txtLastName.getText(),
+                                MIN_NAME_LENGTH,
+                                MAX_NAME_LENGTH,
+                                NAME_PATTERN,
+                                "letters, spaces, apostrophes, hyphens, and periods"
+                        )
+                )) {
                         return false;
                 }
 
-                String email = txtEmail.getText().trim();
-                if (!email.matches("^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$")) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Email format is invalid.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                if (showValidationError(
+                        FormValidationUtil.validateOptionalText(
+                                "Middle name",
+                                txtLastName1.getText(),
+                                1,
+                                MAX_NAME_LENGTH,
+                                NAME_PATTERN,
+                                "letters, spaces, apostrophes, hyphens, and periods"
+                        )
+                )) {
+                        return false;
+                }
+
+                if (showValidationError(FormValidationUtil.validateRequiredEmail("Email", txtEmail.getText(), MAX_EMAIL_LENGTH))) {
                         return false;
                 }
 
                 String contactNumber = txtLastName2.getText() == null ? "" : txtLastName2.getText().trim();
-                if (!contactNumber.isEmpty() && !contactNumber.matches("^[0-9+\\-\\s()]{7,20}$")) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Contact number format is invalid.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                if (showValidationError(
+                        FormValidationUtil.validateOptionalText(
+                                "Contact number",
+                                contactNumber,
+                                MIN_CONTACT_LENGTH,
+                                MAX_CONTACT_LENGTH,
+                                CONTACT_NUMBER_PATTERN,
+                                "numbers, spaces, plus sign, parentheses, and hyphen"
+                        )
+                )) {
                         return false;
                 }
 
@@ -230,12 +229,21 @@ public class FacultyForm extends javax.swing.JFrame {
                         return false;
                 }
 
-                try {
-                        validateDateFields(birthDate);
-                } catch (IllegalArgumentException e) {
+                LocalDate now = LocalDate.now();
+                if (birthDate.isAfter(now)) {
                         JOptionPane.showMessageDialog(
                                 this,
-                                e.getMessage(),
+                                "Future dates are not allowed for birthdate.",
+                                "Validation Error",
+                                JOptionPane.WARNING_MESSAGE
+                        );
+                        return false;
+                }
+
+                if (birthDate.getYear() < 1900) {
+                        JOptionPane.showMessageDialog(
+                                this,
+                                "Birthdate must not be earlier than year 1900.",
                                 "Validation Error",
                                 JOptionPane.WARNING_MESSAGE
                         );
@@ -243,13 +251,9 @@ public class FacultyForm extends javax.swing.JFrame {
                 }
 
                 Object selectedDepartment = cbxDepartment.getSelectedItem();
-                if (selectedDepartment == null || !departmentIdByLabel.containsKey(selectedDepartment.toString())) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Please select a department.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                if (showValidationError(
+                        FormValidationUtil.validateMappedSelection("Department", selectedDepartment, departmentIdByLabel)
+                )) {
                         return false;
                 }
 
@@ -330,6 +334,20 @@ public class FacultyForm extends javax.swing.JFrame {
 
                 dispose();
     }
+
+        private boolean showValidationError(Optional<String> validationError) {
+                if (validationError.isEmpty()) {
+                        return false;
+                }
+
+                JOptionPane.showMessageDialog(
+                        this,
+                        validationError.get(),
+                        "Validation Error",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return true;
+        }
 
     /**
      * This method is called from within the constructor to initialize the form.

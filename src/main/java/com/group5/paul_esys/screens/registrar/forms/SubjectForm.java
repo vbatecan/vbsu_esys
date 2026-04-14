@@ -9,9 +9,11 @@ import com.group5.paul_esys.modules.departments.services.DepartmentService;
 import com.group5.paul_esys.modules.subjects.model.Subject;
 import com.group5.paul_esys.modules.subjects.model.SubjectSchedulePattern;
 import com.group5.paul_esys.modules.subjects.services.SubjectService;
+import com.group5.paul_esys.utils.FormValidationUtil;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.regex.Pattern;
 import javax.swing.JOptionPane;
 
 /**
@@ -21,6 +23,14 @@ import javax.swing.JOptionPane;
 public class SubjectForm extends javax.swing.JDialog {
 	
 	private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(SubjectForm.class.getName());
+        private static final int MIN_SUBJECT_NAME_LENGTH = 2;
+        private static final int MAX_SUBJECT_NAME_LENGTH = 100;
+        private static final int MIN_SUBJECT_CODE_LENGTH = 2;
+        private static final int MAX_SUBJECT_CODE_LENGTH = 20;
+        private static final int MAX_DESCRIPTION_LENGTH = 500;
+        private static final Pattern SUBJECT_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9 .,'()\\-/&]+$");
+        private static final Pattern SUBJECT_CODE_PATTERN = Pattern.compile("^[A-Za-z0-9._\\-/]+$");
+
         private final SubjectService subjectService = SubjectService.getInstance();
         private final DepartmentService departmentService = DepartmentService.getInstance();
 
@@ -117,43 +127,60 @@ public class SubjectForm extends javax.swing.JDialog {
 	}
 
         private boolean isValidForm() {
-                if (txtSubjectName.getText() == null || txtSubjectName.getText().trim().isEmpty()) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Subject name is required.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                if (showValidationError(
+                        FormValidationUtil.validateRequiredText(
+                                "Subject name",
+                                txtSubjectName.getText(),
+                                MIN_SUBJECT_NAME_LENGTH,
+                                MAX_SUBJECT_NAME_LENGTH,
+                                SUBJECT_NAME_PATTERN,
+                                "letters, numbers, spaces, and . , ' ( ) - / &"
+                        )
+                )) {
                         return false;
                 }
 
-                if (txtSubjectCode.getText() == null || txtSubjectCode.getText().trim().isEmpty()) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Subject code is required.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                if (showValidationError(
+                        FormValidationUtil.validateRequiredText(
+                                "Subject code",
+                                txtSubjectCode.getText(),
+                                MIN_SUBJECT_CODE_LENGTH,
+                                MAX_SUBJECT_CODE_LENGTH,
+                                SUBJECT_CODE_PATTERN,
+                                "letters, numbers, and . _ - /"
+                        )
+                )) {
                         return false;
                 }
 
-                if (!hasValidUnits()) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Units must be greater than zero.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                if (showValidationError(FormValidationUtil.validateNumberRange(
+                        "Units",
+                        (Number) spinnerUnit.getValue(),
+                        0,
+                        FormValidationUtil.LARGE_NUMBER_LIMIT
+                ))) {
                         return false;
                 }
 
-                if (!hasValidEstimatedTime()) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Estimated time must be greater than zero.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                if (showValidationError(FormValidationUtil.validateNumberRange(
+                        "Estimated time",
+                        (Number) spinnerEstimatedTime.getValue(),
+                        1,
+                        FormValidationUtil.LARGE_NUMBER_LIMIT
+                ))) {
+                        return false;
+                }
+
+                if (showValidationError(
+                        FormValidationUtil.validateOptionalText(
+                                "Description",
+                                textAreaDescription.getText(),
+                                1,
+                                MAX_DESCRIPTION_LENGTH,
+                                null,
+                                ""
+                        )
+                )) {
                         return false;
                 }
 
@@ -190,14 +217,6 @@ public class SubjectForm extends javax.swing.JDialog {
                 return true;
 	}
 
-        private boolean hasValidUnits() {
-                return ((Number) spinnerUnit.getValue()).intValue() >= 0;
-        }
-
-        private boolean hasValidEstimatedTime() {
-                return ((Number) spinnerEstimatedTime.getValue()).intValue() > 0;
-        }
-
         private boolean hasValidSchedulePattern() {
                 return cbxSchedulePattern.getSelectedItem() != null;
         }
@@ -227,12 +246,12 @@ public class SubjectForm extends javax.swing.JDialog {
 
                 Subject subject = editingSubject == null ? new Subject() : editingSubject;
                 subject
-                        .setSubjectName(txtSubjectName.getText().trim())
-                        .setSubjectCode(txtSubjectCode.getText().trim().toUpperCase())
+                        .setSubjectName(FormValidationUtil.normalizeOptionalText(txtSubjectName.getText()))
+                        .setSubjectCode(FormValidationUtil.normalizeOptionalText(txtSubjectCode.getText()).toUpperCase())
                         .setUnits(((Number) spinnerUnit.getValue()).floatValue())
                         .setEstimatedTime(((Number) spinnerEstimatedTime.getValue()).intValue())
                         .setSchedulePattern(SubjectSchedulePattern.fromValue(cbxSchedulePattern.getSelectedItem().toString()))
-                        .setDescription(textAreaDescription.getText().trim())
+                        .setDescription(FormValidationUtil.normalizeOptionalText(textAreaDescription.getText()))
                         .setDepartmentId(departmentId);
 
                 boolean success = editingSubject == null
@@ -264,6 +283,20 @@ public class SubjectForm extends javax.swing.JDialog {
 
                 dispose();
 	}
+
+        private boolean showValidationError(Optional<String> validationError) {
+                if (validationError.isEmpty()) {
+                        return false;
+                }
+
+                JOptionPane.showMessageDialog(
+                        this,
+                        validationError.get(),
+                        "Validation Error",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return true;
+        }
 
         private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {
                 saveSubject();

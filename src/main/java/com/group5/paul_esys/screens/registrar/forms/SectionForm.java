@@ -6,7 +6,10 @@ package com.group5.paul_esys.screens.registrar.forms;
 
 import com.group5.paul_esys.modules.sections.model.Section;
 import com.group5.paul_esys.modules.sections.services.SectionService;
+import com.group5.paul_esys.utils.FormValidationUtil;
 import java.util.List;
+import java.util.Optional;
+import java.util.regex.Pattern;
 import javax.swing.JOptionPane;
 
 /**
@@ -16,6 +19,13 @@ import javax.swing.JOptionPane;
 public class SectionForm extends javax.swing.JFrame {
 	
 	private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(SectionForm.class.getName());
+        private static final int MIN_SECTION_CODE_LENGTH = 2;
+        private static final int MAX_SECTION_CODE_LENGTH = 20;
+        private static final int MIN_SECTION_NAME_LENGTH = 2;
+        private static final int MAX_SECTION_NAME_LENGTH = 100;
+        private static final Pattern SECTION_CODE_PATTERN = Pattern.compile("^[A-Za-z0-9._\\-/]+$");
+        private static final Pattern SECTION_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9 .,'()\\-/&]+$");
+
         private static final String STATUS_OPEN = "OPEN";
         private static final List<String> STATUS_OPTIONS = List.of(
                 "OPEN",
@@ -91,35 +101,45 @@ public class SectionForm extends javax.swing.JFrame {
 
         private boolean isValidForm() {
                 String sectionCode = readSafeText(txtSectionCode.getText());
-                if (sectionCode.isEmpty()) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Section code is required.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                if (showValidationError(
+                        FormValidationUtil.validateRequiredText(
+                                "Section code",
+                                sectionCode,
+                                MIN_SECTION_CODE_LENGTH,
+                                MAX_SECTION_CODE_LENGTH,
+                                SECTION_CODE_PATTERN,
+                                "letters, numbers, and . _ - /"
+                        )
+                )) {
                         return false;
                 }
 
                 String sectionName = readSafeText(txtSectionName.getText());
-                if (sectionName.isEmpty()) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Section name is required.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                if (showValidationError(
+                        FormValidationUtil.validateRequiredText(
+                                "Section name",
+                                sectionName,
+                                MIN_SECTION_NAME_LENGTH,
+                                MAX_SECTION_NAME_LENGTH,
+                                SECTION_NAME_PATTERN,
+                                "letters, numbers, spaces, and . , ' ( ) - / &"
+                        )
+                )) {
                         return false;
                 }
 
-                int capacity = ((Number) spinnerCapaity.getValue()).intValue();
-                if (capacity <= 0) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Capacity must be greater than zero.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                if (showValidationError(
+                        FormValidationUtil.validateNumberRange(
+                                "Capacity",
+                                (Number) spinnerCapaity.getValue(),
+                                1,
+                                FormValidationUtil.LARGE_NUMBER_LIMIT
+                        )
+                )) {
+                        return false;
+                }
+
+                if (showValidationError(FormValidationUtil.validateRequiredSelection("Status", cbxStatus.getSelectedItem()))) {
                         return false;
                 }
 
@@ -162,8 +182,8 @@ public class SectionForm extends javax.swing.JFrame {
 
                 Section section = editingSection == null ? new Section() : editingSection;
                 section
-                        .setSectionCode(readSafeText(txtSectionCode.getText()))
-                        .setSectionName(readSafeText(txtSectionName.getText()))
+                        .setSectionCode(FormValidationUtil.normalizeOptionalText(txtSectionCode.getText()))
+                        .setSectionName(FormValidationUtil.normalizeOptionalText(txtSectionName.getText()))
                         .setCapacity(((Number) spinnerCapaity.getValue()).intValue())
                         .setStatus(normalizeStatus(cbxStatus.getSelectedItem() == null ? STATUS_OPEN : cbxStatus.getSelectedItem().toString()));
 
@@ -193,6 +213,20 @@ public class SectionForm extends javax.swing.JFrame {
                 }
 
                 dispose();
+        }
+
+        private boolean showValidationError(Optional<String> validationError) {
+                if (validationError.isEmpty()) {
+                        return false;
+                }
+
+                JOptionPane.showMessageDialog(
+                        this,
+                        validationError.get(),
+                        "Validation Error",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return true;
         }
 
 	/**

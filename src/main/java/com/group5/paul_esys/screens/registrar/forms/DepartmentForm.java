@@ -2,6 +2,9 @@ package com.group5.paul_esys.screens.registrar.forms;
 
 import com.group5.paul_esys.modules.departments.model.Department;
 import com.group5.paul_esys.modules.departments.services.DepartmentService;
+import com.group5.paul_esys.utils.FormValidationUtil;
+import java.util.Optional;
+import java.util.regex.Pattern;
 import javax.swing.JOptionPane;
 
 /*
@@ -16,6 +19,14 @@ import javax.swing.JOptionPane;
 public class DepartmentForm extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(DepartmentForm.class.getName());
+    private static final int MIN_DEPARTMENT_NAME_LENGTH = 2;
+    private static final int MAX_DEPARTMENT_NAME_LENGTH = 100;
+    private static final int MIN_DEPARTMENT_CODE_LENGTH = 2;
+    private static final int MAX_DEPARTMENT_CODE_LENGTH = 20;
+    private static final int MAX_DESCRIPTION_LENGTH = 500;
+    private static final Pattern DEPARTMENT_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9 .,'()\\-/&]+$");
+    private static final Pattern DEPARTMENT_CODE_PATTERN = Pattern.compile("^[A-Za-z0-9._\\-/]+$");
+
     private final DepartmentService departmentService = DepartmentService.getInstance();
     private final Runnable onSavedCallback;
     private final Department editingDepartment;
@@ -55,23 +66,42 @@ public class DepartmentForm extends javax.swing.JFrame {
     }
 
     private boolean isValidForm() {
-        if (txtDepart.getText() == null || txtDepart.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(
-                this,
-                "Department name is required.",
-                "Validation Error",
-                JOptionPane.WARNING_MESSAGE
-            );
+        if (showValidationError(
+            FormValidationUtil.validateRequiredText(
+                "Department name",
+                txtDepart.getText(),
+                MIN_DEPARTMENT_NAME_LENGTH,
+                MAX_DEPARTMENT_NAME_LENGTH,
+                DEPARTMENT_NAME_PATTERN,
+                "letters, numbers, spaces, and . , ' ( ) - / &"
+            )
+        )) {
             return false;
         }
 
-        if (txtDepartmentCode.getText() == null || txtDepartmentCode.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(
-                this,
-                "Department code is required.",
-                "Validation Error",
-                JOptionPane.WARNING_MESSAGE
-            );
+        if (showValidationError(
+            FormValidationUtil.validateRequiredText(
+                "Department code",
+                txtDepartmentCode.getText(),
+                MIN_DEPARTMENT_CODE_LENGTH,
+                MAX_DEPARTMENT_CODE_LENGTH,
+                DEPARTMENT_CODE_PATTERN,
+                "letters, numbers, and . _ - /"
+            )
+        )) {
+            return false;
+        }
+
+        if (showValidationError(
+            FormValidationUtil.validateOptionalText(
+                "Description",
+                txtAreaDescription.getText(),
+                1,
+                MAX_DESCRIPTION_LENGTH,
+                null,
+                ""
+            )
+        )) {
             return false;
         }
 
@@ -85,9 +115,9 @@ public class DepartmentForm extends javax.swing.JFrame {
 
         Department department = editingDepartment == null ? new Department() : editingDepartment;
         department
-            .setDepartmentName(txtDepart.getText().trim())
-            .setDepartmentCode(txtDepartmentCode.getText().trim().toUpperCase())
-            .setDescription(txtAreaDescription.getText().trim());
+            .setDepartmentName(FormValidationUtil.normalizeOptionalText(txtDepart.getText()))
+            .setDepartmentCode(FormValidationUtil.normalizeOptionalText(txtDepartmentCode.getText()).toUpperCase())
+            .setDescription(FormValidationUtil.normalizeOptionalText(txtAreaDescription.getText()));
 
         boolean success =
             editingDepartment == null
@@ -118,6 +148,20 @@ public class DepartmentForm extends javax.swing.JFrame {
         }
 
         dispose();
+    }
+
+    private boolean showValidationError(Optional<String> validationError) {
+        if (validationError.isEmpty()) {
+            return false;
+        }
+
+        JOptionPane.showMessageDialog(
+            this,
+            validationError.get(),
+            "Validation Error",
+            JOptionPane.WARNING_MESSAGE
+        );
+        return true;
     }
 
     /**

@@ -4,11 +4,14 @@ import com.group5.paul_esys.modules.curriculum.model.Curriculum;
 import com.group5.paul_esys.modules.curriculum.services.CurriculumService;
 import com.group5.paul_esys.modules.semester.model.Semester;
 import com.group5.paul_esys.modules.semester.services.SemesterService;
+import com.group5.paul_esys.utils.FormValidationUtil;
 import java.awt.Component;
 import java.time.ZoneId;
 import java.util.Date;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.util.Optional;
+import java.util.regex.Pattern;
 import javax.swing.JOptionPane;
 import javax.swing.JTextField;
 import javax.swing.text.AbstractDocument;
@@ -28,6 +31,10 @@ import javax.swing.text.DocumentFilter;
 public class SemesterForm extends javax.swing.JFrame {
     
     private static final java.util.logging.Logger logger = java.util.logging.Logger.getLogger(SemesterForm.class.getName());
+    private static final int MIN_SEMESTER_NAME_LENGTH = 2;
+    private static final int MAX_SEMESTER_NAME_LENGTH = 50;
+    private static final Pattern SEMESTER_NAME_PATTERN = Pattern.compile("^[A-Za-z0-9 .,'()\\-/&]+$");
+
     private final CurriculumService curriculumService = CurriculumService.getInstance();
     private final SemesterService semesterService = SemesterService.getInstance();
     private final Map<String, Long> curriculumIdByLabel = new LinkedHashMap<>();
@@ -155,25 +162,22 @@ public class SemesterForm extends javax.swing.JFrame {
     }
 
     private boolean isValidForm() {
-        if (txtSem.getText() == null || txtSem.getText().trim().isEmpty()) {
-            JOptionPane.showMessageDialog(
-                this,
-                "Semester name is required.",
-                "Validation Error",
-                JOptionPane.WARNING_MESSAGE
-            );
+        if (showValidationError(
+            FormValidationUtil.validateRequiredText(
+                "Semester name",
+                txtSem.getText(),
+                MIN_SEMESTER_NAME_LENGTH,
+                MAX_SEMESTER_NAME_LENGTH,
+                SEMESTER_NAME_PATTERN,
+                "letters, numbers, spaces, and . , ' ( ) - / &"
+            )
+        )) {
             return false;
         }
 
         String semesterName = txtSem.getText().trim();
         Integer yearLevel = readYearLevel();
-        if (yearLevel == null || yearLevel < 1) {
-            JOptionPane.showMessageDialog(
-                this,
-                "Year level must be a positive integer.",
-                "Validation Error",
-                JOptionPane.WARNING_MESSAGE
-            );
+        if (showValidationError(FormValidationUtil.validateNumberRange("Year level", yearLevel, 1, 6))) {
             return false;
         }
 
@@ -187,14 +191,9 @@ public class SemesterForm extends javax.swing.JFrame {
             return false;
         }
 
-        Object selectedCurriculum = cbxCur.getSelectedItem();
-        if (selectedCurriculum == null || !curriculumIdByLabel.containsKey(selectedCurriculum.toString())) {
-            JOptionPane.showMessageDialog(
-                this,
-                "Curriculum is required.",
-                "Validation Error",
-                JOptionPane.WARNING_MESSAGE
-            );
+        if (showValidationError(
+            FormValidationUtil.validateMappedSelection("Curriculum", cbxCur.getSelectedItem(), curriculumIdByLabel)
+        )) {
             return false;
         }
 
@@ -283,6 +282,20 @@ public class SemesterForm extends javax.swing.JFrame {
         }
 
         dispose();
+    }
+
+    private boolean showValidationError(Optional<String> validationError) {
+        if (validationError.isEmpty()) {
+            return false;
+        }
+
+        JOptionPane.showMessageDialog(
+            this,
+            validationError.get(),
+            "Validation Error",
+            JOptionPane.WARNING_MESSAGE
+        );
+        return true;
     }
 
     /**

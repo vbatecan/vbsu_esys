@@ -10,11 +10,13 @@ import com.group5.paul_esys.modules.semester_subjects.model.SemesterSubject;
 import com.group5.paul_esys.modules.semester_subjects.services.SemesterSubjectService;
 import com.group5.paul_esys.modules.subjects.model.Subject;
 import com.group5.paul_esys.modules.subjects.services.SubjectService;
+import com.group5.paul_esys.utils.FormValidationUtil;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import javax.swing.JOptionPane;
 
@@ -191,20 +193,18 @@ public class SemesterSubjectForm extends javax.swing.JDialog {
         }
 
         private boolean isValidForm(Long semesterId, Long subjectId) {
-                if (semesterId == null) {
-                        JOptionPane.showMessageDialog(
-                                this,
-                                "Please select a semester.",
-                                "Validation Error",
-                                JOptionPane.WARNING_MESSAGE
-                        );
+                if (showValidationError(FormValidationUtil.validateRequiredSelection("Semester", jComboBox1.getSelectedItem()))) {
                         return false;
                 }
 
-                if (subjectId == null) {
+                if (showValidationError(FormValidationUtil.validateRequiredSelection("Subject", jComboBox2.getSelectedItem()))) {
+                        return false;
+                }
+
+                if (semesterId == null || subjectId == null) {
                         JOptionPane.showMessageDialog(
                                 this,
-                                "No available subject to add for this semester.",
+                                "Please select valid semester and subject values.",
                                 "Validation Error",
                                 JOptionPane.WARNING_MESSAGE
                         );
@@ -258,6 +258,20 @@ public class SemesterSubjectForm extends javax.swing.JDialog {
                 }
 
                 dispose();
+        }
+
+        private boolean showValidationError(Optional<String> validationError) {
+                if (validationError.isEmpty()) {
+                        return false;
+                }
+
+                JOptionPane.showMessageDialog(
+                        this,
+                        validationError.get(),
+                        "Validation Error",
+                        JOptionPane.WARNING_MESSAGE
+                );
+                return true;
         }
 
         private void jButton1ActionPerformed(java.awt.event.ActionEvent evt) {
