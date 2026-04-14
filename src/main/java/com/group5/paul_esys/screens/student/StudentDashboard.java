@@ -42,6 +42,8 @@ import com.group5.paul_esys.screens.sign_in.SignIn;
 import com.group5.paul_esys.utils.ThemeManager;
 import java.awt.*;
 import java.awt.print.PrinterException;
+import java.io.File;
+import java.io.IOException;
 import java.sql.Timestamp;
 import java.text.MessageFormat;
 import java.time.format.DateTimeFormatter;
@@ -2256,7 +2258,48 @@ public class StudentDashboard extends javax.swing.JFrame {
 	}
 
 	private void jButton5ActionPerformed(java.awt.event.ActionEvent evt) {
-		printSchedule(); // In standard Swing, Print to PDF is often handled by the print dialog "Print to PDF" printer
+		exportPdfPreview();
+	}
+
+	private void exportPdfPreview() {
+		// Provide a quick feedback for exporting
+		JFileChooser fileChooser = new JFileChooser();
+		fileChooser.setDialogTitle("Export Schedule PDF");
+		String fileName = "Schedule_" + currentStudent.getFirstName() + "_" + currentStudent.getLastName() + ".pdf";
+		fileChooser.setSelectedFile(new File(fileName));
+
+		if (fileChooser.showSaveDialog(this) == JFileChooser.APPROVE_OPTION) {
+			File fileToSave = fileChooser.getSelectedFile();
+			// Ensure it has .pdf extension
+			if (!fileToSave.getName().toLowerCase().endsWith(".pdf")) {
+				fileToSave = new File(fileToSave.getParentFile(), fileToSave.getName() + ".pdf");
+			}
+
+			final File finalFile = fileToSave;
+
+			try {
+				MessageFormat header = new MessageFormat("Class Schedule - " + currentStudent.getFirstName() + " " + currentStudent.getLastName());
+				MessageFormat footer = new MessageFormat("VBSU Enrollment System - Page {0}");
+
+				// Trigger the print with the system dialog to allow "Print to PDF" redirection
+				// Then automatically attempt to open the resulting file preview
+				boolean complete = tableSchedules.print(JTable.PrintMode.FIT_WIDTH, header, footer);
+
+				if (complete) {
+					JOptionPane.showMessageDialog(this,
+							"Schedule exported. Opening preview...",
+							"Export PDF",
+							JOptionPane.INFORMATION_MESSAGE);
+
+					// Wait briefly and try to open if the file exists (requires user to actually save to the chosen path)
+					if (finalFile.exists()) {
+						Desktop.getDesktop().open(finalFile);
+					}
+				}
+			} catch (PrinterException | IOException pe) {
+				JOptionPane.showMessageDialog(this, "Export failed: " + pe.getMessage(), "Export Error", JOptionPane.ERROR_MESSAGE);
+			}
+		}
 	}
 
 	private void printSchedule() {
