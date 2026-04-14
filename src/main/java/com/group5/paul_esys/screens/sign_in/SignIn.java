@@ -7,6 +7,8 @@ import com.group5.paul_esys.modules.users.services.UserSession;
 import com.group5.paul_esys.screens.admin.AdminDashboard;
 import com.group5.paul_esys.screens.faculty.FacultyDashboard;
 import com.group5.paul_esys.screens.registrar.RegistrarDashboard;
+import com.group5.paul_esys.screens.shared.forms.PrivacyPolicy;
+import com.group5.paul_esys.screens.shared.forms.TermsAndConditions;
 import com.group5.paul_esys.screens.student.StudentDashboard;
 import com.group5.paul_esys.utils.ThemeManager;
 import java.awt.event.KeyEvent;
@@ -35,6 +37,8 @@ public class SignIn extends javax.swing.JFrame {
 	  ThemeManager.applySavedTheme();
     this.setUndecorated(true);
     initComponents();
+    jLabel9.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
+    jLabel10.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
     this.setLocationRelativeTo(null);
   }
 
@@ -215,10 +219,20 @@ public class SignIn extends javax.swing.JFrame {
                 jLabel9.setForeground(new java.awt.Color(51, 51, 255));
                 jLabel9.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
                 jLabel9.setText("Terms and Condition");
+                jLabel9.addMouseListener(new java.awt.event.MouseAdapter() {
+                        public void mouseClicked(java.awt.event.MouseEvent evt) {
+                                jLabel9MouseClicked(evt);
+                        }
+                });
 
                 jLabel10.setForeground(new java.awt.Color(51, 51, 255));
                 jLabel10.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
                 jLabel10.setText("Privacy Policy");
+                jLabel10.addMouseListener(new java.awt.event.MouseAdapter() {
+                        public void mouseClicked(java.awt.event.MouseEvent evt) {
+                                jLabel10MouseClicked(evt);
+                        }
+                });
 
                 javax.swing.GroupLayout jPanel2Layout = new javax.swing.GroupLayout(jPanel2);
                 jPanel2.setLayout(jPanel2Layout);
@@ -289,6 +303,14 @@ public class SignIn extends javax.swing.JFrame {
       btnSignIn.doClick();
     }
   }//GEN-LAST:event_txtPasswordKeyReleased
+
+        private void jLabel9MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jLabel9MouseClicked
+        	new TermsAndConditions().setVisible(true);
+        }//GEN-LAST:event_jLabel9MouseClicked
+
+        private void jLabel10MouseClicked(java.awt.event.MouseEvent evt) {//GEN-FIRST:event_jLabel10MouseClicked
+        	new PrivacyPolicy().setVisible(true);
+        }//GEN-LAST:event_jLabel10MouseClicked
 
   private void btnCloseActionPerformed(java.awt.event.ActionEvent evt) {
     // GEN-FIRST:event_btnCloseActionPerformed
