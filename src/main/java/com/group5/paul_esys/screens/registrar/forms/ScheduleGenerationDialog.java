@@ -56,6 +56,7 @@ public class ScheduleGenerationDialog extends JDialog {
 		setDefaultCloseOperation(DISPOSE_ON_CLOSE);
 
 		initComponents();
+		tblPreview.setModel(tableModel);
 		initDatePickers();
 		initializeData();
 		pack();
