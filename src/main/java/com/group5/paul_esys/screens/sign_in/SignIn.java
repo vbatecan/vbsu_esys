@@ -1,6 +1,5 @@
 package com.group5.paul_esys.screens.sign_in;
 
-import com.formdev.flatlaf.FlatLightLaf;
 import com.group5.paul_esys.modules.users.models.user.LoginData;
 import com.group5.paul_esys.modules.users.models.user.UserInformation;
 import com.group5.paul_esys.modules.users.services.AuthService;
@@ -9,6 +8,7 @@ import com.group5.paul_esys.screens.admin.AdminDashboard;
 import com.group5.paul_esys.screens.faculty.FacultyDashboard;
 import com.group5.paul_esys.screens.registrar.RegistrarDashboard;
 import com.group5.paul_esys.screens.student.StudentDashboard;
+import com.group5.paul_esys.utils.ThemeManager;
 import java.awt.event.KeyEvent;
 import java.util.Optional;
 import javax.swing.JOptionPane;
@@ -32,7 +32,7 @@ public class SignIn extends javax.swing.JFrame {
    * Creates new form SignInOne
    */
   public SignIn() {
-	  FlatLightLaf.setup();
+	  ThemeManager.applySavedTheme();
     this.setUndecorated(true);
     initComponents();
     this.setLocationRelativeTo(null);

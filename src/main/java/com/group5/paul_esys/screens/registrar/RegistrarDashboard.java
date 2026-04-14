@@ -1,6 +1,5 @@
 package com.group5.paul_esys.screens.registrar;
 
-import com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTGitHubIJTheme;
 import com.group5.paul_esys.modules.registrar.model.Registrar;
 import com.group5.paul_esys.modules.users.services.UserSession;
 import com.group5.paul_esys.screens.registrar.panels.RegistrarEnrollmentPeriodManagement;
@@ -9,7 +8,9 @@ import com.group5.paul_esys.screens.registrar.panels.RegistrarDropRequestsManage
 import com.group5.paul_esys.screens.registrar.panels.RegistrarSchedulesManagement;
 import com.group5.paul_esys.screens.registrar.panels.RegistrarSectionsManagement;
 import com.group5.paul_esys.screens.registrar.panels.RegistrarStudentManagement;
+import com.group5.paul_esys.screens.shared.panels.SecurityPanel;
 import com.group5.paul_esys.screens.sign_in.SignIn;
+import com.group5.paul_esys.utils.ThemeManager;
 import java.awt.BorderLayout;
 import java.awt.Font;
 import javax.swing.BorderFactory;
@@ -35,7 +36,7 @@ public final class RegistrarDashboard extends javax.swing.JFrame {
      * Creates new form RegisterPortal
      */
     public RegistrarDashboard() {
-        FlatMTGitHubIJTheme.setup();
+        ThemeManager.applySavedTheme();
         this.setUndecorated(true);
         initComponents();
         configureLogoutAction();
@@ -59,6 +60,7 @@ public final class RegistrarDashboard extends javax.swing.JFrame {
         tabbedPaneStudents.add("Schedules", null);
         tabbedPaneStudents.add("Enrollment Periods", null);
         tabbedPaneStudents.add("Drop Requests", null);
+        tabbedPaneStudents.add("Security", null);
 
         loadTab(0);
 
@@ -115,6 +117,7 @@ public final class RegistrarDashboard extends javax.swing.JFrame {
             case 4 -> new RegistrarSchedulesManagement();
             case 5 -> new RegistrarEnrollmentPeriodManagement();
             case 6 -> new RegistrarDropRequestsManagement();
+            case 7 -> new SecurityPanel();
             default -> null;
         };
 

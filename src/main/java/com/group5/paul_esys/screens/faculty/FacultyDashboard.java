@@ -5,6 +5,7 @@
 package com.group5.paul_esys.screens.faculty;
 
 import com.group5.paul_esys.screens.faculty.panels.FacultyDashboardPanel;
+import com.group5.paul_esys.screens.shared.panels.SecurityPanel;
 
 /**
  *
@@ -22,6 +23,7 @@ public class FacultyDashboard extends javax.swing.JFrame {
 		initComponents();
 		this.setLocationRelativeTo(null);
 		tabbedPaneSideBar.add("Dashboard", new FacultyDashboardPanel());
+		tabbedPaneSideBar.add("Security", new SecurityPanel());
 	}
 
 	/**

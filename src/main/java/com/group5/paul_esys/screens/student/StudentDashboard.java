@@ -4,7 +4,6 @@
  */
 package com.group5.paul_esys.screens.student;
 
-import com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTGitHubIJTheme;
 import com.group5.paul_esys.modules.courses.model.Course;
 import com.group5.paul_esys.modules.courses.services.CourseService;
 import com.group5.paul_esys.modules.enrollment_period.model.EnrollmentPeriod;
@@ -38,7 +37,9 @@ import com.group5.paul_esys.modules.students.model.Student;
 import com.group5.paul_esys.modules.subjects.model.Subject;
 import com.group5.paul_esys.modules.subjects.services.SubjectService;
 import com.group5.paul_esys.modules.users.services.UserSession;
+import com.group5.paul_esys.screens.shared.panels.SecurityPanel;
 import com.group5.paul_esys.screens.sign_in.SignIn;
+import com.group5.paul_esys.utils.ThemeManager;
 import java.awt.*;
 import java.sql.Timestamp;
 import java.util.ArrayList;
@@ -161,7 +162,7 @@ public class StudentDashboard extends javax.swing.JFrame {
 
 		UIManager.put("TabbedPane.contentBorderInsets", new Insets(0, 0, 0, 0));
 		UIManager.put("TabbedPane.showContentSeparator", false);
-		FlatMTGitHubIJTheme.setup();
+                ThemeManager.applySavedTheme();
 
 		Student student = (Student) UserSession.getInstance()
 		  .getUserInformation()
@@ -175,6 +176,7 @@ public class StudentDashboard extends javax.swing.JFrame {
 
 		this.setUndecorated(true);
 		initComponents();
+                tabbedPane.addTab("Security", new SecurityPanel());
 		this.setLocationRelativeTo(null);
 		this.windowBar1.setTitle("Welcome " + fullName);
 		this.currentStudent = student;

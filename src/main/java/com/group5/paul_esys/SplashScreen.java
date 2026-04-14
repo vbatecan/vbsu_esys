@@ -4,9 +4,9 @@
  */
 package com.group5.paul_esys;
 
-import com.formdev.flatlaf.intellijthemes.materialthemeuilite.FlatMTGitHubIJTheme;
 import com.group5.paul_esys.modules.enrollments.services.EnrollmentService;
 import com.group5.paul_esys.screens.sign_in.SignIn;
+import com.group5.paul_esys.utils.ThemeManager;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import javax.swing.Timer;
@@ -24,7 +24,7 @@ public class SplashScreen extends javax.swing.JFrame {
    * Creates new form SplashScreen
    */
   public SplashScreen() {
-    FlatMTGitHubIJTheme.setup();
+    ThemeManager.applySavedTheme();
     this.setUndecorated(true);
     initComponents();
     this.setLocationRelativeTo(null);
