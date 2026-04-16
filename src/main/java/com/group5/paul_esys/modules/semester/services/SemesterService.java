@@ -48,6 +48,23 @@ public class SemesterService {
     }
   }
 
+  public List<String> getDistinctSemesters() {
+    List<String> semesters = new ArrayList<>();
+    String sql = "SELECT DISTINCT semester FROM semester ORDER BY created_at DESC";
+    try (
+      Connection conn = ConnectionService.getConnection();
+      PreparedStatement ps = conn.prepareStatement(sql);
+      ResultSet rs = ps.executeQuery()
+    ) {
+      while (rs.next()) {
+        semesters.add(rs.getString("semester"));
+      }
+   } catch (SQLException e) {
+      logger.error("ERROR: " + e.getMessage(), e);
+    }
+    return semesters;
+  }
+
   public List<Semester> getAllSemesters() {
     List<Semester> semesters = new ArrayList<>();
     try (

@@ -69,7 +69,8 @@ public class SemesterForm extends javax.swing.JFrame {
         jLabel4.setText("Update existing semester");
         btnSave.setText("Update");
 
-        txtSem.setText(editingSemester.getSemester());
+        cbxSemester.setSelectedItem(editingSemester.getSemester());
+        semesterService.getDistinctSemesters().stream().forEach(semester -> cbxSemester.addItem(semester));
         if (editingSemester.getYearLevel() != null) {
             cbxYear.setSelectedItem(String.valueOf(editingSemester.getYearLevel()));
         }
@@ -165,7 +166,7 @@ public class SemesterForm extends javax.swing.JFrame {
         if (showValidationError(
             FormValidationUtil.validateRequiredText(
                 "Semester name",
-                txtSem.getText(),
+                (String) cbxSemester.getSelectedItem(),
                 MIN_SEMESTER_NAME_LENGTH,
                 MAX_SEMESTER_NAME_LENGTH,
                 SEMESTER_NAME_PATTERN,
@@ -175,7 +176,7 @@ public class SemesterForm extends javax.swing.JFrame {
             return false;
         }
 
-        String semesterName = txtSem.getText().trim();
+        String semesterName = (String) cbxSemester.getSelectedItem();
         Integer yearLevel = readYearLevel();
         if (showValidationError(FormValidationUtil.validateNumberRange("Year level", yearLevel, 1, 6))) {
             return false;
@@ -246,7 +247,7 @@ public class SemesterForm extends javax.swing.JFrame {
         String selectedCurriculum = cbxCur.getSelectedItem().toString();
         Long curriculumId = curriculumIdByLabel.get(selectedCurriculum);
         Integer yearLevel = readYearLevel();
-        String semesterName = txtSem.getText().trim();
+        String semesterName = (String) cbxSemester.getSelectedItem();
 
         Semester semester = editingSemester == null ? new Semester() : editingSemester;
         semester
@@ -308,7 +309,6 @@ public class SemesterForm extends javax.swing.JFrame {
 
                 windowBar1 = new com.group5.paul_esys.components.WindowBar();
                 jPanel1 = new javax.swing.JPanel();
-                txtSem = new javax.swing.JTextField();
                 jLabel1 = new javax.swing.JLabel();
                 jLabel2 = new javax.swing.JLabel();
                 jLabel3 = new javax.swing.JLabel();
@@ -318,6 +318,7 @@ public class SemesterForm extends javax.swing.JFrame {
                 jLabel4 = new javax.swing.JLabel();
                 jLabel5 = new javax.swing.JLabel();
                 cbxYear = new javax.swing.JComboBox<>();
+                cbxSemester = new javax.swing.JComboBox<>();
 
                 setDefaultCloseOperation(javax.swing.WindowConstants.EXIT_ON_CLOSE);
 
@@ -326,11 +327,6 @@ public class SemesterForm extends javax.swing.JFrame {
                 jPanel1.setBackground(new java.awt.Color(255, 255, 255));
                 jPanel1.setAlignmentX(0.1F);
                 jPanel1.setLayout(new org.netbeans.lib.awtextra.AbsoluteLayout());
-
-                txtSem.setFont(new java.awt.Font("Poppins", 0, 14)); // NOI18N
-                txtSem.setBorder(new com.group5.paul_esys.ui.TextFieldRoundBorder());
-                txtSem.addActionListener(this::txtSemActionPerformed);
-                jPanel1.add(txtSem, new org.netbeans.lib.awtextra.AbsoluteConstraints(70, 110, 250, -1));
 
                 jLabel1.setFont(new java.awt.Font("Poppins", 0, 18)); // NOI18N
                 jLabel1.setHorizontalAlignment(javax.swing.SwingConstants.CENTER);
@@ -373,6 +369,9 @@ public class SemesterForm extends javax.swing.JFrame {
                 cbxYear.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
                 jPanel1.add(cbxYear, new org.netbeans.lib.awtextra.AbsoluteConstraints(70, 190, 250, 36));
 
+                cbxSemester.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+                jPanel1.add(cbxSemester, new org.netbeans.lib.awtextra.AbsoluteConstraints(70, 110, 250, 40));
+
                 javax.swing.GroupLayout layout = new javax.swing.GroupLayout(getContentPane());
                 getContentPane().setLayout(layout);
                 layout.setHorizontalGroup(
@@ -390,10 +389,6 @@ public class SemesterForm extends javax.swing.JFrame {
 
                 pack();
         }// </editor-fold>//GEN-END:initComponents
-
-    private void txtSemActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_txtSemActionPerformed
-        // no-op
-    }//GEN-LAST:event_txtSemActionPerformed
 
     private void btnSaveActionPerformed(java.awt.event.ActionEvent evt) {//GEN-FIRST:event_btnSaveActionPerformed
         saveSemester();
@@ -432,6 +427,7 @@ public class SemesterForm extends javax.swing.JFrame {
         private javax.swing.JButton btnCancel;
         private javax.swing.JButton btnSave;
         private javax.swing.JComboBox<String> cbxCur;
+        private javax.swing.JComboBox<String> cbxSemester;
         private javax.swing.JComboBox<String> cbxYear;
         private javax.swing.JLabel jLabel1;
         private javax.swing.JLabel jLabel2;
@@ -439,7 +435,6 @@ public class SemesterForm extends javax.swing.JFrame {
         private javax.swing.JLabel jLabel4;
         private javax.swing.JLabel jLabel5;
         private javax.swing.JPanel jPanel1;
-        private javax.swing.JTextField txtSem;
         private com.group5.paul_esys.components.WindowBar windowBar1;
         // End of variables declaration//GEN-END:variables
 }
