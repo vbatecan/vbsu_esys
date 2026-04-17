@@ -87,6 +87,36 @@ public class OfferingService {
     return offerings;
   }
 
+  public List<Offering> getScheduledOfferingsByEnrollmentPeriod(Long enrollmentPeriodId) {
+    List<Offering> offerings = new ArrayList<>();
+    String sql = "SELECT o.* FROM offerings o "
+      + "WHERE o.enrollment_period_id = ? "
+      + "AND EXISTS ("
+      + "SELECT 1 FROM schedules s "
+      + "WHERE s.offering_id = o.id "
+      + "AND s.day IS NOT NULL "
+      + "AND s.start_time IS NOT NULL "
+      + "AND s.end_time IS NOT NULL"
+      + ") "
+      + "ORDER BY o.section_id, o.subject_id";
+
+    try (
+      Connection conn = ConnectionService.getConnection();
+      PreparedStatement ps = conn.prepareStatement(sql)
+    ) {
+      ps.setLong(1, enrollmentPeriodId);
+      try (ResultSet rs = ps.executeQuery()) {
+        while (rs.next()) {
+          offerings.add(OfferingUtils.mapResultSetToOffering(rs));
+        }
+      }
+    } catch (SQLException e) {
+      logger.error("ERROR: " + e.getMessage(), e);
+    }
+
+    return offerings;
+  }
+
   public List<Offering> getOfferingsBySection(Long sectionId) {
     List<Offering> offerings = new ArrayList<>();
     String sql = "SELECT * FROM offerings WHERE section_id = ? ORDER BY enrollment_period_id DESC, subject_id";

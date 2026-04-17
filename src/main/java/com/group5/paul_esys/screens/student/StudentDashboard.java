@@ -287,6 +287,7 @@ public class StudentDashboard extends javax.swing.JFrame {
 		tblSubjectCatalog.setModel(model);
 		tblSubjectCatalog.setRowHeight(26);
 		tblSubjectCatalog.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
+		tblSubjectCatalog.setAutoCreateRowSorter(true);
 		hideTableColumn(tblSubjectCatalog, CATALOG_COL_OFFERING_ID);
 		hideTableColumn(tblSubjectCatalog, CATALOG_COL_SUBJECT_ID);
 		model.addTableModelListener(evt -> refreshSelectedSubjectsPreview());
@@ -751,7 +752,8 @@ public class StudentDashboard extends javax.swing.JFrame {
 				? "Subject Catalog - " + periodLabel
 				: "Subject Catalog - " + periodLabel + " (Preview only)";
 
-		List<Offering> offerings = OfferingService.getInstance().getOfferingsByEnrollmentPeriod(enrollmentPeriod.getId());
+		List<Offering> offerings = OfferingService.getInstance()
+				.getScheduledOfferingsByEnrollmentPeriod(enrollmentPeriod.getId());
 		if (offerings.isEmpty()) {
 			return new SubjectCatalogSnapshot(activePeriod, announcement, catalogLabel, List.of());
 		}
@@ -1000,7 +1002,7 @@ public class StudentDashboard extends javax.swing.JFrame {
 		return checkedRows;
 	}
 
-	private void initStudentData(Student student) {
+	private void configureTextBoxes(Student student) {
 		txtStudentID.setText(student.getStudentId());
 		txtFirstName.setText(student.getFirstName());
 		txtLastName.setText(student.getLastName());
@@ -1011,6 +1013,10 @@ public class StudentDashboard extends javax.swing.JFrame {
 		txtYearLevel.setText(student.getYearLevel() != null ? student.getYearLevel().toString() : "");
 		txtSemester.setText(resolveCurrentOrLatestSemesterLabel());
 		txtCourse.setText("N/A");
+	}
+
+	private void initStudentData(Student student) {
+		configureTextBoxes(student);
 
 		Optional<Course> course = CourseService.getInstance().getCourseById(student.getCourseId());
 		course.ifPresent(c -> txtCourse.setText(c.getCourseName()));
