@@ -17,6 +17,7 @@ public class FacultyUtils {
         rs.getString("contact_number"),
         rs.getDate("birthdate"),
         rs.getLong("department_id"),
+        rs.getBoolean("is_dep_head"),
         rs.getTimestamp("updated_at"),
         rs.getTimestamp("created_at")
     );

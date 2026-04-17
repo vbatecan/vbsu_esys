@@ -125,6 +125,7 @@ class RealStaffSeeder:
                     "contact_number",
                     "birthdate",
                     "department_id",
+                    "is_dep_head",
                 ],
                 [
                     user_id,
@@ -134,6 +135,7 @@ class RealStaffSeeder:
                     contact_number,
                     self._format_date(birthdate),
                     department_id,
+                    faculty_created == 0,
                 ],
                 return_id=False,
                 cursor=cursor,

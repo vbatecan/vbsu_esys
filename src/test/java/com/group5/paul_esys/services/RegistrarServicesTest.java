@@ -65,7 +65,8 @@ class RegistrarServicesTest extends ServiceTestSupport {
         .setMiddleName("L")
         .setContactNumber("09170000002")
         .setBirthdate(Date.valueOf(LocalDate.of(1990, 1, 1)))
-        .setDepartmentId(1L);
+      .setDepartmentId(1L)
+      .setDepartmentHead(true);
 
     withConnection(mockUpdateConnectionOnly(1), () ->
         assertTrue(FacultyService.getInstance().createFaculty(faculty)));

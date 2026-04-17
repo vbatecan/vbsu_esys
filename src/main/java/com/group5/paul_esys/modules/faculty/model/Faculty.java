@@ -13,6 +13,7 @@ public class Faculty {
   private String contactNumber;
   private Date birthdate;
   private Long departmentId;
+  private boolean departmentHead;
   private Timestamp updatedAt;
   private Timestamp createdAt;
 
@@ -28,6 +29,7 @@ public class Faculty {
       String contactNumber,
       Date birthdate,
       Long departmentId,
+      boolean departmentHead,
       Timestamp updatedAt,
       Timestamp createdAt
   ) {
@@ -39,6 +41,7 @@ public class Faculty {
     this.contactNumber = contactNumber;
     this.birthdate = birthdate;
     this.departmentId = departmentId;
+    this.departmentHead = departmentHead;
     this.updatedAt = updatedAt;
     this.createdAt = createdAt;
   }
@@ -112,6 +115,15 @@ public class Faculty {
 
   public Faculty setDepartmentId(Long departmentId) {
     this.departmentId = departmentId;
+    return this;
+  }
+
+  public boolean isDepartmentHead() {
+    return departmentHead;
+  }
+
+  public Faculty setDepartmentHead(boolean departmentHead) {
+    this.departmentHead = departmentHead;
     return this;
   }
 

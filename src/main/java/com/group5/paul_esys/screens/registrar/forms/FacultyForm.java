@@ -98,6 +98,8 @@ public class FacultyForm extends javax.swing.JFrame {
                                 cbxDepartment.setSelectedItem(departmentLabel);
                         }
                 }
+
+                chkDepartmentHead.setSelected(editingFaculty.isDepartmentHead());
         }
 
         private void loadDepartments() {
@@ -285,7 +287,8 @@ public class FacultyForm extends javax.swing.JFrame {
                         .setMiddleName(middleName)
                         .setContactNumber(contactNumber)
                         .setBirthdate(java.sql.Date.valueOf(birthDate))
-                        .setDepartmentId(departmentId);
+                        .setDepartmentId(departmentId)
+                        .setDepartmentHead(chkDepartmentHead.isSelected());
 
                 if (editingFaculty == null) {
                         String initialPassword = buildInitialPassword(birthDate);
@@ -368,6 +371,7 @@ public class FacultyForm extends javax.swing.JFrame {
                 jLabel4 = new javax.swing.JLabel();
                 jLabel5 = new javax.swing.JLabel();
                 cbxDepartment = new javax.swing.JComboBox<>();
+                chkDepartmentHead = new javax.swing.JCheckBox();
                 jLabel6 = new javax.swing.JLabel();
                 txtEmail = new javax.swing.JTextField();
                 btnSave = new javax.swing.JButton();
@@ -405,6 +409,8 @@ public class FacultyForm extends javax.swing.JFrame {
                 jLabel5.setText("Department");
 
                 cbxDepartment.setModel(new javax.swing.DefaultComboBoxModel<>(new String[] { "Item 1", "Item 2", "Item 3", "Item 4" }));
+
+                chkDepartmentHead.setText("Department Head");
 
                 jLabel6.setText("Email Address (For Portal)");
 
@@ -447,6 +453,7 @@ public class FacultyForm extends javax.swing.JFrame {
                                                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.LEADING)
                                                         .addComponent(jLabel5)
                                                         .addComponent(cbxDepartment, javax.swing.GroupLayout.PREFERRED_SIZE, 258, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                                        .addComponent(chkDepartmentHead)
                                                         .addGroup(javax.swing.GroupLayout.Alignment.TRAILING, jPanel1Layout.createSequentialGroup()
                                                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED, 38, javax.swing.GroupLayout.PREFERRED_SIZE)
                                                                 .addComponent(btnCancel, javax.swing.GroupLayout.PREFERRED_SIZE, 89, javax.swing.GroupLayout.PREFERRED_SIZE)
@@ -502,6 +509,8 @@ public class FacultyForm extends javax.swing.JFrame {
                                 .addComponent(jLabel5)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.RELATED)
                                 .addComponent(cbxDepartment, javax.swing.GroupLayout.PREFERRED_SIZE, javax.swing.GroupLayout.DEFAULT_SIZE, javax.swing.GroupLayout.PREFERRED_SIZE)
+                                .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
+                                .addComponent(chkDepartmentHead)
                                 .addPreferredGap(javax.swing.LayoutStyle.ComponentPlacement.UNRELATED)
                                 .addGroup(jPanel1Layout.createParallelGroup(javax.swing.GroupLayout.Alignment.BASELINE)
                                         .addComponent(btnSave)
@@ -560,6 +569,7 @@ public class FacultyForm extends javax.swing.JFrame {
         private javax.swing.JButton btnCancel;
         private javax.swing.JButton btnSave;
         private javax.swing.JComboBox<String> cbxDepartment;
+        private javax.swing.JCheckBox chkDepartmentHead;
         private raven.datetime.DatePicker datePicker1;
         private javax.swing.JFormattedTextField ftxtDatePicker;
         private javax.swing.JLabel jLabel1;

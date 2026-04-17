@@ -29,7 +29,7 @@ public class FacultyService {
     return INSTANCE;
   }
 
-  private static final String FACULTY_COLUMNS = "id, user_id, first_name, last_name, middle_name, contact_number, birthdate, department_id, updated_at, created_at";
+  private static final String FACULTY_COLUMNS = "id, user_id, first_name, last_name, middle_name, contact_number, birthdate, department_id, is_dep_head, updated_at, created_at";
 
   public List<Faculty> getAllFaculty() {
     List<Faculty> faculty = new ArrayList<>();
@@ -132,7 +132,7 @@ public class FacultyService {
     validateFacultyData(faculty);
     try (Connection conn = ConnectionService.getConnection();
         PreparedStatement ps = conn.prepareStatement(
-            "INSERT INTO faculty (user_id, first_name, last_name, middle_name, contact_number, birthdate, department_id) VALUES (?, ?, ?, ?, ?, ?, ?)"
+          "INSERT INTO faculty (user_id, first_name, last_name, middle_name, contact_number, birthdate, department_id, is_dep_head) VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
         )) {
       if (faculty.getUserId() == null) {
         ps.setNull(1, java.sql.Types.BIGINT);
@@ -153,6 +153,7 @@ public class FacultyService {
       } else {
         ps.setLong(7, faculty.getDepartmentId());
       }
+      ps.setBoolean(8, faculty.isDepartmentHead());
       
       return ps.executeUpdate() > 0;
     } catch (SQLException e) {
@@ -164,7 +165,7 @@ public class FacultyService {
   public Optional<Faculty> registerFaculty(String email, String plainPassword, Faculty faculty) {
     validateFacultyData(faculty);
     String userSql = "INSERT INTO users (email, password, role) VALUES (?, ?, ?)";
-    String facultySql = "INSERT INTO faculty (user_id, first_name, last_name, middle_name, contact_number, birthdate, department_id) VALUES (?, ?, ?, ?, ?, ?, ?)";
+    String facultySql = "INSERT INTO faculty (user_id, first_name, last_name, middle_name, contact_number, birthdate, department_id, is_dep_head) VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
     String hashedPassword = BCrypt
       .withDefaults()
@@ -213,6 +214,7 @@ public class FacultyService {
         } else {
           facultyStmt.setLong(7, faculty.getDepartmentId());
         }
+        facultyStmt.setBoolean(8, faculty.isDepartmentHead());
 
         if (facultyStmt.executeUpdate() <= 0) {
           conn.rollback();
@@ -264,7 +266,7 @@ public class FacultyService {
     validateFacultyData(faculty);
 
     String facultySql =
-      "UPDATE faculty SET user_id = ?, first_name = ?, last_name = ?, middle_name = ?, contact_number = ?, birthdate = ?, department_id = ? WHERE id = ?";
+      "UPDATE faculty SET user_id = ?, first_name = ?, last_name = ?, middle_name = ?, contact_number = ?, birthdate = ?, department_id = ?, is_dep_head = ? WHERE id = ?";
     String userSql = "UPDATE users SET email = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?";
 
     try (Connection conn = ConnectionService.getConnection()) {
@@ -295,7 +297,8 @@ public class FacultyService {
         } else {
           facultyStmt.setLong(7, faculty.getDepartmentId());
         }
-        facultyStmt.setLong(8, faculty.getId());
+        facultyStmt.setBoolean(8, faculty.isDepartmentHead());
+        facultyStmt.setLong(9, faculty.getId());
 
         if (facultyStmt.executeUpdate() <= 0) {
           conn.rollback();
@@ -330,7 +333,7 @@ public class FacultyService {
   public boolean updateFaculty(Faculty faculty) {
     try (Connection conn = ConnectionService.getConnection();
       PreparedStatement ps = conn.prepareStatement(
-        "UPDATE faculty SET user_id = ?, first_name = ?, last_name = ?, middle_name = ?, contact_number = ?, birthdate = ?, department_id = ? WHERE id = ?"
+        "UPDATE faculty SET user_id = ?, first_name = ?, last_name = ?, middle_name = ?, contact_number = ?, birthdate = ?, department_id = ?, is_dep_head = ? WHERE id = ?"
       )) {
       if (faculty.getUserId() == null) {
         ps.setNull(1, java.sql.Types.BIGINT);
@@ -351,7 +354,8 @@ public class FacultyService {
       } else {
         ps.setLong(7, faculty.getDepartmentId());
       }
-      ps.setLong(8, faculty.getId());
+      ps.setBoolean(8, faculty.isDepartmentHead());
+      ps.setLong(9, faculty.getId());
       
       return ps.executeUpdate() > 0;
     } catch (SQLException e) {
