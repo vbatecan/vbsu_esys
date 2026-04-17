@@ -66,11 +66,12 @@ public class EnrollmentPeriodForm extends javax.swing.JFrame {
         endDatePicker.setEditor(ftxtEndDate);
         startSchoolYearPicker.setEditor(ftxtStartSchoolYear);
         endSchoolYearPicker.setEditor(ftxtEndSchoolYear);
+        startSchoolYearPicker.setDateFormat("yyyy");
+        endSchoolYearPicker.setDateFormat("yyyy");
     }
 
     private void configureSemesterSelector() {
         cbxSemester.setModel(new DefaultComboBoxModel<>(SEMESTER_OPTIONS));
-        cbxSemester.setEditable(false);
     }
 
     private void populateSchoolYearPickers(String schoolYear) {
