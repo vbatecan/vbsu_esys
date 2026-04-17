@@ -244,6 +244,7 @@ CREATE TABLE faculty
     middle_name   varchar(32),
     contact_number varchar(20),
     birthdate     date,
+    is_dep_head boolean default false,
     department_id bigint,
     updated_at    timestamp default current_timestamp,
     created_at    timestamp default current_timestamp
