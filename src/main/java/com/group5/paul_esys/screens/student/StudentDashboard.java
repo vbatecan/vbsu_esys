@@ -42,6 +42,7 @@ import com.group5.paul_esys.modules.users.services.UserSession;
 import com.group5.paul_esys.screens.shared.panels.SettingsPanel;
 import com.group5.paul_esys.screens.sign_in.SignIn;
 import com.group5.paul_esys.utils.ThemeManager;
+import com.group5.paul_esys.utils.WindowStateManager;
 import com.group5.paul_esys.screens.student.components.ConflictTableCellRenderer;
 import com.group5.paul_esys.modules.users.models.enums.RemovalActionType;
 import com.group5.paul_esys.modules.users.services.RemovalAuditService;
@@ -187,11 +188,25 @@ public class StudentDashboard extends javax.swing.JFrame {
 				(student.getMiddleName() != null) ? student.getMiddleName() : "");
 
 		this.setUndecorated(true);
+		this.setResizable(true);
 		initComponents();
 		tabbedPane.addTab("Settings", new SettingsPanel());
-		this.setLocationRelativeTo(null);
+		
+		// Restore window state or use default position
+		WindowStateManager.restoreWindowState(this);
+		
 		this.windowBar1.setTitle("Welcome " + fullName);
 		this.currentStudent = student;
+		
+		// Add window state listener to save state on changes
+		this.addWindowStateListener(evt -> WindowStateManager.saveWindowState(this));
+		this.addWindowListener(new java.awt.event.WindowAdapter() {
+			@Override
+			public void windowClosing(java.awt.event.WindowEvent evt) {
+				WindowStateManager.saveWindowState(StudentDashboard.this);
+			}
+		});
+		
 		initializeDashboardUi();
 		initStudentData(student);
 		reloadStudentDashboardData();

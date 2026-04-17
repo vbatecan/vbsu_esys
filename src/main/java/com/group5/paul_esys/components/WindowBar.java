@@ -5,16 +5,22 @@
 package com.group5.paul_esys.components;
 
 import java.awt.Frame;
+import java.awt.Point;
 import java.awt.Window;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import javax.swing.SwingUtilities;
 
 /**
- *
+ * Custom window bar with minimize and close buttons.
+ * Supports drag-and-drop repositioning.
+ * 
  * @author nytri
  */
 public class WindowBar extends javax.swing.JPanel {
 
 	private String title = "Title";
+	private Point dragStartPoint;
 
 	public String getTitle() {
 		return title;
@@ -37,6 +43,42 @@ public class WindowBar extends javax.swing.JPanel {
 	 */
 	public WindowBar() {
 		initComponents();
+		setupDragListener();
+	}
+
+	private void setupDragListener() {
+		MouseAdapter dragAdapter = new MouseAdapter() {
+			@Override
+			public void mousePressed(MouseEvent evt) {
+				dragStartPoint = evt.getLocationOnScreen();
+			}
+
+			@Override
+			public void mouseDragged(MouseEvent evt) {
+				if (dragStartPoint == null) {
+					return;
+				}
+				Point currentPoint = evt.getLocationOnScreen();
+				int dx = currentPoint.x - dragStartPoint.x;
+				int dy = currentPoint.y - dragStartPoint.y;
+
+				Window window = SwingUtilities.getWindowAncestor(WindowBar.this);
+				if (window != null) {
+					window.setLocation(window.getX() + dx, window.getY() + dy);
+					dragStartPoint = currentPoint;
+				}
+			}
+
+			@Override
+			public void mouseReleased(MouseEvent evt) {
+				dragStartPoint = null;
+			}
+		};
+
+		addMouseListener(dragAdapter);
+		addMouseMotionListener(dragAdapter);
+		jLabel3.addMouseListener(dragAdapter);
+		jLabel3.addMouseMotionListener(dragAdapter);
 	}
 
 	/**
@@ -77,6 +119,7 @@ public class WindowBar extends javax.swing.JPanel {
                 jPanel3.setLayout(flowLayout2);
 
                 btnMinimize.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/minus.png"))); // NOI18N
+                btnMinimize.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
                 btnMinimize.addMouseListener(new java.awt.event.MouseAdapter() {
                         public void mouseClicked(java.awt.event.MouseEvent evt) {
                                 btnMinimizeMouseClicked(evt);
@@ -85,6 +128,7 @@ public class WindowBar extends javax.swing.JPanel {
                 jPanel3.add(btnMinimize);
 
                 btnClose.setIcon(new javax.swing.ImageIcon(getClass().getResource("/images/close.png"))); // NOI18N
+                btnClose.setCursor(new java.awt.Cursor(java.awt.Cursor.HAND_CURSOR));
                 btnClose.addMouseListener(new java.awt.event.MouseAdapter() {
                         public void mouseClicked(java.awt.event.MouseEvent evt) {
                                 btnCloseMouseClicked(evt);
@@ -105,6 +149,8 @@ public class WindowBar extends javax.swing.JPanel {
 		Frame frame = (Frame) window;
 		frame.setExtendedState(Frame.ICONIFIED);
         }//GEN-LAST:event_btnMinimizeMouseClicked
+
+
 
 
         // Variables declaration - do not modify//GEN-BEGIN:variables
