@@ -28,9 +28,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-maven-
 
-      - name: Build and run unit tests
+      - name: Install Xvfb (for GUI tests)
         run: |
-          ./mvnw -B -V test
+          sudo apt-get update
+          sudo apt-get install -y xvfb
+
+      - name: Build and run unit tests (headful Swing tests via Xvfb)
+        run: |
+          xvfb-run -a ./mvnw -B -V test
 
       - name: Package (on success)
         if: success()
