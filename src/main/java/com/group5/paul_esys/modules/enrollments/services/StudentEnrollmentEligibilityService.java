@@ -1,6 +1,7 @@
 package com.group5.paul_esys.modules.enrollments.services;
 
 import com.group5.paul_esys.modules.users.services.ConnectionService;
+import com.group5.paul_esys.utils.SqlDialectUtil;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -189,7 +190,7 @@ public class StudentEnrollmentEligibilityService {
   }
 
   private Optional<Long> getLatestCurriculumByCourse(Connection conn, Long courseId) throws SQLException {
-    String sql = "SELECT id FROM curriculum WHERE course = ? ORDER BY cur_year DESC, created_at DESC FETCH FIRST 1 ROWS ONLY";
+    String sql = "SELECT id FROM curriculum WHERE course = ? ORDER BY cur_year DESC, created_at DESC" + SqlDialectUtil.limitOneClause();
 
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setLong(1, courseId);

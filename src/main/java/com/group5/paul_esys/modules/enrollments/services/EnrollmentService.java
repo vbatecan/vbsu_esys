@@ -6,6 +6,7 @@ import com.group5.paul_esys.modules.enrollments.model.Enrollment;
 import com.group5.paul_esys.modules.enrollments.model.EnrollmentDetail;
 import com.group5.paul_esys.modules.enrollments.utils.EnrollmentUtils;
 import com.group5.paul_esys.modules.users.services.ConnectionService;
+import com.group5.paul_esys.utils.SqlDialectUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -388,13 +389,13 @@ public class EnrollmentService {
     }
 
     Long currentPeriodId = getEnrollmentPeriodId(conn,
-        "SELECT id FROM enrollment_period WHERE start_date <= CURRENT_TIMESTAMP AND end_date >= CURRENT_TIMESTAMP ORDER BY start_date DESC FETCH FIRST 1 ROWS ONLY");
+        "SELECT id FROM enrollment_period WHERE start_date <= CURRENT_TIMESTAMP AND end_date >= CURRENT_TIMESTAMP ORDER BY start_date DESC" + SqlDialectUtil.limitOneClause());
     if (currentPeriodId != null) {
       return currentPeriodId;
     }
 
     return getEnrollmentPeriodId(conn,
-        "SELECT id FROM enrollment_period ORDER BY created_at DESC FETCH FIRST 1 ROWS ONLY");
+        "SELECT id FROM enrollment_period ORDER BY created_at DESC" + SqlDialectUtil.limitOneClause());
   }
 
   private Long getEnrollmentPeriodId(Connection conn, String sql) throws SQLException {

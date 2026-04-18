@@ -1,6 +1,7 @@
 package com.group5.paul_esys.modules.users.services;
 
 import com.group5.paul_esys.modules.config.Config;
+import com.group5.paul_esys.utils.SqlDialectUtil;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -21,8 +22,11 @@ public class ConnectionService {
      */
     public static Connection getConnection() {
         try {
-            Class.forName("org.apache.derby.client.ClientAutoloadedDriver");
-            Class.forName("com.mysql.cj.jdbc.Driver");
+            if (SqlDialectUtil.isMySql()) {
+                Class.forName("com.mysql.cj.jdbc.Driver");
+            } else {
+                Class.forName("org.apache.derby.client.ClientAutoloadedDriver");
+            }
             return DriverManager.getConnection(Config.DB_URL, Config.DB_USER, Config.DB_PASS);
         } catch (SQLException e) {
             logger.error("ERROR: " + e.getMessage(), e);
@@ -30,7 +34,8 @@ public class ConnectionService {
             System.exit(1);
         } catch (ClassNotFoundException e) {
             logger.error("ERROR: " + e.getMessage(), e);
-            JOptionPane.showMessageDialog(null, "Error loading Apache Derby JDBC Driver: " + e.getMessage());
+            String driverName = SqlDialectUtil.isMySql() ? "MySQL JDBC Driver" : "Apache Derby JDBC Driver";
+            JOptionPane.showMessageDialog(null, "Error loading " + driverName + ": " + e.getMessage());
             System.exit(1);
         }
 

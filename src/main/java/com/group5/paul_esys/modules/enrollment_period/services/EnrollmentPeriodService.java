@@ -3,6 +3,7 @@ package com.group5.paul_esys.modules.enrollment_period.services;
 import com.group5.paul_esys.modules.enrollment_period.model.EnrollmentPeriod;
 import com.group5.paul_esys.modules.enrollment_period.utils.EnrollmentPeriodUtils;
 import com.group5.paul_esys.modules.users.services.ConnectionService;
+import com.group5.paul_esys.utils.SqlDialectUtil;
 
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
@@ -161,6 +162,7 @@ public class EnrollmentPeriodService {
 
   private Optional<EnrollmentPeriod> findConflictingEnrollmentPeriod(Connection conn, EnrollmentPeriod period)
       throws SQLException {
+    String limitOneClause = SqlDialectUtil.limitOneClause();
     String sql = period.getId() == null
         ? """
           SELECT *
@@ -168,8 +170,7 @@ public class EnrollmentPeriodService {
           WHERE start_date <= ?
             AND end_date >= ?
           ORDER BY start_date ASC
-          FETCH FIRST 1 ROWS ONLY
-          """
+          """ + limitOneClause
         : """
           SELECT *
           FROM enrollment_period
@@ -177,8 +178,7 @@ public class EnrollmentPeriodService {
             AND start_date <= ?
             AND end_date >= ?
           ORDER BY start_date ASC
-          FETCH FIRST 1 ROWS ONLY
-          """;
+          """ + limitOneClause;
 
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
       int parameterIndex = 1;

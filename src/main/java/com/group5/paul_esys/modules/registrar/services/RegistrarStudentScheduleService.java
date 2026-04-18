@@ -4,6 +4,7 @@ import com.group5.paul_esys.modules.enums.EnrollmentDetailStatus;
 import com.group5.paul_esys.modules.enrollments.services.StudentSemesterProgressService;
 import com.group5.paul_esys.modules.registrar.model.*;
 import com.group5.paul_esys.modules.users.services.ConnectionService;
+import com.group5.paul_esys.utils.SqlDialectUtil;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -259,8 +260,7 @@ public class RegistrarStudentScheduleService {
             FROM enrollments
             WHERE student_id = ?
               AND id = ?
-            FETCH FIRST 1 ROWS ONLY
-            """;
+                        """ + SqlDialectUtil.limitOneClause();
 
         try (
             Connection conn = ConnectionService.getConnection();
@@ -469,8 +469,7 @@ public class RegistrarStudentScheduleService {
             FROM enrollments
             WHERE student_id = ?
             ORDER BY created_at DESC
-            FETCH FIRST 1 ROWS ONLY
-            """;
+            """ + SqlDialectUtil.limitOneClause();
 
         try (
             Connection conn = ConnectionService.getConnection();
@@ -555,7 +554,7 @@ public class RegistrarStudentScheduleService {
     }
 
     private boolean hasEnrollmentDetailForOffering(Connection conn, Long enrollmentId, Long offeringId) throws SQLException {
-        String sql = "SELECT 1 FROM enrollments_details WHERE enrollment_id = ? AND offering_id = ? FETCH FIRST 1 ROWS ONLY";
+        String sql = "SELECT 1 FROM enrollments_details WHERE enrollment_id = ? AND offering_id = ?" + SqlDialectUtil.limitOneClause();
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             ps.setLong(1, enrollmentId);
@@ -768,7 +767,7 @@ public class RegistrarStudentScheduleService {
               AND offering_id = ?
             """;
 
-        String targetExistsSql = "SELECT 1 FROM student_enrolled_subjects WHERE student_id = ? AND offering_id = ? FETCH FIRST 1 ROWS ONLY";
+        String targetExistsSql = "SELECT 1 FROM student_enrolled_subjects WHERE student_id = ? AND offering_id = ?" + SqlDialectUtil.limitOneClause();
 
         String sourceStatus = null;
         try (PreparedStatement ps = conn.prepareStatement(selectSourceSql)) {

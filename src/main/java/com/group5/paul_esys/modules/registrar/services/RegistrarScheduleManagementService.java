@@ -15,6 +15,7 @@ import com.group5.paul_esys.modules.registrar.model.ScheduleSaveResult;
 import com.group5.paul_esys.modules.registrar.model.ScheduleUpsertRequest;
 import com.group5.paul_esys.modules.subjects.model.SubjectSchedulePattern;
 import com.group5.paul_esys.modules.users.services.ConnectionService;
+import com.group5.paul_esys.utils.SqlDialectUtil;
 import com.group5.paul_esys.modules.audit.services.AuditService;
 
 import java.sql.Connection;
@@ -1620,9 +1621,10 @@ public class RegistrarScheduleManagementService {
 
   private boolean hasOfferingDayStartDuplicate(Connection conn, ScheduleUpsertRequest request, boolean isUpdate)
       throws SQLException {
+    String limitOneClause = SqlDialectUtil.limitOneClause();
     String sql = isUpdate
-        ? "SELECT 1 FROM schedules WHERE offering_id = ? AND day = ? AND start_time = ? AND id <> ? FETCH FIRST 1 ROWS ONLY"
-        : "SELECT 1 FROM schedules WHERE offering_id = ? AND day = ? AND start_time = ? FETCH FIRST 1 ROWS ONLY";
+      ? "SELECT 1 FROM schedules WHERE offering_id = ? AND day = ? AND start_time = ? AND id <> ?" + limitOneClause
+      : "SELECT 1 FROM schedules WHERE offering_id = ? AND day = ? AND start_time = ?" + limitOneClause;
 
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setLong(1, request.offeringId());
@@ -1662,6 +1664,7 @@ public class RegistrarScheduleManagementService {
     TargetOfferingVars target = lookupTargetOffering(conn, request.offeringId());
     if (target == null || target.enrollmentPeriodId() == null) return false;
 
+    String limitOneClause = SqlDialectUtil.limitOneClause();
     String sql = isUpdate
         ? """
           SELECT 1
@@ -1673,8 +1676,7 @@ public class RegistrarScheduleManagementService {
             AND s.id <> ?
             AND s.start_time < ?
             AND s.end_time > ?
-          FETCH FIRST 1 ROWS ONLY
-          """
+          """ + limitOneClause
         : """
           SELECT 1
           FROM schedules s
@@ -1684,8 +1686,7 @@ public class RegistrarScheduleManagementService {
             AND existing_o.enrollment_period_id = ?
             AND s.start_time < ?
             AND s.end_time > ?
-          FETCH FIRST 1 ROWS ONLY
-          """;
+          """ + limitOneClause;
 
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setLong(1, request.roomId());
@@ -1742,6 +1743,7 @@ public class RegistrarScheduleManagementService {
     TargetOfferingVars target = lookupTargetOffering(conn, request.offeringId());
     if (target == null || target.enrollmentPeriodId() == null) return false;
 
+    String limitOneClause = SqlDialectUtil.limitOneClause();
     String sql = isUpdate
         ? """
           SELECT 1
@@ -1753,8 +1755,7 @@ public class RegistrarScheduleManagementService {
             AND s.id <> ?
             AND s.start_time < ?
             AND s.end_time > ?
-          FETCH FIRST 1 ROWS ONLY
-          """
+          """ + limitOneClause
         : """
           SELECT 1
           FROM schedules s
@@ -1764,8 +1765,7 @@ public class RegistrarScheduleManagementService {
             AND existing_o.enrollment_period_id = ?
             AND s.start_time < ?
             AND s.end_time > ?
-          FETCH FIRST 1 ROWS ONLY
-          """;
+          """ + limitOneClause;
 
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setLong(1, request.facultyId());
@@ -1790,6 +1790,7 @@ public class RegistrarScheduleManagementService {
     TargetOfferingVars target = lookupTargetOffering(conn, request.offeringId());
     if (target == null || target.sectionId() == null || target.enrollmentPeriodId() == null) return false;
 
+    String limitOneClause = SqlDialectUtil.limitOneClause();
     String sql = isUpdate
         ? """
           SELECT 1
@@ -1801,8 +1802,7 @@ public class RegistrarScheduleManagementService {
             AND s.id <> ?
             AND s.start_time < ?
             AND s.end_time > ?
-          FETCH FIRST 1 ROWS ONLY
-          """
+          """ + limitOneClause
         : """
           SELECT 1
           FROM schedules s
@@ -1812,8 +1812,7 @@ public class RegistrarScheduleManagementService {
             AND s.day = ?
             AND s.start_time < ?
             AND s.end_time > ?
-          FETCH FIRST 1 ROWS ONLY
-          """;
+          """ + limitOneClause;
 
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setLong(1, target.sectionId());
@@ -1944,7 +1943,7 @@ public class RegistrarScheduleManagementService {
   }
 
   private boolean offeringExists(Connection conn, Long offeringId) throws SQLException {
-    String sql = "SELECT 1 FROM offerings WHERE id = ? FETCH FIRST 1 ROWS ONLY";
+    String sql = "SELECT 1 FROM offerings WHERE id = ?" + SqlDialectUtil.limitOneClause();
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setLong(1, offeringId);
 
@@ -1955,7 +1954,7 @@ public class RegistrarScheduleManagementService {
   }
 
   private boolean scheduleExists(Connection conn, Long scheduleId) throws SQLException {
-    String sql = "SELECT 1 FROM schedules WHERE id = ? FETCH FIRST 1 ROWS ONLY";
+    String sql = "SELECT 1 FROM schedules WHERE id = ?" + SqlDialectUtil.limitOneClause();
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setLong(1, scheduleId);
 

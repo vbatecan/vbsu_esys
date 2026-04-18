@@ -4,6 +4,7 @@ import com.group5.paul_esys.modules.enums.SemesterProgressStatus;
 import com.group5.paul_esys.modules.enrollments.model.StudentSemesterProgress;
 import com.group5.paul_esys.modules.enrollments.utils.StudentSemesterProgressUtils;
 import com.group5.paul_esys.modules.users.services.ConnectionService;
+import com.group5.paul_esys.utils.SqlDialectUtil;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -177,6 +178,7 @@ public class StudentSemesterProgressService {
 
   private Optional<Long> resolveFirstSemesterId(Connection conn, Long curriculumId) throws SQLException {
     boolean hasYearLevel = hasYearLevelColumn(conn);
+    String limitOneClause = SqlDialectUtil.limitOneClause();
     String semesterRank =
         "CASE "
             + "WHEN UPPER(TRIM(semester)) LIKE '%1ST%' OR UPPER(TRIM(semester)) LIKE '%FIRST%' OR UPPER(TRIM(semester)) = 'SEMESTER 1' THEN 1 "
@@ -186,8 +188,8 @@ public class StudentSemesterProgressService {
             + "ELSE 99 END";
 
     String sql = hasYearLevel
-        ? "SELECT id FROM semester WHERE curriculum_id = ? ORDER BY year_level ASC, " + semesterRank + ", created_at ASC, id ASC FETCH FIRST 1 ROWS ONLY"
-        : "SELECT id FROM semester WHERE curriculum_id = ? ORDER BY " + semesterRank + ", created_at ASC, id ASC FETCH FIRST 1 ROWS ONLY";
+      ? "SELECT id FROM semester WHERE curriculum_id = ? ORDER BY year_level ASC, " + semesterRank + ", created_at ASC, id ASC" + limitOneClause
+      : "SELECT id FROM semester WHERE curriculum_id = ? ORDER BY " + semesterRank + ", created_at ASC, id ASC" + limitOneClause;
 
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setLong(1, curriculumId);
@@ -220,7 +222,7 @@ public class StudentSemesterProgressService {
   }
 
   private boolean progressExists(Connection conn, String studentId, Long semesterId) throws SQLException {
-    String sql = "SELECT 1 FROM student_semester_progress WHERE student_id = ? AND semester_id = ? FETCH FIRST 1 ROWS ONLY";
+    String sql = "SELECT 1 FROM student_semester_progress WHERE student_id = ? AND semester_id = ?" + SqlDialectUtil.limitOneClause();
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setString(1, studentId);
       ps.setLong(2, semesterId);
@@ -231,7 +233,7 @@ public class StudentSemesterProgressService {
   }
 
   private Optional<Long> getLatestCurriculumByCourse(Connection conn, Long courseId) throws SQLException {
-    String sql = "SELECT id FROM curriculum WHERE course = ? ORDER BY cur_year DESC, created_at DESC FETCH FIRST 1 ROWS ONLY";
+    String sql = "SELECT id FROM curriculum WHERE course = ? ORDER BY cur_year DESC, created_at DESC" + SqlDialectUtil.limitOneClause();
 
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setLong(1, courseId);

@@ -10,6 +10,7 @@ import com.group5.paul_esys.modules.registrar.model.StudentDropCandidate;
 import com.group5.paul_esys.modules.registrar.model.StudentDropTargetOption;
 import com.group5.paul_esys.modules.registrar.utils.RegistrarDropRequestUtils;
 import com.group5.paul_esys.modules.users.services.ConnectionService;
+import com.group5.paul_esys.utils.SqlDialectUtil;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -441,8 +442,8 @@ public class RegistrarDropRequestService {
             + "WHERE e.student_id = ? "
             + "AND ed.offering_id = ? "
             + "AND ed.status = ? "
-            + "ORDER BY e.created_at DESC "
-            + "FETCH FIRST 1 ROWS ONLY";
+        + "ORDER BY e.created_at DESC"
+        + SqlDialectUtil.limitOneClause();
 
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setString(1, studentId);
@@ -472,8 +473,8 @@ public class RegistrarDropRequestService {
             + "WHERE e.student_id = ? "
             + "AND ed.offering_id = ? "
             + "AND ed.status = ? "
-            + "ORDER BY e.created_at DESC "
-            + "FETCH FIRST 1 ROWS ONLY";
+        + "ORDER BY e.created_at DESC"
+        + SqlDialectUtil.limitOneClause();
 
     try (PreparedStatement ps = conn.prepareStatement(sql)) {
       ps.setString(1, studentId);

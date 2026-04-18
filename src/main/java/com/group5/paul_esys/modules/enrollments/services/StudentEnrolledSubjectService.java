@@ -4,6 +4,7 @@ import com.group5.paul_esys.modules.enums.StudentEnrolledSubjectStatus;
 import com.group5.paul_esys.modules.enrollments.model.StudentEnrolledSubject;
 import com.group5.paul_esys.modules.enrollments.utils.StudentEnrolledSubjectUtils;
 import com.group5.paul_esys.modules.users.services.ConnectionService;
+import com.group5.paul_esys.utils.SqlDialectUtil;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -49,7 +50,7 @@ public class StudentEnrolledSubjectService {
   }
 
   public Optional<StudentEnrolledSubject> getByStudentAndSemesterSubject(String studentId, Long semesterSubjectId) {
-    String sql = "SELECT * FROM student_enrolled_subjects WHERE student_id = ? AND semester_subject_id = ? ORDER BY updated_at DESC FETCH FIRST 1 ROWS ONLY";
+    String sql = "SELECT * FROM student_enrolled_subjects WHERE student_id = ? AND semester_subject_id = ? ORDER BY updated_at DESC" + SqlDialectUtil.limitOneClause();
 
     try (
       Connection conn = ConnectionService.getConnection();

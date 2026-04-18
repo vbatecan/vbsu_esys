@@ -3,6 +3,7 @@ package com.group5.paul_esys.modules.semester.services;
 import com.group5.paul_esys.modules.semester.model.Semester;
 import com.group5.paul_esys.modules.semester.utils.SemesterUtils;
 import com.group5.paul_esys.modules.users.services.ConnectionService;
+import com.group5.paul_esys.utils.SqlDialectUtil;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
@@ -125,15 +126,16 @@ public class SemesterService {
 
     try (Connection conn = ConnectionService.getConnection()) {
       boolean hasYearLevel = hasYearLevelColumn(conn);
+      String limitOneClause = SqlDialectUtil.limitOneClause();
       String sql;
       if (hasYearLevel) {
         sql = semester.getId() == null
-          ? "SELECT 1 FROM semester WHERE curriculum_id = ? AND UPPER(TRIM(semester)) = UPPER(TRIM(?)) AND year_level = ? FETCH FIRST 1 ROWS ONLY"
-          : "SELECT 1 FROM semester WHERE curriculum_id = ? AND UPPER(TRIM(semester)) = UPPER(TRIM(?)) AND year_level = ? AND id <> ? FETCH FIRST 1 ROWS ONLY";
+          ? "SELECT 1 FROM semester WHERE curriculum_id = ? AND UPPER(TRIM(semester)) = UPPER(TRIM(?)) AND year_level = ?" + limitOneClause
+          : "SELECT 1 FROM semester WHERE curriculum_id = ? AND UPPER(TRIM(semester)) = UPPER(TRIM(?)) AND year_level = ? AND id <> ?" + limitOneClause;
       } else {
         sql = semester.getId() == null
-          ? "SELECT 1 FROM semester WHERE curriculum_id = ? AND UPPER(TRIM(semester)) = UPPER(TRIM(?)) FETCH FIRST 1 ROWS ONLY"
-          : "SELECT 1 FROM semester WHERE curriculum_id = ? AND UPPER(TRIM(semester)) = UPPER(TRIM(?)) AND id <> ? FETCH FIRST 1 ROWS ONLY";
+          ? "SELECT 1 FROM semester WHERE curriculum_id = ? AND UPPER(TRIM(semester)) = UPPER(TRIM(?))" + limitOneClause
+          : "SELECT 1 FROM semester WHERE curriculum_id = ? AND UPPER(TRIM(semester)) = UPPER(TRIM(?)) AND id <> ?" + limitOneClause;
       }
 
       try (PreparedStatement ps = conn.prepareStatement(sql)) {
